@@ -1,5 +1,7 @@
+import Image from "next/image";
 import * as React from "react";
 
+import { stitchLogoAsset } from "@/lib/design/stitch-assets";
 import { cn } from "@/lib/utils";
 
 type ProdeLogoProps = React.ComponentProps<"div">;
@@ -15,26 +17,43 @@ export function ProdeLogo({ className, ...props }: ProdeLogoProps) {
       data-slot="prode-logo"
       {...props}
     >
-      <span
-        aria-hidden="true"
-        className="relative hidden size-20 shrink-0 sm:block md:size-24"
-      >
-        <span className="prode-frame absolute left-[-18px] top-4 h-4 w-12 -skew-x-12 bg-prode-yellow" />
-        <span className="prode-frame absolute left-[-8px] top-12 h-3 w-10 -skew-x-12 bg-prode-surface" />
-        <span className="prode-hard-shadow absolute inset-0 overflow-hidden rounded-full border-[3px] border-prode-black bg-prode-yellow">
-          <span className="absolute -top-3 left-[25%] h-[calc(100%+24px)] w-[46%] rotate-12 border-x-[3px] border-prode-black bg-prode-surface" />
-          <span className="absolute left-[-18%] top-[38%] h-[28%] w-[136%] -rotate-12 border-y-[3px] border-prode-black bg-prode-yellow" />
-        </span>
-      </span>
+      <Image
+        alt={stitchLogoAsset.alt}
+        className="h-auto w-full max-w-[22rem] object-contain mix-blend-multiply sm:max-w-[28rem] md:max-w-[34rem]"
+        height={stitchLogoAsset.height}
+        priority
+        sizes="(max-width: 640px) 22rem, (max-width: 768px) 28rem, 34rem"
+        src={stitchLogoAsset.src}
+        width={stitchLogoAsset.width}
+      />
+    </div>
+  );
+}
 
-      <span className="flex min-w-0 flex-col items-start uppercase leading-none">
-        <span className="font-display text-6xl leading-none text-prode-black sm:text-7xl md:text-8xl">
-          Prode
-        </span>
-        <span className="prode-frame -mt-1 bg-prode-yellow px-2 pb-1 pt-2 font-display text-4xl leading-none sm:text-5xl md:text-6xl">
-          2026
-        </span>
-      </span>
+type ProdeCompactLogoProps = React.ComponentProps<"div">;
+
+export function ProdeCompactLogo({
+  className,
+  ...props
+}: ProdeCompactLogoProps) {
+  return (
+    <div
+      aria-label="Prode 2026"
+      className={cn(
+        "inline-flex min-w-0 items-center gap-2 text-prode-black",
+        className,
+      )}
+      data-slot="prode-compact-logo"
+      {...props}
+    >
+      <Image
+        alt={stitchLogoAsset.alt}
+        className="h-auto w-[4.5rem] shrink-0 object-contain mix-blend-multiply sm:w-20"
+        height={stitchLogoAsset.height}
+        sizes="5rem"
+        src={stitchLogoAsset.src}
+        width={stitchLogoAsset.width}
+      />
     </div>
   );
 }

@@ -1,31 +1,30 @@
-import { AppShell } from "@/components/layout/app-shell";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
+import { AvatarPicker } from "@/components/onboarding/avatar-picker";
+import { ProfileFormSection } from "@/components/onboarding/profile-form-section";
+import { ProdeBadge } from "@/components/prode/prode-badge";
 
 export default function OnboardingPage() {
-  // Final UI must be replaced/refined after the Stitch MCP audit.
   return (
-    <AppShell
-      title="Bienvenida"
-      description="Pantalla temporal para completar perfil, grupo y preferencias una vez que la autenticacion este definida."
-      eyebrow="Configuracion inicial"
+    <AuthenticatedAppShell
+      header={
+        <section className="max-w-5xl space-y-4">
+          <ProdeBadge variant="ink">Configuración inicial</ProdeBadge>
+          <div className="space-y-3">
+            <h1 className="font-display text-6xl uppercase leading-[0.92] text-prode-black sm:text-7xl lg:text-8xl">
+              Crea tu <span className="bg-prode-yellow px-2">Jugador</span>
+            </h1>
+            <p className="max-w-2xl text-base leading-7 text-muted-foreground">
+              Prepará tu identidad para entrar al Prode del Mundial con el
+              grupo.
+            </p>
+          </div>
+        </section>
+      }
     >
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle>Primer ingreso</CardTitle>
-          <CardDescription>
-            El flujo final seguira las pantallas y reglas aprobadas.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm leading-6 text-muted-foreground">
-          Este paso todavia no guarda datos ni crea participaciones.
-        </CardContent>
-      </Card>
-    </AppShell>
+      <div className="grid gap-6 xl:grid-cols-[minmax(18rem,0.84fr)_minmax(32rem,1.2fr)]">
+        <AvatarPicker />
+        <ProfileFormSection />
+      </div>
+    </AuthenticatedAppShell>
   );
 }

@@ -1,17 +1,17 @@
 import { LeaderboardPlaceholder } from "@/components/leaderboard/leaderboard-placeholder";
-import { AppShell } from "@/components/layout/app-shell";
+import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
 
 export default function StandingsPage() {
-  // Final UI must be replaced/refined after the Stitch MCP audit.
+  // Final ranking content still needs the audited Stitch positions table.
   return (
-    <AppShell
+    <AuthenticatedAppShell
       title="Posiciones"
-      description="Vista temporal del ranking del grupo hasta que el modelo de puntaje y la pantalla de Stitch esten implementados."
+      description="Vista temporal del ranking del grupo hasta que el modelo de puntaje y la pantalla de Stitch estén implementados."
       eyebrow="Tabla temporal"
     >
       <div className="max-w-2xl">
         <LeaderboardPlaceholder />
       </div>
-    </AppShell>
+    </AuthenticatedAppShell>
   );
 }

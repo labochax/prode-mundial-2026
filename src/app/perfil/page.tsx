@@ -1,4 +1,4 @@
-import { AppShell } from "@/components/layout/app-shell";
+import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
 import {
   Card,
   CardContent,
@@ -8,9 +8,9 @@ import {
 } from "@/components/ui/card";
 
 export default function ProfilePage() {
-  // Final UI must be replaced/refined after the Stitch MCP audit.
+  // Final profile edit content will reuse the audited Stitch profile language.
   return (
-    <AppShell
+    <AuthenticatedAppShell
       title="Perfil"
       description="Vista temporal para datos del jugador, preferencias y estado dentro del grupo."
       eyebrow="Cuenta temporal"
@@ -19,13 +19,13 @@ export default function ProfilePage() {
         <CardHeader>
           <CardTitle>Datos del jugador</CardTitle>
           <CardDescription>
-            La lectura y edicion del perfil se conectaran despues.
+            La lectura y edición del perfil se conectarán después.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm leading-6 text-muted-foreground">
           No se muestran datos personales en esta base inicial.
         </CardContent>
       </Card>
-    </AppShell>
+    </AuthenticatedAppShell>
   );
 }
