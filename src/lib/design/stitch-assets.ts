@@ -10,6 +10,11 @@ export type StitchAvatarAsset = StitchImageAsset & {
   label: string;
 };
 
+export type StitchAvatarActionAsset = StitchImageAsset & {
+  id: "google-photo" | "upload-image";
+  label: string;
+};
+
 export const stitchLogoAsset = {
   alt: "Logo de Prode 2026",
   height: 512,
@@ -207,3 +212,25 @@ export const stitchAvatarAssets = [
 export type StitchAvatarId = (typeof stitchAvatarAssets)[number]["id"];
 
 export const defaultStitchAvatar = stitchAvatarAssets[0];
+
+export const stitchAvatarActions = [
+  {
+    alt: "Ícono pixel para usar foto de Google",
+    height: 512,
+    id: "google-photo",
+    label: "Usar foto de Google",
+    src: "/stitch/icons/google-avatar-option.png",
+    width: 512,
+  },
+  {
+    alt: "Ícono pixel para subir imagen",
+    height: 512,
+    id: "upload-image",
+    label: "Subir imagen",
+    src: "/stitch/icons/upload-avatar-option.png",
+    width: 512,
+  },
+] as const satisfies readonly StitchAvatarActionAsset[];
+
+export type StitchAvatarActionId =
+  (typeof stitchAvatarActions)[number]["id"];

@@ -8,6 +8,7 @@ import { ProdeBadge } from "@/components/prode/prode-badge";
 import { ProdeCard } from "@/components/prode/prode-card";
 import {
   defaultStitchAvatar,
+  stitchAvatarActions,
   stitchAvatarAssets,
   type StitchAvatarId,
 } from "@/lib/design/stitch-assets";
@@ -69,6 +70,26 @@ export function AvatarPicker() {
             </button>
           );
         })}
+
+        {stitchAvatarActions.map((action) => (
+          <button
+            aria-label={action.label}
+            className="relative aspect-square rounded-full border-[3px] border-prode-black bg-prode-surface shadow-[5px_5px_0_var(--prode-black)] outline-none transition-transform hover:translate-x-px hover:translate-y-px hover:shadow-[4px_4px_0_var(--prode-black)] focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
+            key={action.id}
+            title={action.label}
+            type="button"
+          >
+            <Image
+              alt={action.alt}
+              className="size-full rounded-full object-cover"
+              height={action.height}
+              sizes="(max-width: 640px) 4rem, 5rem"
+              src={action.src}
+              width={action.width}
+            />
+            <span className="sr-only">{action.label}</span>
+          </button>
+        ))}
       </div>
 
       <div className="prode-frame flex items-center justify-between gap-3 bg-prode-yellow px-3 py-2">
