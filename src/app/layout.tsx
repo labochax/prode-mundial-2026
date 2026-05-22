@@ -1,15 +1,42 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import {
+  Anton,
+  Bodoni_Moda,
+  Geist_Mono,
+  Hanken_Grotesk,
+  Space_Grotesk,
+} from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const anton = Anton({
+  display: "swap",
   subsets: ["latin"],
+  variable: "--font-anton",
+  weight: "400",
 });
 
 const geistMono = Geist_Mono({
+  display: "swap",
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const spaceGrotesk = Space_Grotesk({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+});
+
+const hankenGrotesk = Hanken_Grotesk({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-hanken-grotesk",
+});
+
+const bodoniModa = Bodoni_Moda({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-bodoni-moda",
 });
 
 export const metadata: Metadata = {
@@ -26,7 +53,7 @@ export default function RootLayout({
   return (
     <html
       lang="es-AR"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${anton.variable} ${spaceGrotesk.variable} ${hankenGrotesk.variable} ${bodoniModa.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
