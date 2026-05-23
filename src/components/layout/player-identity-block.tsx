@@ -15,13 +15,13 @@ export function PlayerIdentityBlock({
 }: PlayerIdentityBlockProps) {
   return (
     <Link
-      aria-label="Editar jugador"
+      aria-label="Editar mi jugador"
       className={cn(
         "prode-frame prode-pressable block bg-prode-surface text-prode-black outline-none hover:bg-[#fff7b5] focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper",
         compact ? "flex items-center gap-2 p-2" : "space-y-3 p-3",
         className,
       )}
-      href="/onboarding"
+      href="/perfil"
     >
       <div className={cn("flex items-center", compact ? "gap-2" : "gap-3")}>
         <div

@@ -14,7 +14,17 @@ import {
 } from "@/lib/design/stitch-assets";
 import { cn } from "@/lib/utils";
 
-export function AvatarPicker() {
+type AvatarPickerProps = {
+  badgeLabel?: string;
+  description?: string;
+  title?: string;
+};
+
+export function AvatarPicker({
+  badgeLabel = "Avatar",
+  description = "Marcá una cara para tu perfil del Prode.",
+  title = "Elegí tu jugador",
+}: AvatarPickerProps) {
   const [selectedAvatarId, setSelectedAvatarId] = useState<StitchAvatarId>(
     defaultStitchAvatar.id,
   );
@@ -25,13 +35,13 @@ export function AvatarPicker() {
   return (
     <ProdeCard className="space-y-5 p-5 sm:p-6">
       <header className="space-y-3">
-        <ProdeBadge variant="ink">Avatar</ProdeBadge>
+        <ProdeBadge variant="ink">{badgeLabel}</ProdeBadge>
         <div className="space-y-2">
           <h2 className="font-display text-4xl uppercase leading-none">
-            Elegí tu jugador
+            {title}
           </h2>
           <p className="text-sm leading-6 text-muted-foreground">
-            Marcá una cara para tu perfil del Prode.
+            {description}
           </p>
         </div>
       </header>

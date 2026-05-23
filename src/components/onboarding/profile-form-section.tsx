@@ -1,3 +1,9 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { useState } from "react";
+import { Check } from "lucide-react";
+
 import { ProdeButton } from "@/components/prode/prode-button";
 import { ProdeCard } from "@/components/prode/prode-card";
 import {
@@ -7,10 +13,37 @@ import {
   ProdeTextarea,
 } from "@/components/prode/prode-field";
 
-export function ProfileFormSection() {
+type ProfileFormSectionProps = {
+  formLabel?: string;
+  savedLabel?: string;
+  secondaryAction?: ReactNode;
+  showSavedState?: boolean;
+  submitLabel?: string;
+};
+
+export function ProfileFormSection({
+  formLabel = "Perfil del jugador",
+  savedLabel = "Cambios guardados",
+  secondaryAction,
+  showSavedState = false,
+  submitLabel = "Listo para jugar",
+}: ProfileFormSectionProps) {
+  const [isSaved, setIsSaved] = useState(false);
+  const buttonLabel = showSavedState && isSaved ? savedLabel : submitLabel;
+
   return (
     <ProdeCard className="p-5 sm:p-6">
-      <form className="grid gap-5" aria-label="Perfil del jugador">
+      <form
+        aria-label={formLabel}
+        className="grid gap-5"
+        onChange={() => setIsSaved(false)}
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (showSavedState) {
+            setIsSaved(true);
+          }
+        }}
+      >
         <div className="grid gap-4 md:grid-cols-2">
           <ProdeField htmlFor="nombre-visible" label="Nombre visible">
             <ProdeInput
@@ -86,9 +119,20 @@ export function ProfileFormSection() {
           />
         </ProdeField>
 
-        <ProdeButton className="w-full" size="large">
-          Listo para jugar
-        </ProdeButton>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <ProdeButton
+            className="flex-1"
+            size="large"
+            type="submit"
+            variant={showSavedState && isSaved ? "ink" : "primary"}
+          >
+            {showSavedState && isSaved && (
+              <Check aria-hidden="true" className="size-5" />
+            )}
+            {buttonLabel}
+          </ProdeButton>
+          {secondaryAction}
+        </div>
       </form>
     </ProdeCard>
   );
