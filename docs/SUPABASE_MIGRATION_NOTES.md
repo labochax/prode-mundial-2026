@@ -68,3 +68,71 @@ This migration is intended for local review and later Supabase application. It h
 - Whether profile reads should remain broad or move behind a public profile view.
 - Whether pool deletion should be supported and who can perform it.
 - Whether changing `pools.created_by` should be blocked by a trigger in a later hardening migration.
+
+## Match Foundation Migration
+
+Created local migration:
+
+`supabase/migrations/20260523202802_create_match_foundation_schema.sql`
+
+This migration is also intended for local review and later Supabase application. It has not been applied to a remote project by this task.
+
+### What It Adds
+
+- `public.teams`
+  - Spanish-facing team names via `name_es`;
+  - optional Football-Data.org and TheSportsDB identifiers;
+  - optional flag/badge URLs and raw provider JSON.
+- `public.stadiums`
+  - venue name, city, country, optional image URL, and raw provider JSON.
+- `public.matches`
+  - Football-Data.org match id;
+  - match number, stage, group code;
+  - home/left and away/right team references;
+  - kickoff and lock timestamps;
+  - stadium reference;
+  - practical Football-Data-like status values;
+  - score, minute, winner, sync metadata, and raw provider JSON.
+- `public.get_lock_minutes_before_kickoff()`
+- `public.compute_match_lock_at(kickoff_at)`
+- `public.set_match_lock_at()` trigger helper.
+- Updated-at triggers for `teams`, `stadiums`, and `matches`.
+- RLS enabled on `teams`, `stadiums`, and `matches`.
+- Authenticated read-only policies for those tables.
+
+### Lock Time Behavior
+
+`matches.lock_at` is required after insert.
+
+On insert:
+
+- if `lock_at` is provided explicitly, the trigger keeps it;
+- if `lock_at` is omitted, the trigger calculates it as `kickoff_at - settings.lock_minutes_before_kickoff`.
+
+On update:
+
+- if `kickoff_at` changes and `lock_at` was not explicitly changed in the same update, the trigger recalculates `lock_at`;
+- if an admin/server sync updates both `kickoff_at` and `lock_at`, the explicit `lock_at` is preserved.
+
+The setting defaults to `10` minutes from the seeded `settings` row. If the setting is missing, malformed, negative, or unreasonably large, the helper falls back to `10`.
+
+### What Is Still Excluded
+
+- Predictions table.
+- Prediction visibility policies.
+- Scoring functions, score tables, or leaderboard views.
+- Sync runs and Edge Functions.
+- Storage buckets for team/stadium assets.
+- External API calls to Football-Data.org or TheSportsDB.
+
+Predictions and scoring are intentionally excluded so the lock-time and read-only fixture foundation can be tested first.
+
+### Must Be Tested Before Moving To Predictions
+
+- Default `lock_at` calculation from the seeded 10-minute setting.
+- `lock_at` calculation after changing the setting in tests.
+- `kickoff_at` update recalculation behavior.
+- Explicit `lock_at` preservation for future admin corrections.
+- Status, score, minute, and winner constraints.
+- Authenticated read access for teams, stadiums, and matches.
+- Confirm authenticated clients cannot insert/update/delete fixture foundation rows.
