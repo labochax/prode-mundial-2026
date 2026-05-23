@@ -136,3 +136,91 @@ Predictions and scoring are intentionally excluded so the lock-time and read-onl
 - Status, score, minute, and winner constraints.
 - Authenticated read access for teams, stadiums, and matches.
 - Confirm authenticated clients cannot insert/update/delete fixture foundation rows.
+
+## Predictions And Scoring Migration
+
+Created local migration:
+
+`supabase/migrations/20260523203901_create_predictions_scoring_schema.sql`
+
+This migration is local-only and has not been applied to a remote project by this task.
+
+### What It Adds
+
+- `public.predictions`
+  - one prediction per `pool_id`, `user_id`, and `match_id`;
+  - direct `pool_id` storage for pool-specific rankings and visibility;
+  - composite membership FK to ensure predictions can only exist for users who belong to the pool;
+  - predicted home/left and away/right scores;
+  - nullable `points` and `scored_at`.
+- Scoring helpers:
+  - `public.get_match_outcome(home_score, away_score)`;
+  - `public.calculate_prediction_points(pred_home, pred_away, actual_home, actual_away)`.
+- Lock/visibility helpers:
+  - `public.is_match_locked(match_id)`;
+  - `public.is_prediction_visible(prediction_id, viewer_id)`.
+- Trigger helper:
+  - `public.prevent_prediction_after_lock()`.
+- Server-side scoring function:
+  - `public.score_match_predictions(match_id)`.
+- Leaderboard function:
+  - `public.get_pool_leaderboard(pool_id)`.
+- RLS enabled on `predictions`.
+
+### Lock Enforcement
+
+Prediction inserts, updates, and deletes are blocked when `now() >= matches.lock_at`.
+
+The lock is enforced in two places:
+
+- RLS insert/update checks prevent regular client writes when the target match is locked.
+- A `before insert or update or delete` trigger raises `predictions are locked for this match` for regular authenticated clients.
+
+The trigger allows `postgres`, `supabase_admin`, and future `service_role` contexts so server/admin sync or correction paths can still perform controlled maintenance. Service-role use must remain server-only.
+
+### Scoring Behavior
+
+Scoring follows the product rules:
+
+- exact score: `3`;
+- correct outcome: `1`;
+- wrong outcome: `0`;
+- missing actual score: `null` from the helper.
+
+`score_match_predictions(match_id)` only scores matches with `status = 'FINISHED'` and non-null official scores. It updates `points`, sets `scored_at`, and is repeatable. It is intended for server/admin/sync use and is not granted broadly to authenticated clients.
+
+### Leaderboard Behavior
+
+`get_pool_leaderboard(pool_id)` returns:
+
+- `user_id`;
+- `display_name`;
+- `avatar_kind`;
+- `avatar_value`;
+- `total_points`;
+- `exact_hits`;
+- `outcome_hits`;
+- `predicted_matches_count`;
+- `rank`.
+
+Only scored predictions count. Pool members with no scored predictions are included with zero totals. The function returns rows only when `auth.uid()` is a member of the target pool.
+
+### Prediction Visibility RLS
+
+Authenticated users can:
+
+- read their own predictions at any time;
+- read other predictions in the same pool only after that match is locked;
+- insert their own prediction before lock if they are a pool member;
+- update their own prediction before lock if they are a pool member;
+- delete their own prediction before lock if they are a pool member.
+
+Other-pool predictions are not visible through RLS.
+
+### Known Open Risks
+
+- Trigger bypass for `service_role` must only be used in server-side code.
+- `score_match_predictions` currently recalculates `scored_at` on repeat runs. Points remain idempotent, but audit requirements may later require preserving the first scored timestamp.
+- Leaderboard tie-breakers are currently points, exact hits, outcome hits, scored prediction count, and display name. Product may choose different tie-breakers.
+- No prediction edit history exists yet.
+- No penalty shootout fields exist in MVP.
