@@ -49,7 +49,9 @@ export function AuthenticatedNavigation({
       )}
     >
       {authenticatedNavItems.map(({ href, icon: Icon, label }) => {
-        const isActive = pathname === href;
+        const isActive =
+          pathname === href ||
+          (href === "/dashboard" && pathname.startsWith("/partidos/"));
 
         return (
           <Link

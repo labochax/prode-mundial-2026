@@ -3,11 +3,11 @@
 import { Check, Save } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 
 import { MatchTendencyStrip } from "@/components/dashboard/match-tendency-strip";
 import { ScoreStepper } from "@/components/dashboard/score-stepper";
-import { ProdeButton } from "@/components/prode/prode-button";
 import type { MockMatch, MockTeam } from "@/lib/mock/matches";
 import { cn } from "@/lib/utils";
 
@@ -64,12 +64,6 @@ export function MatchPredictionCard({ match }: MatchPredictionCardProps) {
     setIsSaved(false);
   };
 
-  const ctaLabel = isSaved
-    ? "Guardado"
-    : prediction.home === 0 && prediction.away === 0
-      ? "Cargar pronóstico"
-      : "Guardar predicción";
-
   return (
     <motion.article
       className="prode-frame prode-hard-shadow relative flex min-h-[27rem] flex-col overflow-hidden bg-prode-surface text-prode-black"
@@ -120,19 +114,32 @@ export function MatchPredictionCard({ match }: MatchPredictionCardProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <MatchTendencyStrip match={match} />
 
-          <ProdeButton
-            aria-label={`${ctaLabel} para ${match.home.name} contra ${match.away.name}`}
-            className="min-w-44 px-4 py-2 text-xs sm:min-w-40"
-            onClick={() => setIsSaved(true)}
-            variant={isSaved ? "ink" : "primary"}
-          >
-            {isSaved ? (
-              <Check aria-hidden="true" className="size-4" />
-            ) : (
-              <Save aria-hidden="true" className="size-4" />
-            )}
-            {ctaLabel}
-          </ProdeButton>
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              aria-label={
+                isSaved ? "Predicción guardada" : "Guardar predicción rápida"
+              }
+              className={cn(
+                "prode-frame prode-pressable flex size-12 items-center justify-center bg-prode-surface text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper",
+                isSaved && "prode-hard-shadow bg-prode-black text-prode-yellow",
+              )}
+              onClick={() => setIsSaved(true)}
+              type="button"
+            >
+              {isSaved ? (
+                <Check aria-hidden="true" className="size-5" />
+              ) : (
+                <Save aria-hidden="true" className="size-5" />
+              )}
+            </button>
+
+            <Link
+              className="prode-frame prode-hard-shadow prode-pressable inline-flex min-h-12 items-center justify-center bg-prode-yellow px-4 py-3 font-technical text-xs font-bold uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
+              href={`/partidos/${match.id}`}
+            >
+              Ver detalles
+            </Link>
+          </div>
         </div>
       </footer>
     </motion.article>

@@ -8,6 +8,7 @@ type ScoreStepperProps = {
   disabled?: boolean;
   label: string;
   onChange: (value: number) => void;
+  size?: "default" | "large";
   value: number;
 };
 
@@ -15,6 +16,7 @@ export function ScoreStepper({
   disabled,
   label,
   onChange,
+  size = "default",
   value,
 }: ScoreStepperProps) {
   const decrement = () => onChange(Math.max(0, value - 1));
@@ -22,13 +24,21 @@ export function ScoreStepper({
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div
+      <input
         aria-label={`${label}: ${value} goles`}
-        className="prode-frame flex size-20 items-center justify-center bg-prode-surface font-display text-5xl leading-none text-prode-black sm:size-[5.5rem]"
-        role="status"
-      >
-        {value}
-      </div>
+        className={cn(
+          "prode-frame bg-prode-surface text-center font-display leading-none text-prode-black outline-none focus-visible:bg-prode-yellow focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper",
+          size === "large"
+            ? "size-24 text-6xl sm:size-32 sm:text-7xl"
+            : "size-20 text-5xl sm:size-[5.5rem]",
+        )}
+        inputMode="numeric"
+        max={99}
+        min={0}
+        readOnly
+        type="number"
+        value={value}
+      />
 
       <div className="flex items-center gap-2">
         <button

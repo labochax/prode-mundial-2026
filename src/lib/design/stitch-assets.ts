@@ -260,6 +260,15 @@ export const stitchFlagAssets = {
     src: "/stitch/flags/argentina.png",
     width: 512,
   },
+  "argentina-detalle": {
+    alt: "Bandera de Argentina en estilo Stitch para detalle de partido",
+    code: "ARG",
+    height: 512,
+    id: "argentina-detalle",
+    label: "Argentina",
+    src: "/stitch/flags/argentina-detalle.png",
+    width: 512,
+  },
   brasil: {
     alt: "Bandera de Brasil en estilo Stitch",
     code: "BRA",
