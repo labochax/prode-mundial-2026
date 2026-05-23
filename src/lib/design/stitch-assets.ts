@@ -15,6 +15,12 @@ export type StitchAvatarActionAsset = StitchImageAsset & {
   label: string;
 };
 
+export type StitchFlagAsset = StitchImageAsset & {
+  code: string;
+  id: string;
+  label: string;
+};
+
 export const stitchLogoAsset = {
   alt: "Logo de Prode 2026",
   height: 512,
@@ -234,3 +240,80 @@ export const stitchAvatarActions = [
 
 export type StitchAvatarActionId =
   (typeof stitchAvatarActions)[number]["id"];
+
+export const stitchFlagAssets = {
+  "arabia-saudita": {
+    alt: "Bandera de Arabia Saudita en estilo Stitch",
+    code: "KSA",
+    height: 512,
+    id: "arabia-saudita",
+    label: "Arabia Saudita",
+    src: "/stitch/flags/arabia-saudita.png",
+    width: 512,
+  },
+  argentina: {
+    alt: "Bandera de Argentina en estilo Stitch",
+    code: "ARG",
+    height: 512,
+    id: "argentina",
+    label: "Argentina",
+    src: "/stitch/flags/argentina.png",
+    width: 512,
+  },
+  brasil: {
+    alt: "Bandera de Brasil en estilo Stitch",
+    code: "BRA",
+    height: 512,
+    id: "brasil",
+    label: "Brasil",
+    src: "/stitch/flags/brasil.png",
+    width: 512,
+  },
+  dinamarca: {
+    alt: "Bandera de Dinamarca en estilo Stitch",
+    code: "DIN",
+    height: 512,
+    id: "dinamarca",
+    label: "Dinamarca",
+    src: "/stitch/flags/dinamarca.png",
+    width: 512,
+  },
+  francia: {
+    alt: "Bandera de Francia en estilo Stitch",
+    code: "FRA",
+    height: 512,
+    id: "francia",
+    label: "Francia",
+    src: "/stitch/flags/francia.png",
+    width: 512,
+  },
+  mexico: {
+    alt: "Bandera de México en estilo Stitch",
+    code: "MEX",
+    height: 512,
+    id: "mexico",
+    label: "México",
+    src: "/stitch/flags/mexico.png",
+    width: 512,
+  },
+  polonia: {
+    alt: "Bandera de Polonia en estilo Stitch",
+    code: "POL",
+    height: 512,
+    id: "polonia",
+    label: "Polonia",
+    src: "/stitch/flags/polonia.png",
+    width: 512,
+  },
+  serbia: {
+    alt: "Bandera de Serbia en estilo Stitch",
+    code: "SRB",
+    height: 512,
+    id: "serbia",
+    label: "Serbia",
+    src: "/stitch/flags/serbia.png",
+    width: 512,
+  },
+} as const satisfies Record<string, StitchFlagAsset>;
+
+export type StitchFlagId = keyof typeof stitchFlagAssets;
