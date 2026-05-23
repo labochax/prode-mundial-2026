@@ -58,8 +58,12 @@ export function AuthenticatedAppShell({
       </header>
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r-[3px] border-prode-black bg-prode-paper p-5 lg:flex">
-        <Link aria-label="Ir al panel" className="w-fit" href="/dashboard">
-          <ProdeCompactLogo />
+        <Link
+          aria-label="Ir a predicciones"
+          className="prode-frame prode-hard-shadow prode-pressable flex min-h-28 items-center justify-center bg-prode-surface p-3 outline-none hover:bg-[#fff7b5] focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
+          href="/dashboard"
+        >
+          <ProdeCompactLogo imageClassName="w-36 sm:w-36" />
         </Link>
 
         <PlayerIdentityBlock className="mt-7" />

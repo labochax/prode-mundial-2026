@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 import { defaultStitchAvatar } from "@/lib/design/stitch-assets";
 import { cn } from "@/lib/utils";
@@ -13,13 +14,14 @@ export function PlayerIdentityBlock({
   compact = false,
 }: PlayerIdentityBlockProps) {
   return (
-    <section
-      aria-label="Jugador actual"
+    <Link
+      aria-label="Editar jugador"
       className={cn(
-        "prode-frame bg-prode-surface text-prode-black",
+        "prode-frame prode-pressable block bg-prode-surface text-prode-black outline-none hover:bg-[#fff7b5] focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper",
         compact ? "flex items-center gap-2 p-2" : "space-y-3 p-3",
         className,
       )}
+      href="/onboarding"
     >
       <div className={cn("flex items-center", compact ? "gap-2" : "gap-3")}>
         <div
@@ -53,6 +55,6 @@ export function PlayerIdentityBlock({
           0 puntos
         </div>
       )}
-    </section>
+    </Link>
   );
 }

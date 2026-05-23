@@ -30,10 +30,13 @@ export function ProdeLogo({ className, ...props }: ProdeLogoProps) {
   );
 }
 
-type ProdeCompactLogoProps = React.ComponentProps<"div">;
+type ProdeCompactLogoProps = React.ComponentProps<"div"> & {
+  imageClassName?: string;
+};
 
 export function ProdeCompactLogo({
   className,
+  imageClassName,
   ...props
 }: ProdeCompactLogoProps) {
   return (
@@ -48,7 +51,10 @@ export function ProdeCompactLogo({
     >
       <Image
         alt={stitchLogoAsset.alt}
-        className="h-auto w-[4.5rem] shrink-0 object-contain mix-blend-multiply sm:w-20"
+        className={cn(
+          "h-auto w-[4.5rem] shrink-0 object-contain mix-blend-multiply sm:w-20",
+          imageClassName,
+        )}
         height={stitchLogoAsset.height}
         sizes="5rem"
         src={stitchLogoAsset.src}

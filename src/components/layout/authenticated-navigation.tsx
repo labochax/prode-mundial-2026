@@ -1,21 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboard, Trophy, UserRound, UserRoundPlus } from "lucide-react";
+import { ClipboardPenLine, Gift, ScrollText, Trophy } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
 const authenticatedNavItems = [
   {
-    href: "/onboarding",
-    icon: UserRoundPlus,
-    label: "Jugador",
-  },
-  {
     href: "/dashboard",
-    icon: LayoutDashboard,
-    label: "Panel",
+    icon: ClipboardPenLine,
+    label: "Predicciones",
   },
   {
     href: "/posiciones",
@@ -23,9 +18,14 @@ const authenticatedNavItems = [
     label: "Posiciones",
   },
   {
-    href: "/perfil",
-    icon: UserRound,
-    label: "Perfil",
+    href: "/reglas",
+    icon: ScrollText,
+    label: "Reglas",
+  },
+  {
+    href: "/premios",
+    icon: Gift,
+    label: "Premios",
   },
 ] as const;
 
