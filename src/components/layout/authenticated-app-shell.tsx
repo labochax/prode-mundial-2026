@@ -6,6 +6,9 @@ import { PlayerIdentityBlock } from "@/components/layout/player-identity-block";
 import { AnimatedPage } from "@/components/motion/animated-page";
 import { GridTexture } from "@/components/prode/grid-texture";
 import { ProdeCompactLogo } from "@/components/prode/prode-logo";
+import { getShellPlayerIdentity } from "@/lib/profiles/player-identity";
+import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 type AuthenticatedAppShellProps = {
@@ -17,7 +20,14 @@ type AuthenticatedAppShellProps = {
   title?: string;
 };
 
-export function AuthenticatedAppShell({
+async function getCurrentShellIdentity() {
+  const supabase = await createSupabaseServerClient();
+  const profileState = await ensureCurrentProfile(supabase);
+
+  return getShellPlayerIdentity(profileState?.profile ?? null);
+}
+
+export async function AuthenticatedAppShell({
   children,
   className,
   description,
@@ -25,6 +35,7 @@ export function AuthenticatedAppShell({
   header,
   title,
 }: AuthenticatedAppShellProps) {
+  const playerIdentity = await getCurrentShellIdentity();
   const fallbackHeader =
     title || description || eyebrow ? (
       <section className="max-w-3xl space-y-3">
@@ -52,9 +63,13 @@ export function AuthenticatedAppShell({
 
       <header className="prode-frame fixed inset-x-3 top-3 z-40 flex min-h-16 items-center justify-between gap-3 bg-prode-paper px-3 py-2 shadow-[4px_4px_0_var(--prode-black)] lg:hidden">
         <Link aria-label="Ir al panel" href="/dashboard">
-          <ProdeCompactLogo />
+          <ProdeCompactLogo priority />
         </Link>
-        <PlayerIdentityBlock className="min-w-0 max-w-[11rem]" compact />
+        <PlayerIdentityBlock
+          className="min-w-0 max-w-[13rem]"
+          compact
+          identity={playerIdentity}
+        />
       </header>
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r-[3px] border-prode-black bg-prode-paper p-5 lg:flex">
@@ -63,10 +78,10 @@ export function AuthenticatedAppShell({
           className="prode-frame prode-hard-shadow prode-pressable flex min-h-28 items-center justify-center bg-prode-surface p-3 outline-none hover:bg-[#fff7b5] focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
           href="/dashboard"
         >
-          <ProdeCompactLogo imageClassName="w-36 sm:w-36" />
+          <ProdeCompactLogo imageClassName="w-36 sm:w-36" priority />
         </Link>
 
-        <PlayerIdentityBlock className="mt-7" />
+        <PlayerIdentityBlock className="mt-7" identity={playerIdentity} />
 
         <div aria-hidden="true" className="my-5 border-t-[3px] border-prode-black" />
 

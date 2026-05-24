@@ -32,11 +32,13 @@ export function ProdeLogo({ className, ...props }: ProdeLogoProps) {
 
 type ProdeCompactLogoProps = React.ComponentProps<"div"> & {
   imageClassName?: string;
+  priority?: boolean;
 };
 
 export function ProdeCompactLogo({
   className,
   imageClassName,
+  priority = false,
   ...props
 }: ProdeCompactLogoProps) {
   return (
@@ -56,6 +58,7 @@ export function ProdeCompactLogo({
           imageClassName,
         )}
         height={stitchLogoAsset.height}
+        priority={priority}
         sizes="5rem"
         src={stitchLogoAsset.src}
         width={stitchLogoAsset.width}

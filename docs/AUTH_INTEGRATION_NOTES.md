@@ -85,6 +85,20 @@ Rutas públicas:
 
 Si una persona autenticada visita `/login`, se redirige según `profiles.onboarding_completed`.
 
+## Shell autenticado
+
+El shell autenticado lee `profiles` con el cliente Supabase server-side bajo la sesión del usuario y RLS. No usa service role.
+
+Reglas de identidad:
+
+- muestra `display_name`, luego `full_name`, luego el prefijo del email
+- muestra `prode_subgroup`, luego `school_group`, o `Grupo privado`
+- usa foto de Google si `avatar_kind = google` y existe `google_avatar_url`
+- usa avatar Stitch local si `avatar_kind = stitch` y `avatar_value` coincide con un asset local
+- si no hay coincidencia, cae al avatar Stitch por defecto
+
+`Cerrar sesión` ejecuta una Server Action con `supabase.auth.signOut()` y redirige a `/login`.
+
 ## Pendiente
 
-La próxima pasada debería validar el flujo completo con Google OAuth local y revisar los datos guardados en `profiles`.
+Todavía no hay datos reales de partidos, pronósticos ni posiciones conectados a Supabase.
