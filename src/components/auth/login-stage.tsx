@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Mail } from "lucide-react";
+import { LoaderCircle, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { GridTexture } from "@/components/prode/grid-texture";
@@ -10,10 +10,44 @@ import { ProdeButton } from "@/components/prode/prode-button";
 import { ProdeCard } from "@/components/prode/prode-card";
 import { ProdeLogo } from "@/components/prode/prode-logo";
 import { ScanlineOverlay } from "@/components/prode/scanline-overlay";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export function LoginStage() {
+type LoginStageProps = {
+  initialError?: string;
+};
+
+export function LoginStage({ initialError }: LoginStageProps) {
   const reduceMotion = useReducedMotion();
-  const [started, setStarted] = useState(false);
+  const [started, setStarted] = useState(Boolean(initialError));
+  const [authError, setAuthError] = useState<string | null>(initialError ?? null);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  async function handleGoogleLogin() {
+    setAuthError(null);
+    setIsGoogleLoading(true);
+
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+        provider: "google",
+      });
+
+      if (error) {
+        setAuthError(
+          "No se pudo iniciar sesión con Google. Revisá que el proveedor esté configurado en Supabase local.",
+        );
+        setIsGoogleLoading(false);
+      }
+    } catch {
+      setAuthError(
+        "No se pudo iniciar sesión con Google. Revisá las variables locales de Supabase.",
+      );
+      setIsGoogleLoading(false);
+    }
+  }
 
   useEffect(() => {
     function startFromKeyboard() {
@@ -24,6 +58,13 @@ export function LoginStage() {
 
     return () => window.removeEventListener("keydown", startFromKeyboard);
   }, []);
+
+  useEffect(() => {
+    if (initialError) {
+      setAuthError(initialError);
+      setStarted(true);
+    }
+  }, [initialError]);
 
   return (
     <main className="relative isolate flex min-h-svh overflow-x-hidden bg-prode-paper text-prode-black">
@@ -76,7 +117,7 @@ export function LoginStage() {
             >
               <ProdeCard className="space-y-6 p-5 sm:p-7">
                 <header className="space-y-3">
-                  <ProdeBadge>Acceso pendiente</ProdeBadge>
+                  <ProdeBadge>Acceso al Prode</ProdeBadge>
                   <div className="space-y-2">
                     <h1 className="font-display text-4xl uppercase leading-none sm:text-5xl">
                       Selección de Jugador
@@ -89,14 +130,28 @@ export function LoginStage() {
                 </header>
 
                 <div className="grid gap-3">
-                  <ProdeButton className="w-full" disabled size="large">
+                  <ProdeButton
+                    aria-label={
+                      isGoogleLoading
+                        ? "Conectando con Google"
+                        : "Continuar con Google"
+                    }
+                    className="w-full"
+                    disabled={isGoogleLoading}
+                    onClick={handleGoogleLogin}
+                    size="large"
+                  >
                     <span
                       aria-hidden="true"
                       className="prode-frame flex size-7 items-center justify-center bg-prode-surface font-technical text-sm"
                     >
-                      G
+                      {isGoogleLoading ? (
+                        <LoaderCircle className="size-4 animate-spin" />
+                      ) : (
+                        "G"
+                      )}
                     </span>
-                    Continuar con Google
+                    {isGoogleLoading ? "Conectando..." : "Continuar con Google"}
                   </ProdeButton>
                   <ProdeButton
                     className="w-full"
@@ -105,13 +160,22 @@ export function LoginStage() {
                     variant="surface"
                   >
                     <Mail aria-hidden="true" />
-                    Ingresar con email
+                    Ingresar con email · Próximamente
                   </ProdeButton>
                 </div>
 
+                {authError ? (
+                  <p
+                    className="prode-frame bg-prode-surface px-3 py-2 font-technical text-sm font-bold uppercase text-prode-black"
+                    role="alert"
+                  >
+                    {authError}
+                  </p>
+                ) : null}
+
                 <div className="space-y-3 border-t-[3px] border-prode-black pt-4 text-sm leading-6">
                   <p className="font-technical font-bold uppercase">
-                    Estas opciones son visuales por ahora.
+                    Google crea la sesión real. Email queda para una etapa futura.
                   </p>
                   <p>
                     Al continuar aceptás las reglas del Prode y el bloqueo de
