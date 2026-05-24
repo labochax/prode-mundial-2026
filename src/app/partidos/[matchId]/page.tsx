@@ -1,11 +1,21 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
+import { savePredictionAction } from "@/app/actions/predictions";
 import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
 import { MatchDetailToolbar } from "@/components/match-detail/match-detail-toolbar";
 import { MatchStatsPanel } from "@/components/match-detail/match-stats-panel";
 import { PredictionCanvas } from "@/components/match-detail/prediction-canvas";
 import { ProdeBadge } from "@/components/prode/prode-badge";
-import { getMockMatchById, getNextMockMatch } from "@/lib/mock/matches";
+import { mapSupabaseMatchToPredictionMatch } from "@/lib/matches/prediction-match";
+import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
+import {
+  getMatchWithDetailsById,
+  getNextMatchAfter,
+} from "@/lib/supabase/queries/matches";
+import { getPredictionForMatch } from "@/lib/supabase/queries/predictions";
+import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type MatchPageProps = {
   params: Promise<{ matchId: string }>;
@@ -13,19 +23,26 @@ type MatchPageProps = {
 
 export default async function MatchPage({ params }: MatchPageProps) {
   const { matchId } = await params;
-  const match = getMockMatchById(matchId);
-  const nextMatch = getNextMockMatch(matchId);
+  const supabase = await createSupabaseServerClient();
+  const current = await ensureCurrentProfile(supabase);
 
-  if (!match) {
+  if (!current) {
+    redirect("/login");
+  }
+
+  const pool = await getOrJoinDefaultPool(supabase);
+  const matchRow = await getMatchWithDetailsById(supabase, matchId);
+
+  if (!matchRow) {
     return (
       <AuthenticatedAppShell
         className="max-w-[90rem]"
         title="Partido no encontrado"
-        description="Esta pantalla usa datos locales de prueba. Más adelante se resolverá contra Supabase y Football-Data.org."
+        description="No encontramos ese partido en la base local de Supabase."
         eyebrow={`Partido ${matchId}`}
       >
         <section className="prode-frame prode-hard-shadow max-w-3xl bg-prode-surface p-6 sm:p-8">
-          <ProdeBadge variant="surface">Sin datos mock</ProdeBadge>
+          <ProdeBadge variant="surface">Sin datos locales</ProdeBadge>
           <h1 className="mt-4 font-display text-5xl uppercase leading-none">
             No encontramos ese partido
           </h1>
@@ -39,6 +56,15 @@ export default async function MatchPage({ params }: MatchPageProps) {
       </AuthenticatedAppShell>
     );
   }
+
+  const [prediction, nextMatchRow] = await Promise.all([
+    getPredictionForMatch(supabase, matchRow.id, pool.id),
+    getNextMatchAfter(supabase, matchRow.kickoff_at),
+  ]);
+  const match = mapSupabaseMatchToPredictionMatch(matchRow, prediction);
+  const nextMatch = nextMatchRow
+    ? mapSupabaseMatchToPredictionMatch(nextMatchRow, null)
+    : null;
 
   return (
     <AuthenticatedAppShell
@@ -55,6 +81,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
             nextMatchLabel={
               nextMatch ? "Siguiente partido" : "Volver al panel"
             }
+            saveAction={savePredictionAction}
           />
         </div>
 

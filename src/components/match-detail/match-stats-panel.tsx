@@ -1,10 +1,10 @@
 import { Building2, CalendarClock, Flag, MapPin, TrendingUp } from "lucide-react";
 
 import { ProdeBadge } from "@/components/prode/prode-badge";
-import type { MockMatch } from "@/lib/mock/matches";
+import type { PredictionMatch } from "@/lib/matches/prediction-match";
 
 type MatchStatsPanelProps = {
-  match: MockMatch;
+  match: PredictionMatch;
 };
 
 type BarRowProps = {
@@ -82,7 +82,7 @@ export function MatchStatsPanel({ match }: MatchStatsPanelProps) {
             <h3 className="font-technical text-xs font-bold uppercase">
               Historial directo
             </h3>
-            <ProdeBadge variant="surface">Mock</ProdeBadge>
+            <ProdeBadge variant="surface">Local</ProdeBadge>
           </div>
 
           <div className="flex h-10 border-[3px] border-prode-black bg-prode-surface">

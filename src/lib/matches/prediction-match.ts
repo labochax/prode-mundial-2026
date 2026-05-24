@@ -1,0 +1,261 @@
+import type { Database, Json } from "@/lib/supabase/database.types";
+import {
+  stitchFlagAssets,
+  type StitchFlagAsset,
+} from "@/lib/design/stitch-assets";
+
+type MatchRow = Database["public"]["Tables"]["matches"]["Row"];
+type PredictionRow = Database["public"]["Tables"]["predictions"]["Row"];
+type StadiumRow = Database["public"]["Tables"]["stadiums"]["Row"];
+type TeamRow = Database["public"]["Tables"]["teams"]["Row"];
+
+export type MatchWithRelations = MatchRow & {
+  away_team: TeamRow | null;
+  home_team: TeamRow | null;
+  stadium: StadiumRow | null;
+};
+
+export type PredictionMatchTeam = {
+  code: string;
+  detailFlag?: StitchFlagAsset;
+  flag?: StitchFlagAsset;
+  id: string;
+  name: string;
+};
+
+export type PredictionMatchDetail = {
+  directHistory: {
+    away: number;
+    draw: number;
+    home: number;
+  };
+  metadata: {
+    city: string;
+    dateTime: string;
+    groupPhase: string;
+    stadium: string;
+  };
+  timerLabel: string;
+};
+
+export type PredictionMatch = {
+  away: PredictionMatchTeam;
+  detail: PredictionMatchDetail;
+  groupLabel: string;
+  home: PredictionMatchTeam;
+  id: string;
+  initialPrediction: {
+    away: number;
+    home: number;
+  };
+  initialState: "empty" | "saved";
+  kickoffAt: string;
+  lockAt: string;
+  locked: boolean;
+  lockLabel: string;
+  tendency: {
+    away: number;
+    draw: number;
+    home: number;
+  };
+  timeLabel: string;
+};
+
+const BUENOS_AIRES_TIME_ZONE = "America/Argentina/Buenos_Aires";
+
+const defaultTendency = {
+  away: 30,
+  draw: 25,
+  home: 45,
+};
+
+const defaultDirectHistory = {
+  away: 3,
+  draw: 2,
+  home: 4,
+};
+
+function isRecord(value: Json | undefined): value is Record<string, Json | undefined> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readNumber(value: Json | undefined, fallback: number) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function readPercentBlock(
+  rawJson: Json | null,
+  key: "direct_history" | "tendency",
+  fallback: { away: number; draw: number; home: number },
+) {
+  if (!isRecord(rawJson)) {
+    return fallback;
+  }
+
+  const block = rawJson[key];
+
+  if (!isRecord(block)) {
+    return fallback;
+  }
+
+  return {
+    away: readNumber(block.away, fallback.away),
+    draw: readNumber(block.draw, fallback.draw),
+    home: readNumber(block.home, fallback.home),
+  };
+}
+
+function findFlagBySrc(src: string | null): StitchFlagAsset | undefined {
+  if (!src) {
+    return undefined;
+  }
+
+  return Object.values(stitchFlagAssets).find((asset) => asset.src === src);
+}
+
+function getTeamCode(team: TeamRow | null, fallback: string) {
+  return (team?.tla ?? team?.short_name ?? fallback).slice(0, 3).toUpperCase();
+}
+
+function mapTeam(team: TeamRow | null, fallbackName: string): PredictionMatchTeam {
+  const code = getTeamCode(team, fallbackName);
+  const flag = findFlagBySrc(team?.flag_url ?? null);
+  const detailFlag =
+    code === "ARG" ? stitchFlagAssets["argentina-detalle"] : flag;
+
+  return {
+    code,
+    detailFlag,
+    flag,
+    id: team?.id ?? fallbackName.toLowerCase(),
+    name: team?.name_es ?? fallbackName,
+  };
+}
+
+function formatDashboardTime(kickoffAt: string) {
+  const kickoff = new Date(kickoffAt);
+  const today = new Date();
+  const dayFormatter = new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit",
+    month: "short",
+    timeZone: BUENOS_AIRES_TIME_ZONE,
+    weekday: "short",
+  });
+  const timeFormatter = new Intl.DateTimeFormat("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: BUENOS_AIRES_TIME_ZONE,
+  });
+  const dateKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: BUENOS_AIRES_TIME_ZONE,
+    year: "numeric",
+  });
+
+  const kickoffKey = dateKeyFormatter.format(kickoff);
+  const todayKey = dateKeyFormatter.format(today);
+
+  if (kickoffKey === todayKey) {
+    return `Hoy ${timeFormatter.format(kickoff)}`;
+  }
+
+  return `${dayFormatter.format(kickoff)} ${timeFormatter.format(kickoff)}`;
+}
+
+function formatDetailDateTime(kickoffAt: string) {
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "long",
+    timeZone: BUENOS_AIRES_TIME_ZONE,
+    weekday: "long",
+    year: "numeric",
+  }).format(new Date(kickoffAt));
+}
+
+function getTimerLabel(lockAt: string) {
+  const diffMs = new Date(lockAt).getTime() - Date.now();
+
+  if (diffMs <= 0) {
+    return "Cerrado";
+  }
+
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) {
+    return `Cierra en ${days}d ${String(hours).padStart(2, "0")}h`;
+  }
+
+  return `Cierra en ${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+    2,
+    "0",
+  )}`;
+}
+
+function getGroupLabel(match: MatchRow) {
+  const group = match.group_code ?? "Grupo";
+  const stage = match.stage ?? "Fecha";
+
+  return `${group} - ${stage}`;
+}
+
+function getLockLabel(match: MatchRow, locked: boolean) {
+  if (locked) {
+    return "Pronóstico cerrado";
+  }
+
+  const lockMinutes = Math.max(
+    0,
+    Math.round(
+      (new Date(match.kickoff_at).getTime() - new Date(match.lock_at).getTime()) /
+        60000,
+    ),
+  );
+
+  return `Cierra ${lockMinutes} min antes`;
+}
+
+export function mapSupabaseMatchToPredictionMatch(
+  match: MatchWithRelations,
+  prediction: PredictionRow | null,
+): PredictionMatch {
+  const locked = new Date(match.lock_at).getTime() <= Date.now();
+  const tendency = readPercentBlock(match.raw_json, "tendency", defaultTendency);
+
+  return {
+    away: mapTeam(match.away_team, "Equipo B"),
+    detail: {
+      directHistory: readPercentBlock(
+        match.raw_json,
+        "direct_history",
+        defaultDirectHistory,
+      ),
+      metadata: {
+        city: match.stadium?.city ?? "Ciudad a confirmar",
+        dateTime: formatDetailDateTime(match.kickoff_at),
+        groupPhase: getGroupLabel(match),
+        stadium: match.stadium?.name ?? "Estadio a confirmar",
+      },
+      timerLabel: getTimerLabel(match.lock_at),
+    },
+    groupLabel: getGroupLabel(match),
+    home: mapTeam(match.home_team, "Equipo A"),
+    id: match.id,
+    initialPrediction: {
+      away: prediction?.predicted_away_score ?? 0,
+      home: prediction?.predicted_home_score ?? 0,
+    },
+    initialState: prediction ? "saved" : "empty",
+    kickoffAt: match.kickoff_at,
+    lockAt: match.lock_at,
+    locked,
+    lockLabel: getLockLabel(match, locked),
+    tendency,
+    timeLabel: formatDashboardTime(match.kickoff_at),
+  };
+}

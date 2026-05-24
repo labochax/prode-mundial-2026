@@ -2,10 +2,10 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { ProdeBadge } from "@/components/prode/prode-badge";
-import type { MockMatch } from "@/lib/mock/matches";
+import type { PredictionMatch } from "@/lib/matches/prediction-match";
 
 type MatchDetailToolbarProps = {
-  match: MockMatch;
+  match: PredictionMatch;
 };
 
 export function MatchDetailToolbar({ match }: MatchDetailToolbarProps) {

@@ -79,6 +79,10 @@ select is(
   (
     select count(*)::int
     from public.teams
+    where id in (
+      '81000000-0000-0000-0000-000000000001',
+      '81000000-0000-0000-0000-000000000002'
+    )
   ),
   2,
   'authenticated users can read teams'
@@ -88,6 +92,7 @@ select is(
   (
     select count(*)::int
     from public.stadiums
+    where id = '82000000-0000-0000-0000-000000000001'
   ),
   1,
   'authenticated users can read stadiums'
@@ -97,6 +102,7 @@ select is(
   (
     select count(*)::int
     from public.matches
+    where id = '83000000-0000-0000-0000-000000000001'
   ),
   1,
   'authenticated users can read matches'

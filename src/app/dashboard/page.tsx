@@ -1,24 +1,68 @@
 import { ArrowDown } from "lucide-react";
+import { redirect } from "next/navigation";
 
+import { savePredictionAction } from "@/app/actions/predictions";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { MatchPredictionCard } from "@/components/dashboard/match-prediction-card";
 import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
-import { mockDashboardMatches } from "@/lib/mock/matches";
+import { mapSupabaseMatchToPredictionMatch } from "@/lib/matches/prediction-match";
+import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
+import { getUpcomingMatchesWithDetails } from "@/lib/supabase/queries/matches";
+import { getPredictionsForMatches } from "@/lib/supabase/queries/predictions";
+import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const supabase = await createSupabaseServerClient();
+  const current = await ensureCurrentProfile(supabase);
+
+  if (!current) {
+    redirect("/login");
+  }
+
+  const pool = await getOrJoinDefaultPool(supabase);
+  const matches = await getUpcomingMatchesWithDetails(supabase);
+  const predictionsByMatchId = await getPredictionsForMatches(
+    supabase,
+    pool.id,
+    matches.map((match) => match.id),
+  );
+  const predictionMatches = matches.map((match) =>
+    mapSupabaseMatchToPredictionMatch(
+      match,
+      predictionsByMatchId.get(match.id) ?? null,
+    ),
+  );
+
   return (
     <AuthenticatedAppShell
       className="max-w-[90rem] gap-10"
       header={<DashboardHeader />}
     >
-      <section
-        aria-label="Partidos disponibles para cargar pronóstico"
-        className="grid grid-cols-1 gap-6 xl:grid-cols-2"
-      >
-        {mockDashboardMatches.map((match) => (
-          <MatchPredictionCard key={match.id} match={match} />
-        ))}
-      </section>
+      {predictionMatches.length > 0 ? (
+        <section
+          aria-label="Partidos disponibles para cargar pronóstico"
+          className="grid grid-cols-1 gap-6 xl:grid-cols-2"
+        >
+          {predictionMatches.map((match) => (
+            <MatchPredictionCard
+              key={match.id}
+              match={match}
+              saveAction={savePredictionAction}
+            />
+          ))}
+        </section>
+      ) : (
+        <section className="prode-frame prode-hard-shadow bg-prode-surface p-6 text-prode-black">
+          <h2 className="font-display text-4xl uppercase">
+            Sin partidos cargados
+          </h2>
+          <p className="mt-3 max-w-2xl font-body text-base">
+            Todavía no hay partidos disponibles en la base local. Ejecutá la
+            semilla de desarrollo antes de probar el flujo de pronósticos.
+          </p>
+        </section>
+      )}
 
       <button
         className="prode-pressable flex w-full items-center justify-center gap-4 border-y-[3px] border-prode-black bg-transparent py-4 font-display text-2xl uppercase outline-none hover:bg-[#f7f4df] focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"

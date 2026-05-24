@@ -4,24 +4,38 @@ import { Check, Save } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
+import type { SavePredictionActionState } from "@/app/actions/predictions";
 import { MatchTendencyStrip } from "@/components/dashboard/match-tendency-strip";
 import { ScoreStepper } from "@/components/dashboard/score-stepper";
-import type { MockMatch, MockTeam } from "@/lib/mock/matches";
+import type {
+  PredictionMatch,
+  PredictionMatchTeam,
+} from "@/lib/matches/prediction-match";
 import { cn } from "@/lib/utils";
 
 type MatchPredictionCardProps = {
-  match: MockMatch;
+  match: PredictionMatch;
+  saveAction: (
+    previousState: SavePredictionActionState,
+    formData: FormData,
+  ) => Promise<SavePredictionActionState>;
 };
 
 type TeamColumnProps = {
+  disabled?: boolean;
   score: number;
-  team: MockTeam;
+  team: PredictionMatchTeam;
   onScoreChange: (value: number) => void;
 };
 
-function TeamColumn({ onScoreChange, score, team }: TeamColumnProps) {
+const initialActionState = {
+  message: null,
+  status: "idle",
+} as const satisfies SavePredictionActionState;
+
+function TeamColumn({ disabled, onScoreChange, score, team }: TeamColumnProps) {
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center gap-3">
       <div className="prode-frame flex size-16 items-center justify-center overflow-hidden bg-prode-surface sm:size-20">
@@ -46,6 +60,7 @@ function TeamColumn({ onScoreChange, score, team }: TeamColumnProps) {
       </h2>
 
       <ScoreStepper
+        disabled={disabled}
         label={team.name}
         onChange={onScoreChange}
         value={score}
@@ -54,8 +69,15 @@ function TeamColumn({ onScoreChange, score, team }: TeamColumnProps) {
   );
 }
 
-export function MatchPredictionCard({ match }: MatchPredictionCardProps) {
+export function MatchPredictionCard({
+  match,
+  saveAction,
+}: MatchPredictionCardProps) {
   const reduceMotion = useReducedMotion();
+  const [actionState, formAction, isPending] = useActionState(
+    saveAction,
+    initialActionState,
+  );
   const [prediction, setPrediction] = useState(match.initialPrediction);
   const [isSaved, setIsSaved] = useState(match.initialState === "saved");
 
@@ -63,6 +85,12 @@ export function MatchPredictionCard({ match }: MatchPredictionCardProps) {
     setPrediction((current) => ({ ...current, [side]: value }));
     setIsSaved(false);
   };
+
+  useEffect(() => {
+    if (actionState.status === "success") {
+      setIsSaved(true);
+    }
+  }, [actionState.status]);
 
   return (
     <motion.article
@@ -91,6 +119,7 @@ export function MatchPredictionCard({ match }: MatchPredictionCardProps) {
 
         <div className="flex items-start justify-between gap-3 sm:gap-5">
           <TeamColumn
+            disabled={match.locked}
             onScoreChange={(value) => updateScore("home", value)}
             score={prediction.home}
             team={match.home}
@@ -103,6 +132,7 @@ export function MatchPredictionCard({ match }: MatchPredictionCardProps) {
           </div>
 
           <TeamColumn
+            disabled={match.locked}
             onScoreChange={(value) => updateScore("away", value)}
             score={prediction.away}
             team={match.away}
@@ -114,7 +144,18 @@ export function MatchPredictionCard({ match }: MatchPredictionCardProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <MatchTendencyStrip match={match} />
 
-          <div className="flex shrink-0 items-center gap-3">
+          <form action={formAction} className="flex shrink-0 items-center gap-3">
+            <input name="match_id" type="hidden" value={match.id} />
+            <input
+              name="predicted_home_score"
+              type="hidden"
+              value={prediction.home}
+            />
+            <input
+              name="predicted_away_score"
+              type="hidden"
+              value={prediction.away}
+            />
             <button
               aria-label={
                 isSaved ? "Predicción guardada" : "Guardar predicción rápida"
@@ -123,8 +164,8 @@ export function MatchPredictionCard({ match }: MatchPredictionCardProps) {
                 "prode-frame prode-pressable flex size-12 items-center justify-center bg-prode-surface text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper",
                 isSaved && "prode-hard-shadow bg-prode-black text-prode-yellow",
               )}
-              onClick={() => setIsSaved(true)}
-              type="button"
+              disabled={isPending || match.locked}
+              type="submit"
             >
               {isSaved ? (
                 <Check aria-hidden="true" className="size-5" />
@@ -136,11 +177,27 @@ export function MatchPredictionCard({ match }: MatchPredictionCardProps) {
             <Link
               className="prode-frame prode-hard-shadow prode-pressable inline-flex min-h-12 items-center justify-center bg-prode-yellow px-4 py-3 font-technical text-xs font-bold uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
               href={`/partidos/${match.id}`}
+              prefetch={false}
             >
               Ver detalles
             </Link>
-          </div>
+          </form>
         </div>
+
+        {(match.locked || actionState.message) && (
+          <p
+            className={cn(
+              "mt-3 font-technical text-[0.68rem] font-bold uppercase",
+              actionState.status === "error"
+                ? "text-red-700"
+                : "text-muted-foreground",
+            )}
+          >
+            {match.locked
+              ? "Partido cerrado: solo podés ver tu predicción."
+              : actionState.message}
+          </p>
+        )}
       </footer>
     </motion.article>
   );

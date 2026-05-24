@@ -8,6 +8,7 @@ export type QuickPickValue = "away" | "draw" | "home";
 
 type QuickPickButtonsProps = {
   awayTeamName: string;
+  disabled?: boolean;
   homeTeamName: string;
   onSelect: (value: QuickPickValue) => void;
   selected: QuickPickValue | null;
@@ -15,6 +16,7 @@ type QuickPickButtonsProps = {
 
 export function QuickPickButtons({
   awayTeamName,
+  disabled,
   homeTeamName,
   onSelect,
   selected,
@@ -53,7 +55,9 @@ export function QuickPickButtons({
               className={cn(
                 "prode-frame prode-pressable flex min-h-28 flex-col items-center justify-center gap-2 bg-prode-surface p-3 text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper",
                 isSelected && "prode-hard-shadow bg-prode-yellow",
+                disabled && "cursor-not-allowed opacity-60",
               )}
+              disabled={disabled}
               key={value}
               onClick={() => onSelect(value)}
               type="button"

@@ -1,9 +1,9 @@
 import { TrendingUp } from "lucide-react";
 
-import type { MockMatch } from "@/lib/mock/matches";
+import type { PredictionMatch } from "@/lib/matches/prediction-match";
 
 type MatchTendencyStripProps = {
-  match: MockMatch;
+  match: PredictionMatch;
 };
 
 export function MatchTendencyStrip({ match }: MatchTendencyStripProps) {

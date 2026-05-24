@@ -4,36 +4,52 @@ import { ArrowRight, Check, Save } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
+import type { SavePredictionActionState } from "@/app/actions/predictions";
 import {
   QuickPickButtons,
   type QuickPickValue,
 } from "@/components/match-detail/quick-pick-buttons";
 import { ProdeButton } from "@/components/prode/prode-button";
 import { ScoreStepper } from "@/components/dashboard/score-stepper";
-import type { MockMatch, MockTeam } from "@/lib/mock/matches";
+import type {
+  PredictionMatch,
+  PredictionMatchTeam,
+} from "@/lib/matches/prediction-match";
 import type { StitchFlagAsset } from "@/lib/design/stitch-assets";
 import { generateQuickPickScore } from "@/lib/scoring/quick-picks";
+import { cn } from "@/lib/utils";
 
 type PredictionCanvasProps = {
-  match: MockMatch;
+  match: PredictionMatch;
   nextMatchHref: string;
   nextMatchLabel: string;
+  saveAction: (
+    previousState: SavePredictionActionState,
+    formData: FormData,
+  ) => Promise<SavePredictionActionState>;
 };
 
 type TeamPredictionBlockProps = {
+  disabled?: boolean;
   label: string;
   onScoreChange: (value: number) => void;
   score: number;
-  team: MockTeam;
+  team: PredictionMatchTeam;
 };
 
-function getDisplayFlag(team: MockTeam): StitchFlagAsset | undefined {
+const initialActionState = {
+  message: null,
+  status: "idle",
+} as const satisfies SavePredictionActionState;
+
+function getDisplayFlag(team: PredictionMatchTeam): StitchFlagAsset | undefined {
   return team.detailFlag ?? team.flag;
 }
 
 function TeamPredictionBlock({
+  disabled,
   label,
   onScoreChange,
   score,
@@ -70,6 +86,7 @@ function TeamPredictionBlock({
 
       <div className="mt-6">
         <ScoreStepper
+          disabled={disabled}
           label={team.name}
           onChange={onScoreChange}
           size="large"
@@ -84,8 +101,13 @@ export function PredictionCanvas({
   match,
   nextMatchHref,
   nextMatchLabel,
+  saveAction,
 }: PredictionCanvasProps) {
   const reduceMotion = useReducedMotion();
+  const [actionState, formAction, isPending] = useActionState(
+    saveAction,
+    initialActionState,
+  );
   const [prediction, setPrediction] = useState(match.initialPrediction);
   const [quickPick, setQuickPick] = useState<QuickPickValue | null>(null);
   const [isSaved, setIsSaved] = useState(match.initialState === "saved");
@@ -100,6 +122,23 @@ export function PredictionCanvas({
     setPrediction(generateQuickPickScore(value));
     setIsSaved(false);
   };
+
+  useEffect(() => {
+    setPrediction(match.initialPrediction);
+    setQuickPick(null);
+    setIsSaved(match.initialState === "saved");
+  }, [
+    match.id,
+    match.initialPrediction.away,
+    match.initialPrediction.home,
+    match.initialState,
+  ]);
+
+  useEffect(() => {
+    if (actionState.status === "success") {
+      setIsSaved(true);
+    }
+  }, [actionState.status]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -118,6 +157,7 @@ export function PredictionCanvas({
 
         <div className="relative z-10 flex flex-col items-center justify-between gap-8 md:flex-row md:items-stretch">
           <TeamPredictionBlock
+            disabled={match.locked}
             label={match.home.code}
             onScoreChange={(value) => updateScore("home", value)}
             score={prediction.home}
@@ -141,6 +181,7 @@ export function PredictionCanvas({
           </div>
 
           <TeamPredictionBlock
+            disabled={match.locked}
             label={match.away.code}
             onScoreChange={(value) => updateScore("away", value)}
             score={prediction.away}
@@ -151,17 +192,45 @@ export function PredictionCanvas({
 
       <QuickPickButtons
         awayTeamName={match.away.name}
+        disabled={match.locked}
         homeTeamName={match.home.name}
         onSelect={selectQuickPick}
         selected={quickPick}
       />
 
-      <div className="flex flex-col gap-4 sm:flex-row">
+      {(match.locked || actionState.message) && (
+        <p
+          className={cn(
+            "prode-frame bg-prode-surface px-4 py-3 font-technical text-xs font-bold uppercase",
+            actionState.status === "error"
+              ? "text-red-700"
+              : "text-muted-foreground",
+          )}
+        >
+          {match.locked
+            ? "Este partido ya cerró. Tu predicción queda disponible para consulta."
+            : actionState.message}
+        </p>
+      )}
+
+      <form action={formAction} className="flex flex-col gap-4 sm:flex-row">
+        <input name="match_id" type="hidden" value={match.id} />
+        <input
+          name="predicted_home_score"
+          type="hidden"
+          value={prediction.home}
+        />
+        <input
+          name="predicted_away_score"
+          type="hidden"
+          value={prediction.away}
+        />
         <ProdeButton
           aria-label={`Guardar predicción para ${match.home.name} contra ${match.away.name}`}
           className="flex-1 text-base"
-          onClick={() => setIsSaved(true)}
+          disabled={isPending || match.locked}
           size="large"
+          type="submit"
           variant={isSaved ? "ink" : "primary"}
         >
           {isSaved ? (
@@ -180,7 +249,7 @@ export function PredictionCanvas({
           {nextMatchLabel}
           <ArrowRight aria-hidden="true" className="size-5" />
         </Link>
-      </div>
+      </form>
     </div>
   );
 }
