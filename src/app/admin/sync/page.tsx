@@ -1,6 +1,7 @@
 import { Trophy, Wrench } from "lucide-react";
 import { redirect } from "next/navigation";
 
+import { previewFootballDataDryRunAction } from "@/app/actions/api-sync-preview";
 import { finalizeAndScoreMatchAction } from "@/app/actions/dev-scoring";
 import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
 import { ProdeBadge } from "@/components/prode/prode-badge";
@@ -46,6 +47,12 @@ export default async function AdminSyncPage({
   const resolvedSearchParams = await searchParams;
   const successState = getSearchValue(resolvedSearchParams, "estado");
   const errorState = getSearchValue(resolvedSearchParams, "error");
+  const apiPreviewState = getSearchValue(resolvedSearchParams, "api_estado");
+  const apiPreviewError = getSearchValue(resolvedSearchParams, "api_error");
+  const apiPreviewTeams = getSearchValue(resolvedSearchParams, "api_teams");
+  const apiPreviewMatches = getSearchValue(resolvedSearchParams, "api_matches");
+  const apiPreviewText = getSearchValue(resolvedSearchParams, "api_texto");
+  const apiPreviewReset = getSearchValue(resolvedSearchParams, "api_reset");
   const scoredPredictions = getSearchValue(resolvedSearchParams, "predicciones");
   const isProduction = process.env.NODE_ENV === "production";
   const matches = isProduction ? [] : await getUpcomingMatchesWithDetails(supabase);
@@ -88,6 +95,54 @@ export default async function AdminSyncPage({
                 : `Partido puntuado. Predicciones actualizadas: ${
                     scoredPredictions ?? "0"
                   }.`}
+          </div>
+        )}
+      </ProdeCard>
+
+      <ProdeCard className="p-5 sm:p-6">
+        <div className="flex flex-col gap-4 border-b-[3px] border-prode-black pb-5 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <ProdeBadge variant="surface">Vista previa API</ProdeBadge>
+            <h2 className="mt-4 font-display text-4xl uppercase leading-none sm:text-5xl">
+              Probar Football-Data
+            </h2>
+            <p className="mt-3 max-w-3xl font-body text-base">
+              Ejecuta una lectura local de prueba, mapea candidatos y no escribe
+              datos en Supabase.
+            </p>
+          </div>
+
+          <form action={previewFootballDataDryRunAction}>
+            <button
+              className="prode-frame prode-hard-shadow prode-pressable inline-flex min-h-14 items-center justify-center bg-prode-yellow px-4 py-3 font-technical text-xs font-bold uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper disabled:pointer-events-none disabled:opacity-50"
+              disabled={isProduction}
+              type="submit"
+            >
+              Probar Football-Data
+            </button>
+          </form>
+        </div>
+
+        {(apiPreviewState || apiPreviewError || isProduction) && (
+          <div
+            className={cn(
+              "prode-frame mt-5 px-4 py-3 font-technical text-xs font-bold uppercase",
+              apiPreviewError || isProduction
+                ? "bg-[#ffe2d8] text-red-800"
+                : "bg-prode-yellow text-prode-black",
+            )}
+          >
+            {isProduction
+              ? "La vista previa API está desactivada en producción."
+              : apiPreviewError
+                ? apiPreviewError
+                : `Sin escrituras DB. Equipos: ${apiPreviewTeams ?? "0"} / Partidos: ${
+                    apiPreviewMatches ?? "0"
+                  }. ${apiPreviewText ?? ""} ${
+                    apiPreviewReset
+                      ? `Reset de cuota en ${apiPreviewReset}s.`
+                      : ""
+                  }`}
           </div>
         )}
       </ProdeCard>

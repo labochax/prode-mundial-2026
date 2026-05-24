@@ -479,3 +479,15 @@ Evolucion propuesta:
 ## Proximo Paso Recomendado
 
 Implementar Phase A y B: crear clientes server-only en modo dry-run, validadores de env y mappers puros con tests. No escribir a Supabase ni tocar UI hasta confirmar payloads reales y decision de migracion para statuses de Football-Data.
+
+## Nota De Implementacion Phase A/B
+
+Se agregaron los primeros bloques seguros de integracion:
+
+- Helpers server-only para leer `FOOTBALL_DATA_API_TOKEN` y `THESPORTSDB_API_KEY`.
+- Cliente server-only de Football-Data con header `X-Auth-Token`, errores controlados y lectura de headers de rate limit.
+- Cliente server-only de TheSportsDB con key local default `123`.
+- Mappers puros para convertir payloads externos en candidatos DB-shaped, sin upserts.
+- Vista previa local en `/admin/sync` mediante `Probar Football-Data`.
+
+La vista previa no escribe en Supabase. Los tokens permanecen en contexto servidor y no se importan en componentes client.
