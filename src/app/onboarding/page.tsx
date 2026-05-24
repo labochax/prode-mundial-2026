@@ -1,9 +1,27 @@
-import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
-import { AvatarPicker } from "@/components/onboarding/avatar-picker";
-import { ProfileFormSection } from "@/components/onboarding/profile-form-section";
-import { ProdeBadge } from "@/components/prode/prode-badge";
+import { redirect } from "next/navigation";
 
-export default function OnboardingPage() {
+import { completeOnboardingProfileAction } from "@/app/actions/profile";
+import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
+import { ProfileEditor } from "@/components/onboarding/profile-editor";
+import { ProdeBadge } from "@/components/prode/prode-badge";
+import { getProfileFormValues } from "@/lib/profiles/profile-form";
+import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export default async function OnboardingPage() {
+  const supabase = await createSupabaseServerClient();
+  const profileState = await ensureCurrentProfile(supabase);
+
+  if (!profileState) {
+    redirect("/login");
+  }
+
+  if (profileState.profile.onboarding_completed) {
+    redirect("/dashboard");
+  }
+
+  const initialValues = getProfileFormValues(profileState.profile);
+
   return (
     <AuthenticatedAppShell
       header={
@@ -21,10 +39,11 @@ export default function OnboardingPage() {
         </section>
       }
     >
-      <div className="grid gap-6 xl:grid-cols-[minmax(18rem,0.84fr)_minmax(32rem,1.2fr)]">
-        <AvatarPicker />
-        <ProfileFormSection />
-      </div>
+      <ProfileEditor
+        action={completeOnboardingProfileAction}
+        initialValues={initialValues}
+        submitLabel="Listo para jugar"
+      />
     </AuthenticatedAppShell>
   );
 }

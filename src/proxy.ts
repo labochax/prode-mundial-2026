@@ -96,6 +96,19 @@ export async function proxy(request: NextRequest) {
     return redirectToLogin(request, response);
   }
 
+  if (
+    isProtectedRoute(pathname) &&
+    isAuthenticated &&
+    user &&
+    pathname !== "/onboarding"
+  ) {
+    const landingPath = await getAuthenticatedLandingPath(supabase, user.id);
+
+    if (landingPath === "/onboarding") {
+      return redirectWithCookies(request, response, landingPath);
+    }
+  }
+
   return response;
 }
 
