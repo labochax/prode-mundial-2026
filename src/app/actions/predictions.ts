@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
-import { getOrJoinDefaultPoolWithMembership } from "@/lib/supabase/queries/pools";
+import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type SavePredictionActionState = {
@@ -138,29 +138,16 @@ export async function savePredictionAction(
   }
 
   try {
-    const { membershipStatus, pool } =
-      await getOrJoinDefaultPoolWithMembership(supabase);
+    const pool = await getOrJoinDefaultPool(supabase);
     const { data: match, error: matchError } = await supabase
       .from("matches")
       .select("id,lock_at")
       .eq("id", parsed.data.match_id)
       .maybeSingle();
 
-    logPredictionDebug("attempt", {
-      matchId: parsed.data.match_id,
-      membershipStatus,
-      poolId: pool.id,
-      predictedAwayScore: parsed.data.predicted_away_score,
-      predictedHomeScore: parsed.data.predicted_home_score,
-      userId: current.user.id,
-    });
-
     if (matchError) {
       logPredictionDebug("match-read-error", {
         ...getErrorDetails(matchError),
-        matchId: parsed.data.match_id,
-        poolId: pool.id,
-        userId: current.user.id,
       });
 
       return getPredictionErrorState(matchError);
@@ -192,9 +179,6 @@ export async function savePredictionAction(
     if (existingPredictionError) {
       logPredictionDebug("existing-read-error", {
         ...getErrorDetails(existingPredictionError),
-        matchId: parsed.data.match_id,
-        poolId: pool.id,
-        userId: current.user.id,
       });
 
       return getPredictionErrorState(existingPredictionError);
@@ -220,10 +204,7 @@ export async function savePredictionAction(
     if (error) {
       logPredictionDebug("write-error", {
         ...getErrorDetails(error),
-        matchId: parsed.data.match_id,
         mode: existingPrediction ? "update" : "insert",
-        poolId: pool.id,
-        userId: current.user.id,
       });
 
       if (!existingPrediction && error.code === "23505") {
@@ -246,9 +227,6 @@ export async function savePredictionAction(
 
         logPredictionDebug("race-update-error", {
           ...getErrorDetails(retryError),
-          matchId: parsed.data.match_id,
-          poolId: pool.id,
-          userId: current.user.id,
         });
 
         return getPredictionErrorState(retryError);
@@ -256,13 +234,6 @@ export async function savePredictionAction(
 
       return getPredictionErrorState(error);
     }
-
-    logPredictionDebug("success", {
-      matchId: parsed.data.match_id,
-      mode: existingPrediction ? "update" : "insert",
-      poolId: pool.id,
-      userId: current.user.id,
-    });
 
     revalidatePath("/dashboard");
     revalidatePath(`/partidos/${parsed.data.match_id}`);
@@ -274,8 +245,6 @@ export async function savePredictionAction(
   } catch (error) {
     logPredictionDebug("unexpected-error", {
       ...getErrorDetails(error),
-      matchId: parsed.data.match_id,
-      userId: current.user.id,
     });
 
     return getPredictionErrorState(error);

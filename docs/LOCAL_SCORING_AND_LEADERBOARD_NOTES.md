@@ -25,6 +25,14 @@ Por ahora `Global` y `Amigos` muestran el mismo pool local. La separación real 
 
 La acción usa el cliente admin server-only porque los usuarios normales no tienen permisos para actualizar resultados. No se importa service role en componentes client.
 
+El sandbox está desactivado en producción. Antes de desplegar una operación real,
+`/admin/sync` debe reemplazarse por un flujo con autorización admin explícita,
+auditoría y controles de sincronización.
+
+Los logs de guardado de predicciones se mantienen reducidos: no se registran
+IDs de usuario, IDs de pool, IDs de partido ni marcadores en guardados exitosos.
+Solo se conservan errores de desarrollo con detalles técnicos no secretos.
+
 ## Cómo Probar
 
 1. Iniciar sesión con Google.
@@ -41,4 +49,5 @@ La acción usa el cliente admin server-only porque los usuarios normales no tien
 - No hay fixtures oficiales.
 - No hay permisos admin productivos.
 - `/admin/sync` está desactivado en producción.
+- No hay integración con TheSportsDB.
 - Las celdas de últimos resultados y tendencia todavía son derivadas mínimas porque `get_pool_leaderboard` devuelve totales, no historial por partido.
