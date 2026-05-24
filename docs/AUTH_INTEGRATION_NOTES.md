@@ -16,7 +16,36 @@ El botón `Continuar con Google` llama a Supabase Auth con provider `google` y r
 http://localhost:3000/auth/callback
 ```
 
-Para que el OAuth real funcione, todavía falta configurar el provider Google en Supabase local y en Google Cloud con ese callback permitido. Si el provider no está listo, la UI muestra un error controlado en español o Supabase devuelve el fallo del proveedor.
+Para que el OAuth real funcione en local, Google Cloud debe permitir:
+
+Authorized redirect URI principal:
+
+```text
+http://127.0.0.1:54321/auth/v1/callback
+```
+
+Redirect URI adicional opcional:
+
+```text
+http://localhost:54321/auth/v1/callback
+```
+
+Authorized JavaScript origins:
+
+```text
+http://localhost:3000
+http://127.0.0.1:3000
+http://127.0.0.1:54321
+```
+
+El archivo local `.env` debe existir para Supabase CLI y contener:
+
+```text
+SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=
+SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET=
+```
+
+`.env` y `.env.local` no deben commitearse. Si el provider no está listo, la UI muestra un error controlado en español o Supabase devuelve el fallo del proveedor.
 
 ## Callback y bootstrap de perfil
 
@@ -37,7 +66,7 @@ Redirección:
 
 ## Protección de rutas
 
-`src/middleware.ts` refresca sesión con `@supabase/ssr` y protege:
+`src/proxy.ts` refresca sesión con `@supabase/ssr` y protege:
 
 - `/admin/*`
 - `/dashboard`
@@ -56,8 +85,6 @@ Rutas públicas:
 
 Si una persona autenticada visita `/login`, se redirige según `profiles.onboarding_completed`.
 
-Nota técnica: Next.js 16 documenta `proxy.ts` como reemplazo de `middleware.ts`. Esta implementación usa `middleware.ts` porque la tarea pidió ese archivo explícitamente; puede renombrarse a `proxy.ts` más adelante.
-
 ## Pendiente
 
-La persistencia de formularios de `/onboarding` y `/perfil` queda diferida. La próxima pasada debería guardar campos de perfil mediante Server Actions o Route Handlers usando el cliente server-side bajo RLS del usuario autenticado.
+La próxima pasada debería validar el flujo completo con Google OAuth local y revisar los datos guardados en `profiles`.
