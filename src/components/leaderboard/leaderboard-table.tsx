@@ -5,12 +5,12 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { LeaderboardRow } from "@/components/leaderboard/leaderboard-row";
 import { prodeButtonVariants } from "@/components/prode/prode-button";
-import type { RankedMockLeaderboardPlayer } from "@/lib/mock/leaderboard";
+import type { LeaderboardPlayer } from "@/lib/leaderboard/leaderboard-types";
 import { cn } from "@/lib/utils";
 
 type LeaderboardTableProps = {
   onLoadMore: () => void;
-  players: RankedMockLeaderboardPlayer[];
+  players: LeaderboardPlayer[];
   visibleCount: number;
 };
 

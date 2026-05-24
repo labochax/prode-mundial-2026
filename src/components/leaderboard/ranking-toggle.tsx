@@ -2,7 +2,7 @@
 
 import { Globe2, UsersRound } from "lucide-react";
 
-import type { LeaderboardMode } from "@/lib/mock/leaderboard";
+import type { LeaderboardMode } from "@/lib/leaderboard/leaderboard-types";
 import { cn } from "@/lib/utils";
 
 type RankingToggleProps = {

@@ -5,13 +5,13 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 
 import type {
+  LeaderboardPlayer,
   LeaderboardResultMarker,
-  RankedMockLeaderboardPlayer,
-} from "@/lib/mock/leaderboard";
+} from "@/lib/leaderboard/leaderboard-types";
 import { cn } from "@/lib/utils";
 
 type LeaderboardRowProps = {
-  player: RankedMockLeaderboardPlayer;
+  player: LeaderboardPlayer;
   reduceMotion: boolean;
 };
 
@@ -57,7 +57,7 @@ function ResultMarker({
 function TrendIndicator({
   direction,
   value,
-}: RankedMockLeaderboardPlayer["trend"]) {
+}: LeaderboardPlayer["trend"]) {
   if (direction === "same") {
     return (
       <span className="inline-flex items-center justify-center gap-1 font-technical text-sm font-black text-prode-black">
@@ -120,17 +120,30 @@ export function LeaderboardRow({ player, reduceMotion }: LeaderboardRowProps) {
             player.isCurrentPlayer && "bg-prode-surface",
           )}
         >
-          <Image
-            alt={player.avatar.alt}
-            className={cn(
-              "size-full object-cover",
-              !player.isCurrentPlayer && "grayscale",
-            )}
-            height={player.avatar.height}
-            sizes="3.5rem"
-            src={player.avatar.src}
-            width={player.avatar.width}
-          />
+          {player.avatar.kind === "google" ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt={player.avatar.alt}
+              className={cn(
+                "size-full object-cover",
+                !player.isCurrentPlayer && "grayscale",
+              )}
+              referrerPolicy="no-referrer"
+              src={player.avatar.src}
+            />
+          ) : (
+            <Image
+              alt={player.avatar.alt}
+              className={cn(
+                "size-full object-cover",
+                !player.isCurrentPlayer && "grayscale",
+              )}
+              height={player.avatar.height}
+              sizes="3.5rem"
+              src={player.avatar.src}
+              width={player.avatar.width}
+            />
+          )}
         </div>
 
         <div className="min-w-0">

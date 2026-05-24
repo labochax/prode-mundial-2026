@@ -1,24 +1,30 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { LeaderboardHeader } from "@/components/leaderboard/leaderboard-header";
 import { LeaderboardTable } from "@/components/leaderboard/leaderboard-table";
 import { ProdeBadge } from "@/components/prode/prode-badge";
-import {
-  getRankedMockLeaderboard,
-  type LeaderboardMode,
-} from "@/lib/mock/leaderboard";
+import type {
+  LeaderboardMode,
+  LeaderboardPlayer,
+} from "@/lib/leaderboard/leaderboard-types";
 
 const initialVisibleCount = 8;
 const loadMoreStep = 4;
 
-export function LeaderboardView() {
+type LeaderboardViewProps = {
+  players: LeaderboardPlayer[];
+};
+
+export function LeaderboardView({ players }: LeaderboardViewProps) {
   const [mode, setMode] = useState<LeaderboardMode>("global");
   const [visibleCount, setVisibleCount] = useState(initialVisibleCount);
 
-  const rankedPlayers = useMemo(() => getRankedMockLeaderboard(mode), [mode]);
-  const currentPlayer = rankedPlayers.find((player) => player.isCurrentPlayer);
+  const currentPlayer = players.find((player) => player.isCurrentPlayer);
+  const hasScoredPredictions = players.some(
+    (player) => player.predictedMatchesCount > 0,
+  );
 
   const changeMode = (nextMode: LeaderboardMode) => {
     setMode(nextMode);
@@ -31,7 +37,7 @@ export function LeaderboardView() {
         currentRank={currentPlayer?.rank}
         mode={mode}
         onModeChange={changeMode}
-        totalPlayers={rankedPlayers.length}
+        totalPlayers={players.length}
       />
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -55,20 +61,31 @@ export function LeaderboardView() {
         </div>
       </section>
 
-      <LeaderboardTable
-        onLoadMore={() =>
-          setVisibleCount((current) =>
-            Math.min(current + loadMoreStep, rankedPlayers.length),
-          )
-        }
-        players={rankedPlayers}
-        visibleCount={visibleCount}
-      />
+      {hasScoredPredictions ? (
+        <LeaderboardTable
+          onLoadMore={() =>
+            setVisibleCount((current) =>
+              Math.min(current + loadMoreStep, players.length),
+            )
+          }
+          players={players}
+          visibleCount={visibleCount}
+        />
+      ) : (
+        <section className="prode-frame prode-hard-shadow bg-prode-surface p-6 text-prode-black">
+          <ProdeBadge variant="primary">Sin puntos</ProdeBadge>
+          <h2 className="mt-4 font-display text-4xl uppercase leading-none sm:text-5xl">
+            Todavía no hay puntos
+          </h2>
+          <p className="mt-3 max-w-2xl font-body text-base">
+            Cargá predicciones y simulá resultados para ver la tabla.
+          </p>
+        </section>
+      )}
 
       <p className="max-w-3xl font-technical text-xs font-bold uppercase text-muted-foreground">
-        Datos locales de prueba. El ranking real saldrá de Supabase cuando estén
-        conectados resultados oficiales, bloqueos por partido y cálculo de
-        puntaje.
+        Datos locales de Supabase. En este MVP local, Global y Amigos usan el
+        mismo pool de prueba hasta implementar grupos reales.
       </p>
     </div>
   );

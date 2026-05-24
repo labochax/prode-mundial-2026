@@ -2,7 +2,7 @@
 
 import { ProdeBadge } from "@/components/prode/prode-badge";
 import { RankingToggle } from "@/components/leaderboard/ranking-toggle";
-import type { LeaderboardMode } from "@/lib/mock/leaderboard";
+import type { LeaderboardMode } from "@/lib/leaderboard/leaderboard-types";
 
 type LeaderboardHeaderProps = {
   currentRank?: number;
@@ -20,7 +20,7 @@ export function LeaderboardHeader({
   return (
     <header className="flex flex-col gap-6 border-b-[6px] border-prode-black pb-5 lg:flex-row lg:items-end lg:justify-between">
       <div className="max-w-3xl">
-        <ProdeBadge variant="surface">Ranking mock</ProdeBadge>
+        <ProdeBadge variant="surface">Ranking local</ProdeBadge>
         <h1 className="mt-4 font-display text-5xl uppercase leading-none text-prode-black sm:text-6xl lg:text-7xl">
           Tabla de
           <br />
