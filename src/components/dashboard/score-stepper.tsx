@@ -27,7 +27,7 @@ export function ScoreStepper({
       <input
         aria-label={`${label}: ${value} goles`}
         className={cn(
-          "prode-frame bg-prode-surface text-center font-display leading-none text-prode-black outline-none focus-visible:bg-prode-yellow focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper",
+          "prode-frame bg-prode-surface px-0 text-center font-display leading-none text-prode-black outline-none tabular-nums focus-visible:bg-prode-yellow focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
           size === "large"
             ? "size-24 text-6xl sm:size-32 sm:text-7xl"
             : "size-20 text-5xl sm:size-[5.5rem]",
@@ -36,7 +36,7 @@ export function ScoreStepper({
         max={99}
         min={0}
         readOnly
-        type="number"
+        type="text"
         value={value}
       />
 

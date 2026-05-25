@@ -21,6 +21,8 @@ type MatchPredictionCardProps = {
     previousState: SavePredictionActionState,
     formData: FormData,
   ) => Promise<SavePredictionActionState>;
+  stageHeading: string;
+  stageMarker: string;
 };
 
 type TeamColumnProps = {
@@ -79,6 +81,8 @@ function TeamColumn({ disabled, onScoreChange, score, team }: TeamColumnProps) {
 export function MatchPredictionCard({
   match,
   saveAction,
+  stageHeading,
+  stageMarker,
 }: MatchPredictionCardProps) {
   const reduceMotion = useReducedMotion();
   const [actionState, formAction, isPending] = useActionState(
@@ -107,38 +111,42 @@ export function MatchPredictionCard({
     >
       <div
         className={cn(
-          "prode-frame absolute right-0 top-0 z-10 border-r-0 border-t-0 px-3 py-1 font-technical text-xs font-bold uppercase",
+          "prode-frame absolute right-0 top-0 z-10 max-w-40 border-r-0 border-t-0 px-4 py-2 text-center font-technical text-sm font-black uppercase leading-tight sm:text-base",
           match.timeLabel.startsWith("Hoy") ? "bg-prode-yellow" : "bg-white",
         )}
       >
         {match.timeLabel}
       </div>
 
-      <div className="flex flex-1 flex-col justify-center gap-5 px-4 pb-5 pt-12 sm:px-6">
-        <div className="flex items-center justify-between gap-3">
-          <p className="font-technical text-xs font-bold uppercase text-muted-foreground">
-            {match.groupLabel}
-          </p>
-          <div className="flex flex-wrap justify-end gap-2">
-            <span
-              className={cn(
-                "prode-frame px-2 py-1 font-technical text-[0.68rem] font-bold uppercase",
-                statusClassName[match.status.tone],
-              )}
-            >
-              {[match.status.label, match.status.minuteLabel]
-                .filter(Boolean)
-                .join(" ")}
-            </span>
-            <span className="font-technical text-[0.68rem] font-bold uppercase text-muted-foreground">
-              {match.lockLabel}
-            </span>
-          </div>
-        </div>
+      <div
+        aria-label={`${stageHeading}: ${stageMarker}`}
+        className="prode-frame absolute left-0 top-0 z-10 flex min-h-16 min-w-16 items-center justify-center border-l-0 border-t-0 bg-prode-yellow px-4 py-2"
+      >
+        <span className="font-display text-4xl uppercase leading-none sm:text-5xl">
+          {stageMarker}
+        </span>
+      </div>
 
-        {match.status.scoreLabel && (
-          <div className="prode-frame mx-auto w-fit bg-[#f7f4df] px-3 py-1 font-technical text-xs font-black uppercase">
-            {match.status.scoreLabel}
+      <div className="flex flex-1 flex-col justify-center gap-5 px-4 pb-5 pt-20 sm:px-6">
+        {(match.status.tone !== "scheduled" || match.status.scoreLabel) && (
+          <div className="flex min-h-8 items-center justify-center gap-2">
+            {match.status.tone !== "scheduled" && (
+              <span
+                className={cn(
+                  "prode-frame px-3 py-1 font-technical text-xs font-bold uppercase",
+                  statusClassName[match.status.tone],
+                )}
+              >
+                {[match.status.label, match.status.minuteLabel]
+                  .filter(Boolean)
+                  .join(" ")}
+              </span>
+            )}
+            {match.status.scoreLabel && (
+              <span className="prode-frame bg-[#f7f4df] px-3 py-1 font-technical text-xs font-black uppercase">
+                {match.status.scoreLabel}
+              </span>
+            )}
           </div>
         )}
 
