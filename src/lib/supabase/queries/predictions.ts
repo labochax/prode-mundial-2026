@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 
 type SupabaseDatabaseClient = SupabaseClient<Database>;
-type PredictionRow = Database["public"]["Tables"]["predictions"]["Row"];
+export type PredictionRow = Database["public"]["Tables"]["predictions"]["Row"];
 
 export async function getPredictionForMatch(
   client: SupabaseDatabaseClient,

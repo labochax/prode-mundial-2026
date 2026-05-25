@@ -2,64 +2,32 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { saveTournamentPredictionAction } from "@/app/actions/tournament-predictions";
 import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
 import { ProdeBadge } from "@/components/prode/prode-badge";
 import { InteractiveKnockoutBracket } from "@/components/tournament/interactive-knockout-bracket";
-import type { MatchWithRelations } from "@/lib/matches/prediction-match";
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
 import { getActiveUpcomingMatchesWithDetails } from "@/lib/supabase/queries/matches";
 import { getPredictionsForMatches } from "@/lib/supabase/queries/predictions";
 import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
+import {
+  getCurrentTournamentPrediction,
+  getTournamentLockAt,
+} from "@/lib/supabase/queries/tournament-predictions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { buildProjectedBracket } from "@/lib/tournament/bracket";
-import { rankThirdPlacedTeams } from "@/lib/tournament/rank-third-placed";
-import { simulateGroupTables } from "@/lib/tournament/simulate-groups";
+import {
+  buildTournamentProjection,
+  isGroupStageMatch,
+} from "@/lib/tournament/projection";
+import { getSelectionsFromSavedTournamentPrediction } from "@/lib/tournament/tournament-prediction-payload";
 import type {
   ProjectedBracket,
   RankedThirdPlacedTeam,
-  TournamentGroupMatch,
   TournamentGroupSimulation,
   TournamentStandingRow,
-  TournamentTeam,
 } from "@/lib/tournament/types";
+import type { KnockoutSelectionMap } from "@/lib/tournament/knockout-selection";
 import { cn } from "@/lib/utils";
-
-function isGroupStageMatch(match: MatchWithRelations) {
-  return (match.stage ?? "").toUpperCase().includes("GROUP");
-}
-
-function mapTeam(
-  team: MatchWithRelations["home_team"],
-  fallbackId: string,
-): TournamentTeam {
-  return {
-    code: team?.tla ?? team?.short_name ?? null,
-    id: team?.id ?? fallbackId,
-    name: team?.name_es ?? team?.name_en ?? "Equipo a confirmar",
-  };
-}
-
-function getGroupStagePredictionMatches(
-  matches: MatchWithRelations[],
-  predictionsByMatchId: Awaited<ReturnType<typeof getPredictionsForMatches>>,
-): TournamentGroupMatch[] {
-  return matches.filter(isGroupStageMatch).map((match) => {
-    const prediction = predictionsByMatchId.get(match.id) ?? null;
-
-    return {
-      awayTeam: mapTeam(match.away_team, `${match.id}-away`),
-      groupCode: match.group_code ?? "GROUP",
-      homeTeam: mapTeam(match.home_team, `${match.id}-home`),
-      id: match.id,
-      prediction: prediction
-        ? {
-            awayScore: prediction.predicted_away_score,
-            homeScore: prediction.predicted_home_score,
-          }
-        : null,
-    };
-  });
-}
 
 function StatHeader() {
   return (
@@ -214,7 +182,23 @@ function BestThirdRow({ row }: { row: RankedThirdPlacedTeam }) {
   );
 }
 
-function ProjectedBracketSection({ bracket }: { bracket: ProjectedBracket }) {
+type ProjectedBracketSectionProps = {
+  bracket: ProjectedBracket;
+  initialSaveState: "locked" | "saved" | "unsaved";
+  initialSelections: KnockoutSelectionMap;
+  isLocked: boolean;
+  lockedAt: string | null;
+  savedAt: string | null;
+};
+
+function ProjectedBracketSection({
+  bracket,
+  initialSaveState,
+  initialSelections,
+  isLocked,
+  lockedAt,
+  savedAt,
+}: ProjectedBracketSectionProps) {
   const isComplete = bracket.status === "complete";
 
   return (
@@ -265,7 +249,15 @@ function ProjectedBracketSection({ bracket }: { bracket: ProjectedBracket }) {
         </div>
       )}
 
-      <InteractiveKnockoutBracket bracket={bracket} />
+      <InteractiveKnockoutBracket
+        bracket={bracket}
+        initialSaveState={initialSaveState}
+        initialSelections={initialSelections}
+        isLocked={isLocked}
+        lockedAt={lockedAt}
+        saveAction={saveTournamentPredictionAction}
+        savedAt={savedAt}
+      />
     </section>
   );
 }
@@ -279,6 +271,10 @@ export default async function MyWorldCupPage() {
   }
 
   const pool = await getOrJoinDefaultPool(supabase);
+  const [savedTournamentPrediction, tournamentLockAt] = await Promise.all([
+    getCurrentTournamentPrediction(supabase, pool.id),
+    getTournamentLockAt(supabase),
+  ]);
   const { matches } = await getActiveUpcomingMatchesWithDetails(supabase);
   const groupMatches = matches.filter(isGroupStageMatch);
   const predictionsByMatchId = await getPredictionsForMatches(
@@ -286,18 +282,27 @@ export default async function MyWorldCupPage() {
     pool.id,
     groupMatches.map((match) => match.id),
   );
-  const simulationMatches = getGroupStagePredictionMatches(
-    groupMatches,
+  const { groups, projectedBracket, thirdPlacedTeams } = buildTournamentProjection(
+    matches,
     predictionsByMatchId,
   );
-  const groups = simulateGroupTables(simulationMatches);
-  const thirdPlacedTeams = rankThirdPlacedTeams(groups);
-  const projectedBracket = buildProjectedBracket(groups, thirdPlacedTeams);
   const bestThirdQualifiedTeamIds = new Set(
     thirdPlacedTeams
       .filter((row) => row.isQualified)
       .map((row) => row.team.id),
   );
+  const lockedAt = tournamentLockAt ?? savedTournamentPrediction?.locked_at ?? null;
+  const isTournamentLocked = lockedAt
+    ? new Date(lockedAt).getTime() <= Date.now()
+    : false;
+  const initialSelections = getSelectionsFromSavedTournamentPrediction(
+    savedTournamentPrediction?.bracket_json,
+  );
+  const initialSaveState = isTournamentLocked
+    ? "locked"
+    : savedTournamentPrediction
+      ? "saved"
+      : "unsaved";
   const completedPredictions = groups.reduce(
     (total, group) => total + group.predictionsCompleted,
     0,
@@ -432,7 +437,14 @@ export default async function MyWorldCupPage() {
             )}
           </section>
 
-          <ProjectedBracketSection bracket={projectedBracket} />
+          <ProjectedBracketSection
+            bracket={projectedBracket}
+            initialSaveState={initialSaveState}
+            initialSelections={initialSelections}
+            isLocked={isTournamentLocked}
+            lockedAt={lockedAt}
+            savedAt={savedTournamentPrediction?.updated_at ?? null}
+          />
         </>
       )}
     </AuthenticatedAppShell>

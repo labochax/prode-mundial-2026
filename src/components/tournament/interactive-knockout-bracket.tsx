@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 
+import type { SaveTournamentPredictionActionState } from "@/app/actions/tournament-predictions";
 import { ProdeButton } from "@/components/prode/prode-button";
 import {
   buildDerivedKnockoutRounds,
@@ -18,6 +19,14 @@ import { cn } from "@/lib/utils";
 
 type InteractiveKnockoutBracketProps = {
   bracket: ProjectedBracket;
+  initialSaveState: "locked" | "saved" | "unsaved";
+  initialSelections: KnockoutSelectionMap;
+  isLocked: boolean;
+  lockedAt: string | null;
+  saveAction: (input: {
+    selections: KnockoutSelectionMap;
+  }) => Promise<SaveTournamentPredictionActionState>;
+  savedAt: string | null;
 };
 
 function TeamButton({
@@ -179,11 +188,13 @@ function RoundSection({
 }
 
 function FinalRoundSection({
+  disabled,
   final,
   onSelect,
   selections,
   thirdPlace,
 }: {
+  disabled?: boolean;
   final: DerivedKnockoutMatch[];
   onSelect: (matchupId: string, teamId: string) => void;
   selections: KnockoutSelectionMap;
@@ -201,6 +212,7 @@ function FinalRoundSection({
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {[...final, ...thirdPlace].map((matchup) => (
             <SelectableMatchCard
+              disabled={disabled}
               key={matchup.id}
               matchup={matchup}
               onSelect={onSelect}
@@ -257,15 +269,43 @@ function ChampionSummaryItem({ slot }: { slot: ProjectedBracketSlot | null }) {
   );
 }
 
-function SummaryCard({ summary }: { summary: KnockoutSummary }) {
+function SummaryCard({
+  isBracketComplete,
+  isLocked,
+  isPending,
+  lockedAt,
+  onSave,
+  savedAt,
+  saveMessage,
+  saveStatus,
+  summary,
+}: {
+  isBracketComplete: boolean;
+  isLocked: boolean;
+  isPending: boolean;
+  lockedAt: string | null;
+  onSave: () => void;
+  savedAt: string | null;
+  saveMessage: string;
+  saveStatus: "dirty" | "error" | "locked" | "saved" | "unsaved";
+  summary: KnockoutSummary;
+}) {
   const bonus = getBracketBonusPreview();
+  const statusLabel = isLocked
+    ? "Predicción bloqueada"
+    : saveStatus === "saved"
+      ? "Mi Mundial guardado"
+      : saveStatus === "dirty"
+        ? "Cambios sin guardar"
+        : "No guardado todavía";
+  const canSave = !isLocked && isBracketComplete;
 
   return (
     <section className="prode-frame prode-hard-shadow bg-prode-surface p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <span className="prode-frame bg-prode-yellow px-3 py-2 font-technical text-xs font-black uppercase">
-            No guardado todavía
+            {statusLabel}
           </span>
           <h3 className="mt-4 font-display text-5xl uppercase leading-none">
             Resumen de Mi Mundial
@@ -296,8 +336,49 @@ function SummaryCard({ summary }: { summary: KnockoutSummary }) {
         ))}
       </div>
 
-      <ProdeButton className="mt-5" disabled>
-        Guardar predicción próximamente
+      <div className="mt-5 border-t-[3px] border-prode-black pt-5">
+        <p
+          className={cn(
+            "mb-3 font-technical text-xs font-black uppercase",
+            saveStatus === "error" ? "text-red-700" : "text-muted-foreground",
+          )}
+        >
+          {saveMessage}
+        </p>
+        {lockedAt && (
+          <p className="mb-3 font-body text-sm text-muted-foreground">
+            Cierre de Mi Mundial:{" "}
+            {new Intl.DateTimeFormat("es-AR", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            }).format(new Date(lockedAt))}
+          </p>
+        )}
+        {savedAt && !isLocked && (
+          <p className="mb-3 font-body text-sm text-muted-foreground">
+            Último guardado:{" "}
+            {new Intl.DateTimeFormat("es-AR", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            }).format(new Date(savedAt))}
+          </p>
+        )}
+        <p className="mb-4 max-w-3xl font-body text-sm leading-6 text-muted-foreground">
+          Cuando se bloquee, las llaves de otros jugadores podrán verse desde
+          rankings/perfiles en una próxima vista.
+        </p>
+      </div>
+
+      <ProdeButton
+        className="mt-1"
+        disabled={!canSave || isPending}
+        onClick={onSave}
+      >
+        {isLocked
+          ? "Predicción bloqueada"
+          : isPending
+            ? "Guardando..."
+            : "Guardar Mi Mundial"}
       </ProdeButton>
     </section>
   );
@@ -305,17 +386,82 @@ function SummaryCard({ summary }: { summary: KnockoutSummary }) {
 
 export function InteractiveKnockoutBracket({
   bracket,
+  initialSaveState,
+  initialSelections,
+  isLocked,
+  lockedAt,
+  saveAction,
+  savedAt,
 }: InteractiveKnockoutBracketProps) {
-  const [selections, setSelections] = useState<KnockoutSelectionMap>({});
+  const [selections, setSelections] =
+    useState<KnockoutSelectionMap>(initialSelections);
+  const [isPending, startTransition] = useTransition();
+  const [saveState, setSaveState] = useState<{
+    message: string;
+    savedAt: string | null;
+    status: "dirty" | "error" | "locked" | "saved" | "unsaved";
+  }>(() => {
+    if (initialSaveState === "locked") {
+      return {
+        message: "Predicción bloqueada",
+        savedAt,
+        status: "locked",
+      };
+    }
+
+    if (initialSaveState === "saved") {
+      return {
+        message: "Mi Mundial guardado",
+        savedAt,
+        status: "saved",
+      };
+    }
+
+    return {
+      message: "Completá la llave y guardá tu predicción pre-torneo.",
+      savedAt: null,
+      status: "unsaved",
+    };
+  });
   const rounds = useMemo(
     () => buildDerivedKnockoutRounds(bracket.roundOf32, selections),
     [bracket.roundOf32, selections],
   );
+  const isInteractionLocked = isLocked || saveState.status === "locked";
   const handleSelect = (matchupId: string, teamId: string) => {
+    if (isInteractionLocked) {
+      return;
+    }
+
     setSelections((current) => ({
       ...current,
       [matchupId]: teamId,
     }));
+    setSaveState((current) =>
+      current.status !== "locked"
+        ? {
+            message: "Tenés cambios sin guardar.",
+            savedAt: current.savedAt,
+            status: "dirty",
+          }
+        : current,
+    );
+  };
+  const handleSave = () => {
+    startTransition(async () => {
+      const result = await saveAction({ selections });
+
+      setSaveState((current) => ({
+        message: result.message,
+        savedAt: result.savedAt ?? current.savedAt,
+        status:
+          result.status === "success"
+            ? "saved"
+            : result.message === "La predicción ya está bloqueada"
+              ? "locked"
+              : "error",
+      }));
+    });
   };
 
   return (
@@ -323,50 +469,71 @@ export function InteractiveKnockoutBracket({
       <div className="prode-frame prode-hard-shadow bg-prode-surface p-5">
         <div className="max-w-4xl">
           <span className="prode-frame bg-prode-yellow px-3 py-2 font-technical text-xs font-black uppercase">
-            Sin persistencia
+            Predicción guardable
           </span>
           <h2 className="mt-4 font-display text-5xl uppercase leading-none">
             Completá tu llave
           </h2>
           <p className="mt-3 font-body text-base leading-7 text-muted-foreground">
-            Elegí quién avanza en cada cruce. Esta proyección todavía no se
-            guarda: servirá como base para el bonus pre-torneo.
+            Elegí quién avanza en cada cruce y guardá tu Mi Mundial completo
+            antes del inicio del torneo.
           </p>
         </div>
       </div>
 
       <RoundSection
-        disabled={bracket.status !== "complete"}
+        disabled={isInteractionLocked || bracket.status !== "complete"}
         matches={rounds.roundOf32}
         onSelect={handleSelect}
         selections={selections}
         title="16avos"
       />
       <RoundSection
+        disabled={isInteractionLocked}
         matches={rounds.roundOf16}
         onSelect={handleSelect}
         selections={selections}
         title="Octavos"
       />
       <RoundSection
+        disabled={isInteractionLocked}
         matches={rounds.quarterfinals}
         onSelect={handleSelect}
         selections={selections}
         title="Cuartos"
       />
       <RoundSection
+        disabled={isInteractionLocked}
         matches={rounds.semifinals}
         onSelect={handleSelect}
         selections={selections}
         title="Semifinales"
       />
       <FinalRoundSection
+        disabled={isInteractionLocked}
         final={rounds.final}
         onSelect={handleSelect}
         selections={selections}
         thirdPlace={rounds.thirdPlace}
       />
-      <SummaryCard summary={rounds.summary} />
+      <SummaryCard
+        isBracketComplete={
+          Boolean(
+            rounds.summary.champion &&
+              rounds.summary.runnerUp &&
+              rounds.summary.thirdPlace &&
+              rounds.summary.fourthPlace,
+          ) && bracket.status === "complete"
+        }
+        isLocked={isInteractionLocked}
+        isPending={isPending}
+        lockedAt={lockedAt}
+        onSave={handleSave}
+        savedAt={saveState.savedAt}
+        saveMessage={saveState.message}
+        saveStatus={saveState.status}
+        summary={rounds.summary}
+      />
     </section>
   );
 }

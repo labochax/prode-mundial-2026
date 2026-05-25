@@ -518,6 +518,106 @@ export type Database = {
         }
         Relationships: []
       }
+      tournament_predictions: {
+        Row: {
+          bonus_points: number
+          bracket_json: Json
+          champion_team_id: string
+          created_at: string
+          fourth_place_team_id: string
+          id: string
+          locked_at: string
+          pool_id: string
+          quarterfinal_team_ids: string[]
+          round_of_16_team_ids: string[]
+          runner_up_team_id: string
+          scored_at: string | null
+          semifinal_team_ids: string[]
+          third_place_team_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bonus_points?: number
+          bracket_json: Json
+          champion_team_id: string
+          created_at?: string
+          fourth_place_team_id: string
+          id?: string
+          locked_at?: string
+          pool_id: string
+          quarterfinal_team_ids?: string[]
+          round_of_16_team_ids?: string[]
+          runner_up_team_id: string
+          scored_at?: string | null
+          semifinal_team_ids?: string[]
+          third_place_team_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bonus_points?: number
+          bracket_json?: Json
+          champion_team_id?: string
+          created_at?: string
+          fourth_place_team_id?: string
+          id?: string
+          locked_at?: string
+          pool_id?: string
+          quarterfinal_team_ids?: string[]
+          round_of_16_team_ids?: string[]
+          runner_up_team_id?: string
+          scored_at?: string | null
+          semifinal_team_ids?: string[]
+          third_place_team_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_predictions_champion_team_id_fkey"
+            columns: ["champion_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_predictions_fourth_place_team_id_fkey"
+            columns: ["fourth_place_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_predictions_pool_id_fkey"
+            columns: ["pool_id"]
+            isOneToOne: false
+            referencedRelation: "pools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_predictions_pool_membership_fk"
+            columns: ["pool_id", "user_id"]
+            isOneToOne: true
+            referencedRelation: "pool_memberships"
+            referencedColumns: ["pool_id", "user_id"]
+          },
+          {
+            foreignKeyName: "tournament_predictions_runner_up_team_id_fkey"
+            columns: ["runner_up_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_predictions_third_place_team_id_fkey"
+            columns: ["third_place_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -555,6 +655,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_tournament_lock_at: { Args: never; Returns: string }
       is_match_locked: { Args: { target_match_id: string }; Returns: boolean }
       is_pool_admin: {
         Args: { target_pool_id: string; target_user_id?: string }

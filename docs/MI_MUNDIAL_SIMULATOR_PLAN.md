@@ -370,3 +370,19 @@ Limitaciones intencionales:
 - el máximo de bonus de Mi Mundial es `52 puntos`.
 
 La próxima fase técnica debe alinear persistencia, bloqueo y scoring con estas reglas antes de activar puntos reales por la llave pre-torneo.
+
+## Nota de implementación Phase 4
+
+Phase 4 agrega persistencia de la llave completa en Supabase mediante `public.tournament_predictions`.
+
+Incluye:
+
+- una predicción única por `pool_id` + `user_id`;
+- guardado de selecciones completas de la llave en `bracket_json`;
+- columnas derivadas para equipos en `Octavos`, `Cuartos`, `Semifinales`, campeón, subcampeón, tercero y cuarto;
+- bloqueo en base de datos con `public.get_tournament_lock_at()`, calculado desde el primer kickoff oficial disponible;
+- RLS para lectura propia siempre, lectura de miembros del pool después del cierre y escritura propia solo antes del cierre;
+- acción server-side `saveTournamentPredictionAction`, usando cliente Supabase normal bajo RLS, sin service role;
+- UI de `/mi-mundial` con carga inicial de la llave guardada, guardado manual y estado bloqueado.
+
+La persistencia no modifica `predictions` partido a partido ni persiste tablas simuladas de grupo. El scoring de bonus sigue pendiente y debe implementarse en una fase separada alineada con `/reglas`.
