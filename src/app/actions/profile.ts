@@ -9,6 +9,11 @@ import {
   type ProfileActionState,
   profileAvatarKinds,
 } from "@/lib/profiles/profile-form";
+import {
+  normalizeOptionalProfileText,
+  normalizeProfileSubgroups,
+  normalizeProfileText,
+} from "@/lib/profiles/profile-normalization";
 import { stitchAvatarAssets } from "@/lib/design/stitch-assets";
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -16,9 +21,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 const optionalText = (maxLength = 120) =>
   z
     .string()
-    .trim()
-    .max(maxLength, `Máximo ${maxLength} caracteres.`)
-    .transform((value) => (value.length > 0 ? value : null));
+    .transform(normalizeProfileText)
+    .pipe(z.string().max(maxLength, `Máximo ${maxLength} caracteres.`))
+    .transform(normalizeOptionalProfileText);
 
 const profileFormSchema = z.object({
   age: z
@@ -36,23 +41,36 @@ const profileFormSchema = z.object({
   avatar_kind: z.enum(profileAvatarKinds, {
     error: "Elegí un tipo de avatar válido.",
   }),
-  avatar_value: z.string().trim().max(500, "El avatar seleccionado no es válido."),
+  avatar_value: z
+    .string()
+    .transform(normalizeProfileText)
+    .pipe(z.string().max(500, "El avatar seleccionado no es válido.")),
   city: optionalText(100),
   country: z
     .string()
-    .trim()
-    .min(2, "Indicá un país.")
-    .max(80, "Máximo 80 caracteres."),
+    .transform(normalizeProfileText)
+    .pipe(
+      z
+        .string()
+        .min(2, "Indicá un país.")
+        .max(80, "Máximo 80 caracteres."),
+    ),
   display_name: z
     .string()
-    .trim()
-    .min(2, "Indicá un nombre visible.")
-    .max(60, "Máximo 60 caracteres."),
+    .transform(normalizeProfileText)
+    .pipe(
+      z
+        .string()
+        .min(2, "Indicá un nombre visible.")
+        .max(60, "Máximo 60 caracteres."),
+    ),
   favorite_team: optionalText(100),
   first_name: optionalText(80),
   graduation_year_or_category: optionalText(80),
   last_name: optionalText(80),
-  prode_subgroup: optionalText(240),
+  prode_subgroup_1: optionalText(120),
+  prode_subgroup_2: optionalText(120),
+  prode_subgroup_3: optionalText(120),
   province: optionalText(100),
   school_group: optionalText(120),
 });
@@ -78,7 +96,11 @@ function getProfilePayload(formData: FormData) {
     first_name: getString(formData, "first_name"),
     graduation_year_or_category: getString(formData, "graduation_year_or_category"),
     last_name: getString(formData, "last_name"),
-    prode_subgroup: getString(formData, "prode_subgroup"),
+    prode_subgroup_1:
+      getString(formData, "prode_subgroup_1") ||
+      getString(formData, "prode_subgroup"),
+    prode_subgroup_2: getString(formData, "prode_subgroup_2"),
+    prode_subgroup_3: getString(formData, "prode_subgroup_3"),
     province: getString(formData, "province"),
     school_group: getString(formData, "school_group"),
   };
@@ -145,6 +167,12 @@ async function saveCurrentProfile(
     return getErrorState("La subida de imagen todavía no está disponible.");
   }
 
+  const prodeSubgroups = normalizeProfileSubgroups([
+    parsed.data.prode_subgroup_1 ?? "",
+    parsed.data.prode_subgroup_2 ?? "",
+    parsed.data.prode_subgroup_3 ?? "",
+  ]);
+
   const { error } = await supabase
     .from("profiles")
     .update({
@@ -161,7 +189,8 @@ async function saveCurrentProfile(
       onboarding_completed: options.completeOnboarding
         ? true
         : current.profile.onboarding_completed,
-      prode_subgroup: parsed.data.prode_subgroup,
+      prode_subgroup: prodeSubgroups[0] ?? null,
+      prode_subgroups: prodeSubgroups,
       province: parsed.data.province,
       school_group: parsed.data.school_group,
     })

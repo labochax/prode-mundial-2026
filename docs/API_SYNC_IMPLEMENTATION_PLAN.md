@@ -55,7 +55,12 @@ Fuentes revisadas:
 ### `supabase/seed.sql`
 
 - Sigue siendo util para desarrollo offline.
-- Cuando exista sync real, el seed debe quedar como fallback local/dev y no competir con filas oficiales. Sus `football_data_id` fake (`990001`, etc.) deben evitar colisionar con IDs reales o moverse a una semilla separada.
+- El seed default ahora usa un snapshot oficial de Football-Data para equipos y
+  fixtures 2026.
+- Ya no debe cargar fixtures fake/demo en el dashboard default.
+- La sync manual/live sigue siendo necesaria para cambios de horario,
+  postergaciones, estados de partido, resultados y fases eliminatorias que el
+  snapshot pueda no reflejar.
 
 ## 2. Plan De Sync Con Football-Data.org
 
@@ -504,11 +509,11 @@ Se agregó la primera sincronización manual local de fixtures:
 - `lock_at` queda a cargo del trigger existente: en inserts se envía `null` para que la base lo calcule, y en updates no se escribe `lock_at`.
 - No se modifican predicciones, no se ejecuta `score_match_predictions`, no se llama TheSportsDB y no hay cron.
 
-La semilla local sigue como fallback; el sync oficial no elimina filas locales.
-Las pantallas principales seleccionan una fuente activa: fixtures oficiales
-cuando existen, seed local solo cuando todavía no hay oficiales. Además de
-`football_data_id`, la app reconoce `raw_json.seed_note` para ocultar fixtures
-fake heredados que habían sido sembrados con IDs falsos.
+La semilla local pasó a ser un snapshot oficial de Football-Data. El sync
+oficial no elimina filas locales, pero el dashboard default ya no depende de
+fixtures fake/demo después de `npx supabase db reset`. Además de
+`football_data_id`, la app sigue reconociendo `raw_json.seed_note` para ocultar
+fixtures fake heredados que pudieran quedar en instalaciones antiguas.
 
 ## Nota De Implementacion Phase D Inicial
 

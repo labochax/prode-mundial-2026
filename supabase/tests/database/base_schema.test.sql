@@ -21,6 +21,7 @@ select has_column('public', 'profiles', 'country', 'profiles.country exists');
 select has_column('public', 'profiles', 'province', 'profiles.province exists');
 select has_column('public', 'profiles', 'city', 'profiles.city exists');
 select has_column('public', 'profiles', 'prode_subgroup', 'profiles.prode_subgroup exists');
+select has_column('public', 'profiles', 'prode_subgroups', 'profiles.prode_subgroups exists');
 select has_column('public', 'profiles', 'avatar_kind', 'profiles.avatar_kind exists');
 select has_column('public', 'profiles', 'avatar_value', 'profiles.avatar_value exists');
 select has_column('public', 'profiles', 'google_avatar_url', 'profiles.google_avatar_url exists');
@@ -89,6 +90,15 @@ select ok(
   exists (
     select 1
     from pg_constraint
+    where conname = 'profiles_prode_subgroups_max_three'
+      and conrelid = 'public.profiles'::regclass
+  ),
+  'profiles prode_subgroups max three check constraint exists'
+);
+select ok(
+  exists (
+    select 1
+    from pg_constraint
     where conname = 'pool_memberships_role_allowed'
       and conrelid = 'public.pool_memberships'::regclass
   ),
@@ -125,6 +135,26 @@ select lives_ok(
     values ('10000000-0000-0000-0000-000000000003', 'Avatar upload', 1, 'upload')
   $$,
   'profiles accepts upload avatar kind'
+);
+
+select lives_ok(
+  $$
+    update public.profiles
+    set prode_subgroups = array['Amigos', 'Familia', 'Trabajo']
+    where id = '10000000-0000-0000-0000-000000000001'
+  $$,
+  'profiles accepts up to three prode subgroups'
+);
+
+select throws_ok(
+  $$
+    update public.profiles
+    set prode_subgroups = array['Amigos', 'Familia', 'Trabajo', 'Colegio']
+    where id = '10000000-0000-0000-0000-000000000001'
+  $$,
+  '23514',
+  'new row for relation "profiles" violates check constraint "profiles_prode_subgroups_max_three"',
+  'profiles rejects more than three prode subgroups'
 );
 
 select throws_ok(

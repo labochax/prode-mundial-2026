@@ -6,6 +6,7 @@ import { ProfileEditor } from "@/components/onboarding/profile-editor";
 import { ProdeBadge } from "@/components/prode/prode-badge";
 import { getProfileFormValues } from "@/lib/profiles/profile-form";
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
+import { getProfileSuggestions } from "@/lib/supabase/queries/profile-suggestions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function OnboardingPage() {
@@ -21,6 +22,7 @@ export default async function OnboardingPage() {
   }
 
   const initialValues = getProfileFormValues(profileState.profile);
+  const profileSuggestions = await getProfileSuggestions(supabase);
 
   return (
     <AuthenticatedAppShell
@@ -42,6 +44,7 @@ export default async function OnboardingPage() {
       <ProfileEditor
         action={completeOnboardingProfileAction}
         initialValues={initialValues}
+        suggestions={profileSuggestions}
         submitLabel="Listo para jugar"
       />
     </AuthenticatedAppShell>

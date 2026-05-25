@@ -6,19 +6,21 @@
 
 ## Seed Local
 
-`supabase/seed.sql` carga datos falsos de desarrollo:
+`supabase/seed.sql` carga un snapshot oficial local de Football-Data:
 
 - Pool público: `Prode Mundial 2026` (`prode-mundial-2026`).
-- Equipos: Argentina, México, Brasil, Alemania, España, Japón, Uruguay y Francia.
-- Estadios de muestra.
-- Cuatro partidos de ejemplo con fechas futuras.
+- Equipos oficiales del Mundial 2026 disponibles en Football-Data.
+- Fixtures oficiales disponibles para la temporada 2026.
+- `football_data_id`, `stage`, `group_code`, `kickoff_at`, `status`,
+  `raw_json` y `last_synced_at`.
 
-Estos partidos no son fixtures oficiales del Mundial 2026. Son datos locales para validar el MVP visual y el flujo de pronósticos.
+El reset local ya no vuelve a los fixtures fake como Argentina vs México. Los
+datos fake/demo dejaron de ser la fuente default del dashboard.
 
-Los partidos fake del seed deben tener `football_data_id = null` y un marcador
-`raw_json.seed_note`. Las instalaciones locales antiguas pueden conservar IDs
-fake de seed; por eso la app también detecta `raw_json.seed_note` como fixture
-de prueba.
+El snapshot no requiere llamadas live durante `npx supabase db reset`. La sync
+manual desde `/admin/sync` sigue siendo útil para cambios de calendario,
+postergaciones, horarios, estados live/resultados y actualizaciones de fases
+eliminatorias.
 
 ## Dashboard
 
@@ -29,7 +31,8 @@ El panel autenticado ahora:
 - agrega al usuario al pool como `member` si todavía no pertenece;
 - carga partidos desde `public.matches` con equipos y estadio;
 - si existen fixtures oficiales de Football-Data, muestra solo esos partidos;
-- si no existen fixtures oficiales, usa los partidos fake del seed como fallback;
+- si no existen fixtures oficiales, puede usar fixtures de prueba heredados como
+  fallback de desarrollo, pero el seed default ya trae fixtures oficiales;
 - carga las predicciones propias del usuario para esos partidos;
 - guarda predicciones rápidas mediante Server Action y RLS normal.
 
@@ -44,9 +47,9 @@ El panel autenticado ahora:
 - guarda cambios de predicción mediante Server Action;
 - respeta el estado bloqueado que expone la base por `matches.lock_at`.
 
-La navegación directa a un partido fake por UUID puede seguir funcionando en
-desarrollo local, pero el dashboard no los promociona cuando ya hay fixtures
-oficiales importados.
+La navegación directa a un partido fake heredado por UUID puede seguir
+funcionando en desarrollo local, pero el dashboard no los promociona cuando ya
+hay fixtures oficiales.
 
 ## Persistencia De Predicciones
 
@@ -62,7 +65,9 @@ No se usa service role para el flujo normal de usuario. La base mantiene el bloq
 
 ## Limitaciones Actuales
 
-- La sincronización de Football-Data.org es manual/local desde `/admin/sync`.
+- El snapshot de seed puede quedar desactualizado si Football-Data cambia
+  horarios, estados o cruces eliminatorios; usar `/admin/sync` o la ruta cron
+  local para refrescar.
 - No hay assets oficiales desde TheSportsDB.
 - No hay Supabase remoto ni deploy.
 - El seed local no crea usuarios, perfiles ni predicciones reales.

@@ -1,4 +1,8 @@
 import type { Database } from "@/lib/supabase/database.types";
+import {
+  normalizeProfileSubgroups,
+  normalizeProfileText,
+} from "@/lib/profiles/profile-normalization";
 
 export const profileAvatarKinds = ["stitch", "google", "upload"] as const;
 
@@ -22,6 +26,7 @@ export type ProfileFormValues = {
   graduationYearOrCategory: string;
   lastName: string;
   prodeSubgroup: string;
+  prodeSubgroups: [string, string, string];
   province: string;
   schoolGroup: string;
 };
@@ -54,18 +59,36 @@ export const defaultProfileFormValues: ProfileFormValues = {
   graduationYearOrCategory: "",
   lastName: "",
   prodeSubgroup: "",
+  prodeSubgroups: ["", "", ""],
   province: "",
   schoolGroup: "",
 };
 
 function valueOrEmpty(value: string | number | null | undefined) {
-  return value == null ? "" : String(value);
+  return value == null ? "" : normalizeProfileText(String(value));
 }
 
 function normalizeAvatarKind(value: string | null | undefined): ProfileAvatarKind {
   return profileAvatarKinds.includes(value as ProfileAvatarKind)
     ? (value as ProfileAvatarKind)
     : "stitch";
+}
+
+function getProfileSubgroups(profile: ProfileRow): [string, string, string] {
+  const legacyPrimary = valueOrEmpty(profile.prode_subgroup);
+  const rawSubgroups =
+    Array.isArray(profile.prode_subgroups) && profile.prode_subgroups.length > 0
+      ? profile.prode_subgroups
+      : legacyPrimary
+        ? [legacyPrimary]
+        : [];
+  const normalizedSubgroups = normalizeProfileSubgroups(rawSubgroups);
+
+  return [
+    normalizedSubgroups[0] ?? "",
+    normalizedSubgroups[1] ?? "",
+    normalizedSubgroups[2] ?? "",
+  ];
 }
 
 export function getProfileFormValues(profile: ProfileRow): ProfileFormValues {
@@ -91,6 +114,7 @@ export function getProfileFormValues(profile: ProfileRow): ProfileFormValues {
     graduationYearOrCategory: valueOrEmpty(profile.graduation_year_or_category),
     lastName: valueOrEmpty(profile.last_name),
     prodeSubgroup: valueOrEmpty(profile.prode_subgroup),
+    prodeSubgroups: getProfileSubgroups(profile),
     province: valueOrEmpty(profile.province),
     schoolGroup: valueOrEmpty(profile.school_group),
   };

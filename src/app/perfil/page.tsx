@@ -9,6 +9,7 @@ import { ProdeBadge } from "@/components/prode/prode-badge";
 import { prodeButtonVariants } from "@/components/prode/prode-button";
 import { getProfileFormValues } from "@/lib/profiles/profile-form";
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
+import { getProfileSuggestions } from "@/lib/supabase/queries/profile-suggestions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ export default async function ProfilePage() {
   }
 
   const initialValues = getProfileFormValues(profileState.profile);
+  const profileSuggestions = await getProfileSuggestions(supabase);
 
   return (
     <AuthenticatedAppShell
@@ -46,6 +48,7 @@ export default async function ProfilePage() {
         formLabel="Editar mi jugador"
         initialValues={initialValues}
         savedLabel="Cambios guardados"
+        suggestions={profileSuggestions}
         secondaryAction={
           <Link
             className={cn(

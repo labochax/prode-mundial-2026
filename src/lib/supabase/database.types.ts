@@ -289,6 +289,7 @@ export type Database = {
           last_name: string | null
           onboarding_completed: boolean
           prode_subgroup: string | null
+          prode_subgroups: string[]
           province: string | null
           school_group: string | null
           updated_at: string
@@ -312,6 +313,7 @@ export type Database = {
           last_name?: string | null
           onboarding_completed?: boolean
           prode_subgroup?: string | null
+          prode_subgroups?: string[]
           province?: string | null
           school_group?: string | null
           updated_at?: string
@@ -335,6 +337,7 @@ export type Database = {
           last_name?: string | null
           onboarding_completed?: boolean
           prode_subgroup?: string | null
+          prode_subgroups?: string[]
           province?: string | null
           school_group?: string | null
           updated_at?: string

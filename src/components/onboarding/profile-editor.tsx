@@ -10,6 +10,7 @@ import type {
   ProfileAvatarSelection,
   ProfileFormValues,
 } from "@/lib/profiles/profile-form";
+import type { ProfileSuggestions } from "@/lib/profiles/profile-suggestions";
 
 type ProfileServerAction = (
   previousState: ProfileActionState,
@@ -27,6 +28,7 @@ type ProfileEditorProps = {
   secondaryAction?: ReactNode;
   showSavedState?: boolean;
   submitLabel?: string;
+  suggestions?: ProfileSuggestions;
 };
 
 export function ProfileEditor({
@@ -40,6 +42,7 @@ export function ProfileEditor({
   secondaryAction,
   showSavedState,
   submitLabel,
+  suggestions,
 }: ProfileEditorProps) {
   const [avatarSelection, setAvatarSelection] = useState<ProfileAvatarSelection>({
     kind: initialValues.avatarKind,
@@ -65,6 +68,7 @@ export function ProfileEditor({
         secondaryAction={secondaryAction}
         showSavedState={showSavedState}
         submitLabel={submitLabel}
+        suggestions={suggestions}
       />
     </div>
   );
