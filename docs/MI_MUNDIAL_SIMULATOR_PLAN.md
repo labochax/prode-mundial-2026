@@ -301,3 +301,26 @@ La lógica pura de torneo tiene tests unitarios con Vitest:
 - clasificación del top 8 de terceros.
 
 Los tests de base de datos, RLS y funciones SQL siguen separados en Supabase pgTAP (`npx supabase test db`).
+
+## Nota de implementación Phase 2
+
+Phase 2 agrega una sección read-only `Llave proyectada` dentro de `/mi-mundial`.
+
+Incluye:
+
+- armado de 32 clasificados proyectados desde los 24 clasificados directos y los mejores 8 terceros;
+- render de 16 cruces de `16avos` usando los slots publicados del calendario FIFA 2026;
+- asignación de mejores terceros mediante lookup de Annexe C según el conjunto de 8 grupos clasificados;
+- origen visible por equipo, por ejemplo `1° Grupo A`, `2° Grupo B` o `Mejor 3° - Grupo C`;
+- opción FIFA seleccionada visible como diagnóstico, por ejemplo `Combinación FIFA: opción 254`;
+- tests unitarios para la lógica pura de bracket en `src/lib/tournament/bracket.ts` y para la tabla de combinaciones en `src/lib/tournament/third-place-combinations.ts`.
+
+Limitaciones intencionales:
+
+- los cruces directos, como `1°J vs 2°H`, usan el slot oficial;
+- los mejores terceros se asignan con las 495 combinaciones de Annexe C;
+- si no hay una fila de Annexe C para el conjunto recibido, la UI muestra `Por definir` con el rango permitido y se emite un warning solo en desarrollo;
+- no hay predicción de campeón todavía;
+- no se persisten tablas ni llaves proyectadas;
+- no se sobreescriben fixtures oficiales ni predicciones guardadas.
+- los desempates de grupos todavía usan reglas MVP simplificadas; antes de producción habría que implementar todos los criterios oficiales de Article 13 si el Prode decide copiarlos estrictamente.

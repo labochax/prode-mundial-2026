@@ -10,9 +10,13 @@ import { getActiveUpcomingMatchesWithDetails } from "@/lib/supabase/queries/matc
 import { getPredictionsForMatches } from "@/lib/supabase/queries/predictions";
 import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { buildProjectedBracket } from "@/lib/tournament/bracket";
 import { rankThirdPlacedTeams } from "@/lib/tournament/rank-third-placed";
 import { simulateGroupTables } from "@/lib/tournament/simulate-groups";
 import type {
+  ProjectedBracket,
+  ProjectedBracketMatch,
+  ProjectedBracketSlot,
   RankedThirdPlacedTeam,
   TournamentGroupMatch,
   TournamentGroupSimulation,
@@ -211,6 +215,129 @@ function BestThirdRow({ row }: { row: RankedThirdPlacedTeam }) {
   );
 }
 
+function BracketTeamSlot({ slot }: { slot: ProjectedBracketSlot }) {
+  return (
+    <div
+      className={cn(
+        "prode-frame bg-[#f7f4df] p-3",
+        slot.isPlaceholder && "bg-prode-surface text-muted-foreground",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={cn(
+            "prode-frame px-2 py-1 font-technical text-xs font-black uppercase leading-none",
+            slot.isPlaceholder ? "bg-[#f7f4df]" : "bg-prode-yellow",
+          )}
+        >
+          {slot.slotLabel}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-technical text-sm font-black uppercase">
+            {slot.team.name}
+          </p>
+          <p className="mt-1 font-technical text-[0.68rem] font-black uppercase text-muted-foreground">
+            {slot.originLabel}
+          </p>
+          {slot.ruleLabel && (
+            <p className="mt-1 font-technical text-[0.62rem] font-black uppercase text-muted-foreground">
+              {slot.ruleLabel}
+            </p>
+          )}
+        </div>
+      </div>
+      <p className="mt-3 border-t-[2px] border-prode-black/30 pt-2 font-technical text-[0.62rem] font-black uppercase text-muted-foreground">
+        {slot.qualificationType}
+      </p>
+    </div>
+  );
+}
+
+function BracketMatchCard({ matchup }: { matchup: ProjectedBracketMatch }) {
+  return (
+    <article className="prode-frame prode-hard-shadow bg-prode-surface p-3">
+      <header className="mb-3 flex items-center justify-between gap-3 border-b-[3px] border-prode-black pb-2">
+        <h3 className="font-technical text-xs font-black uppercase">
+          {matchup.slotLabel}
+        </h3>
+        <span className="prode-frame bg-prode-yellow px-2 py-1 font-technical text-[0.62rem] font-black uppercase">
+          {matchup.roundLabel}
+        </span>
+      </header>
+
+      <div className="space-y-3">
+        <BracketTeamSlot slot={matchup.home} />
+        <div className="flex items-center gap-2">
+          <span className="h-[3px] flex-1 bg-prode-black" />
+          <span className="font-display text-3xl uppercase leading-none">VS</span>
+          <span className="h-[3px] flex-1 bg-prode-black" />
+        </div>
+        <BracketTeamSlot slot={matchup.away} />
+      </div>
+    </article>
+  );
+}
+
+function ProjectedBracketSection({ bracket }: { bracket: ProjectedBracket }) {
+  const isComplete = bracket.status === "complete";
+
+  return (
+    <section className="space-y-6">
+      <div className="border-y-[3px] border-prode-black bg-prode-yellow px-4 py-3 shadow-[6px_6px_0_var(--prode-black)]">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="font-display text-5xl uppercase leading-none">
+            Llave proyectada
+          </h2>
+          <span className="font-technical text-xs font-black uppercase">
+            16avos
+          </span>
+        </div>
+      </div>
+
+      <div className="prode-frame prode-hard-shadow bg-prode-surface p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <p className="max-w-4xl font-body text-sm leading-6 text-muted-foreground">
+            Llave proyectada según tus pronósticos. Los cruces contra mejores
+            terceros usan la combinación FIFA correspondiente al conjunto de
+            grupos clasificados.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+            <span className="prode-frame bg-[#f7f4df] px-3 py-2 font-technical text-xs font-black uppercase">
+              Clasificados: {bracket.projectedTeams.length}/
+              {bracket.requiredQualifiers}
+            </span>
+            {bracket.thirdPlaceCombination && (
+              <span className="prode-frame bg-prode-yellow px-3 py-2 font-technical text-xs font-black uppercase">
+                Combinación FIFA: opción {bracket.thirdPlaceCombination.option}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {!isComplete && (
+        <div className="prode-frame prode-hard-shadow bg-prode-yellow p-5 text-prode-black">
+          <h3 className="font-display text-4xl uppercase leading-none">
+            La llave se completa cuando haya suficientes clasificados
+            proyectados.
+          </h3>
+          <p className="mt-3 max-w-2xl font-body text-base">
+            Completaste {bracket.completedGroups}/{bracket.requiredGroups} grupos.
+            Seguí cargando pronósticos de fase de grupos para proyectar los 32
+            clasificados.
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-4">
+        {bracket.roundOf32.map((matchup) => (
+          <BracketMatchCard key={matchup.id} matchup={matchup} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default async function MyWorldCupPage() {
   const supabase = await createSupabaseServerClient();
   const current = await ensureCurrentProfile(supabase);
@@ -233,6 +360,7 @@ export default async function MyWorldCupPage() {
   );
   const groups = simulateGroupTables(simulationMatches);
   const thirdPlacedTeams = rankThirdPlacedTeams(groups);
+  const projectedBracket = buildProjectedBracket(groups, thirdPlacedTeams);
   const bestThirdQualifiedTeamIds = new Set(
     thirdPlacedTeams
       .filter((row) => row.isQualified)
@@ -371,6 +499,8 @@ export default async function MyWorldCupPage() {
               </div>
             )}
           </section>
+
+          <ProjectedBracketSection bracket={projectedBracket} />
         </>
       )}
     </AuthenticatedAppShell>
