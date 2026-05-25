@@ -18,8 +18,8 @@ const rankingModes = [
   },
   {
     icon: UsersRound,
-    label: "Amigos",
-    value: "friends",
+    label: "Grupos",
+    value: "groups",
   },
 ] as const;
 
