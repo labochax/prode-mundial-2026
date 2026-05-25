@@ -1,0 +1,291 @@
+import "server-only";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { fetchFootballDataResultsSyncCandidates } from "@/lib/sports/football-data/client";
+import type {
+  FootballDataMatchCandidate,
+  FootballDataMatchStatus,
+  FootballDataResultsSyncCandidates,
+} from "@/lib/sports/football-data/types";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import type { Database, Json } from "@/lib/supabase/database.types";
+
+type SupabaseAdminClient = SupabaseClient<Database>;
+type MatchUpdate = Database["public"]["Tables"]["matches"]["Update"];
+type SyncRunInsert = Database["public"]["Tables"]["sync_runs"]["Insert"];
+type SyncRunUpdate = Database["public"]["Tables"]["sync_runs"]["Update"];
+
+type ExistingMatch = Pick<
+  Database["public"]["Tables"]["matches"]["Row"],
+  "football_data_id" | "id"
+>;
+
+const liveStatuses = new Set<FootballDataMatchStatus>([
+  "EXTRA_TIME",
+  "IN_PLAY",
+  "PAUSED",
+  "PENALTY_SHOOTOUT",
+]);
+
+const stoppedStatuses = new Set<FootballDataMatchStatus>([
+  "AWARDED",
+  "CANCELLED",
+  "POSTPONED",
+  "SUSPENDED",
+]);
+
+export type FootballDataResultsSyncResult = {
+  checkedMatches: number;
+  finishedMatchesScored: number;
+  liveMatchesUpdated: number;
+  matchesUpdated: number;
+  predictionsChanged: 0;
+  rateLimitReset: string | null;
+  scoredPredictions: number;
+  stoppedMatchesUpdated: number;
+  syncRunId: string;
+};
+
+function toJson(value: unknown): Json {
+  return JSON.parse(JSON.stringify(value)) as Json;
+}
+
+async function createSyncRun(client: SupabaseAdminClient) {
+  const insertRow = {
+    provider: "football-data",
+    status: "running",
+    sync_type: "results",
+    summary: {
+      note: "Sync local/manual de resultados iniciada desde /admin/sync.",
+    },
+  } satisfies SyncRunInsert;
+
+  const { data, error } = await client
+    .from("sync_runs")
+    .insert(insertRow)
+    .select("id")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data.id;
+}
+
+async function updateSyncRun(
+  client: SupabaseAdminClient,
+  syncRunId: string,
+  updateRow: SyncRunUpdate,
+) {
+  const { error } = await client
+    .from("sync_runs")
+    .update(updateRow)
+    .eq("id", syncRunId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+async function recordProviderError(
+  client: SupabaseAdminClient,
+  syncRunId: string,
+  error: unknown,
+  context: string,
+) {
+  await client.from("provider_errors").insert({
+    context,
+    details:
+      error instanceof Error
+        ? {
+            name: error.name,
+          }
+        : null,
+    message: error instanceof Error ? error.message : "Error desconocido.",
+    provider: "football-data",
+    sync_run_id: syncRunId,
+  });
+}
+
+async function getExistingMatches(
+  client: SupabaseAdminClient,
+  footballDataMatchIds: number[],
+) {
+  const uniqueIds = [...new Set(footballDataMatchIds)];
+
+  if (uniqueIds.length === 0) {
+    return new Map<number, ExistingMatch>();
+  }
+
+  const { data, error } = await client
+    .from("matches")
+    .select("id, football_data_id")
+    .in("football_data_id", uniqueIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return new Map(
+    data
+      .filter((match) => typeof match.football_data_id === "number")
+      .map((match) => [match.football_data_id as number, match]),
+  );
+}
+
+function getResultUpdateRow(match: FootballDataMatchCandidate) {
+  return {
+    away_score: match.away_score,
+    home_score: match.home_score,
+    kickoff_at: match.kickoff_at,
+    last_synced_at: match.last_synced_at,
+    minute: match.minute,
+    raw_json: match.raw_json,
+    status: match.status,
+    winner: match.winner,
+  } satisfies MatchUpdate;
+}
+
+async function updateResultMatch(
+  client: SupabaseAdminClient,
+  matchId: string,
+  candidate: FootballDataMatchCandidate,
+) {
+  const { error } = await client
+    .from("matches")
+    .update(getResultUpdateRow(candidate))
+    .eq("id", matchId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+async function syncResultsToDatabase(
+  client: SupabaseAdminClient,
+  candidates: FootballDataResultsSyncCandidates,
+) {
+  const existingMatches = await getExistingMatches(
+    client,
+    candidates.matches.map((match) => match.football_data_id),
+  );
+  let matchesUpdated = 0;
+  let liveMatchesUpdated = 0;
+  let stoppedMatchesUpdated = 0;
+  let finishedMatchesScored = 0;
+  let scoredPredictions = 0;
+
+  for (const candidate of candidates.matches) {
+    const existingMatch = existingMatches.get(candidate.football_data_id);
+
+    if (!existingMatch) {
+      continue;
+    }
+
+    await updateResultMatch(client, existingMatch.id, candidate);
+    matchesUpdated += 1;
+
+    if (liveStatuses.has(candidate.status)) {
+      liveMatchesUpdated += 1;
+    }
+
+    if (stoppedStatuses.has(candidate.status)) {
+      stoppedMatchesUpdated += 1;
+    }
+
+    if (candidate.status === "FINISHED") {
+      const { data, error } = await client.rpc("score_match_predictions", {
+        target_match_id: existingMatch.id,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      finishedMatchesScored += 1;
+      scoredPredictions += data ?? 0;
+    }
+  }
+
+  return {
+    finishedMatchesScored,
+    liveMatchesUpdated,
+    matchesUpdated,
+    scoredPredictions,
+    stoppedMatchesUpdated,
+  };
+}
+
+export async function syncFootballDataResults(): Promise<FootballDataResultsSyncResult> {
+  const client = createSupabaseAdminClient();
+  const syncRunId = await createSyncRun(client);
+
+  try {
+    const candidates = await fetchFootballDataResultsSyncCandidates({
+      competitionCode: "WC",
+      season: "2026",
+    });
+    const {
+      finishedMatchesScored,
+      liveMatchesUpdated,
+      matchesUpdated,
+      scoredPredictions,
+      stoppedMatchesUpdated,
+    } = await syncResultsToDatabase(client, candidates);
+    const result = {
+      checkedMatches: candidates.matches.length,
+      finishedMatchesScored,
+      liveMatchesUpdated,
+      matchesUpdated,
+      predictionsChanged: 0,
+      rateLimitReset: candidates.rateLimit.requestCounterReset,
+      scoredPredictions,
+      stoppedMatchesUpdated,
+      syncRunId,
+    } satisfies FootballDataResultsSyncResult;
+
+    await updateSyncRun(client, syncRunId, {
+      finished_at: new Date().toISOString(),
+      status: "success",
+      summary: toJson(result),
+    });
+
+    return result;
+  } catch (error) {
+    try {
+      await recordProviderError(client, syncRunId, error, "results");
+    } catch (providerError) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[syncFootballDataResults:provider-error]", {
+          message:
+            providerError instanceof Error ? providerError.message : "unknown",
+          name: providerError instanceof Error ? providerError.name : "unknown",
+        });
+      }
+    }
+
+    try {
+      await updateSyncRun(client, syncRunId, {
+        error_message:
+          error instanceof Error ? error.message : "Error desconocido.",
+        finished_at: new Date().toISOString(),
+        status: "error",
+        summary: toJson({
+          predictions_changed: 0,
+        }),
+      });
+    } catch (syncRunError) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[syncFootballDataResults:sync-run-error]", {
+          message:
+            syncRunError instanceof Error ? syncRunError.message : "unknown",
+          name: syncRunError instanceof Error ? syncRunError.name : "unknown",
+        });
+      }
+    }
+
+    throw error;
+  }
+}

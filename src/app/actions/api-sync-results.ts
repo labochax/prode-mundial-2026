@@ -1,0 +1,98 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+import { FootballDataApiError } from "@/lib/sports/football-data/client";
+import { syncFootballDataResults } from "@/lib/sports/football-data/results-sync";
+import { SportsApiConfigError } from "@/lib/sports/env.server";
+
+function getResultsRedirectPath(params: Record<string, string>) {
+  const searchParams = new URLSearchParams(params);
+
+  return `/admin/sync?${searchParams.toString()}`;
+}
+
+function getResultsErrorMessage(error: unknown) {
+  if (error instanceof SportsApiConfigError) {
+    return error.message;
+  }
+
+  if (error instanceof FootballDataApiError) {
+    if (error.status === 429) {
+      return "Football-Data respondió con límite de uso. Esperá el reinicio de cuota y probá de nuevo.";
+    }
+
+    if (error.status === 401 || error.status === 403) {
+      return "Football-Data rechazó el token. Revisá FOOTBALL_DATA_API_TOKEN en .env.local.";
+    }
+
+    if (error.status === 404) {
+      return "Football-Data no encontró resultados para la competencia o temporada solicitada.";
+    }
+
+    return error.message;
+  }
+
+  if (
+    error instanceof TypeError ||
+    (error instanceof Error && error.message.toLowerCase().includes("fetch"))
+  ) {
+    return "No pudimos conectar con Football-Data. Revisá la red y probá de nuevo.";
+  }
+
+  if (error instanceof Error && error.message.startsWith("Falta configurar")) {
+    return error.message;
+  }
+
+  return "No pudimos sincronizar los resultados.";
+}
+
+export async function syncFootballDataResultsAction() {
+  const isDevelopment = process.env.NODE_ENV !== "production";
+
+  if (!isDevelopment) {
+    redirect(
+      getResultsRedirectPath({
+        results_error: "La sincronización de resultados está desactivada en producción.",
+      }),
+    );
+  }
+
+  let redirectPath: string;
+
+  try {
+    const result = await syncFootballDataResults();
+
+    revalidatePath("/dashboard");
+    revalidatePath("/posiciones");
+    revalidatePath("/admin/sync");
+
+    redirectPath = getResultsRedirectPath({
+      results_checked: String(result.checkedMatches),
+      results_estado: "ok",
+      results_finished: String(result.finishedMatchesScored),
+      results_live: String(result.liveMatchesUpdated),
+      results_reset: result.rateLimitReset ?? "",
+      results_run: result.syncRunId,
+      results_scored: String(result.scoredPredictions),
+      results_stopped: String(result.stoppedMatchesUpdated),
+      results_text:
+        `Actualizados: ${result.matchesUpdated}. ` +
+        "Predicciones directas modificadas: 0.",
+    });
+  } catch (error) {
+    if (isDevelopment) {
+      console.error("[syncFootballDataResultsAction]", {
+        message: error instanceof Error ? error.message : "unknown",
+        name: error instanceof Error ? error.name : "unknown",
+      });
+    }
+
+    redirectPath = getResultsRedirectPath({
+      results_error: getResultsErrorMessage(error),
+    });
+  }
+
+  redirect(redirectPath);
+}

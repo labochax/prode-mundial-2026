@@ -10,6 +10,7 @@ import type {
   FootballDataFixtureSyncCandidates,
   FootballDataMatchesResponse,
   FootballDataRateLimitInfo,
+  FootballDataResultsSyncCandidates,
   FootballDataTeamsResponse,
 } from "@/lib/sports/football-data/types";
 
@@ -31,6 +32,9 @@ function getRateLimitInfo(headers: Headers): FootballDataRateLimitInfo {
     apiVersion: headers.get("x-api-version"),
     authenticatedClient: headers.get("x-authenticated-client"),
     requestCounterReset: headers.get("x-requestcounter-reset"),
+    requestsAvailableMinute:
+      headers.get("x-requests-available-minute") ??
+      headers.get("x-requestsavailable-minute"),
     requestsAvailable: headers.get("x-requestsavailable"),
   };
 }
@@ -170,4 +174,30 @@ export async function fetchFootballDataFixtureSyncCandidates(options?: {
     },
     teams: teams.map((team) => mapFootballDataTeamToCandidate(team)),
   } satisfies FootballDataFixtureSyncCandidates;
+}
+
+export async function fetchFootballDataResultsSyncCandidates(options?: {
+  competitionCode?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  season?: string;
+  status?: string;
+}) {
+  const competitionCode = options?.competitionCode ?? "WC";
+  const fetchedAt = new Date().toISOString();
+  const matchesResponse = await fetchFootballDataCompetitionMatches(competitionCode, {
+    dateFrom: options?.dateFrom,
+    dateTo: options?.dateTo,
+    season: options?.season,
+    status: options?.status,
+  });
+  const matches = matchesResponse.data.matches ?? [];
+
+  return {
+    fetchedAt,
+    matches: matches.map((match) =>
+      mapFootballDataMatchToCandidate(match, fetchedAt),
+    ),
+    rateLimit: matchesResponse.rateLimit,
+  } satisfies FootballDataResultsSyncCandidates;
 }

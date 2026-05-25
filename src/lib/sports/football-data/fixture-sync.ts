@@ -180,6 +180,7 @@ function getMatchBaseRow(
     kickoff_at: match.kickoff_at,
     last_synced_at: match.last_synced_at,
     match_number: match.match_number,
+    minute: match.minute,
     raw_json: match.raw_json,
     stage: match.stage,
     status: match.status,

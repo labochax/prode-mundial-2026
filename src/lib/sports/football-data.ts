@@ -7,6 +7,8 @@ export const FOOTBALL_DATA_PROVIDER = {
 export type {
   FootballDataFixtureSyncCandidates,
   FootballDataMatchCandidate,
+  FootballDataMatchStatus,
+  FootballDataResultsSyncCandidates,
   FootballDataTeamCandidate,
 } from "@/lib/sports/football-data/types";
 export {

@@ -3,17 +3,22 @@ import type {
   FootballDataMatch,
   FootballDataMatchCandidate,
   FootballDataMatchScoreSide,
+  FootballDataMatchStatus,
   FootballDataTeam,
   FootballDataTeamCandidate,
 } from "@/lib/sports/football-data/types";
 
-const allowedLocalStatuses = new Set([
+const allowedFootballDataStatuses = new Set<FootballDataMatchStatus>([
+  "AWARDED",
   "CANCELLED",
+  "EXTRA_TIME",
   "FINISHED",
   "IN_PLAY",
   "PAUSED",
+  "PENALTY_SHOOTOUT",
   "POSTPONED",
   "SCHEDULED",
+  "SUSPENDED",
   "TIMED",
 ]);
 
@@ -62,11 +67,18 @@ function getScoreSide(match: FootballDataMatch): FootballDataMatchScoreSide | nu
   return match.score?.fullTime ?? match.score?.regularTime ?? null;
 }
 
-function getWinner(match: FootballDataMatch): FootballDataMatchCandidate["winner"] {
+function getWinner(
+  match: FootballDataMatch,
+  status: FootballDataMatchStatus,
+): FootballDataMatchCandidate["winner"] {
   const winner = match.score?.winner ?? null;
 
   if (winner === "AWAY_TEAM" || winner === "DRAW" || winner === "HOME_TEAM") {
     return winner;
+  }
+
+  if (status !== "FINISHED" && status !== "AWARDED") {
+    return null;
   }
 
   const score = getScoreSide(match);
@@ -86,25 +98,11 @@ function getWinner(match: FootballDataMatch): FootballDataMatchCandidate["winner
   return "DRAW";
 }
 
-function mapStatus(status: string | null | undefined) {
+function mapStatus(status: string | null | undefined): FootballDataMatchStatus {
   const normalized = normalizeText(status)?.toUpperCase() ?? "SCHEDULED";
 
-  // Some Football-Data statuses require a future DB status migration. Until
-  // that happens, preserve the raw payload and map them conservatively.
-  if (allowedLocalStatuses.has(normalized)) {
-    return normalized;
-  }
-
-  if (normalized === "SUSPENDED") {
-    return "PAUSED";
-  }
-
-  if (normalized === "AWARDED") {
-    return "FINISHED";
-  }
-
-  if (normalized === "EXTRA_TIME" || normalized === "PENALTY_SHOOTOUT") {
-    return "IN_PLAY";
+  if (allowedFootballDataStatuses.has(normalized as FootballDataMatchStatus)) {
+    return normalized as FootballDataMatchStatus;
   }
 
   return "SCHEDULED";
@@ -151,6 +149,7 @@ export function mapFootballDataMatchToCandidate(
   syncedAt = new Date().toISOString(),
 ): FootballDataMatchCandidate {
   const score = getScoreSide(match);
+  const status = mapStatus(match.status);
 
   return {
     away_score: typeof score?.away === "number" ? score.away : null,
@@ -162,9 +161,10 @@ export function mapFootballDataMatchToCandidate(
     kickoff_at: new Date(match.utcDate).toISOString(),
     last_synced_at: syncedAt,
     match_number: match.matchday ?? null,
+    minute: typeof match.minute === "number" ? match.minute : null,
     raw_json: toJson(match),
     stage: normalizeText(match.stage),
-    status: mapStatus(match.status),
-    winner: getWinner(match),
+    status,
+    winner: getWinner(match, status),
   };
 }

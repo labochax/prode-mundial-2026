@@ -39,6 +39,23 @@ El sync de fixtures:
 - no elimina los partidos del seed local;
 - no llama TheSportsDB todavía.
 
+## Sync Local De Resultados
+
+`/admin/sync` incluye `Sincronizar resultados ahora`.
+
+El sync de resultados:
+
+- actualiza estados y marcadores de partidos oficiales ya importados;
+- guarda información en vivo (`IN_PLAY`, `PAUSED`, `EXTRA_TIME`,
+  `PENALTY_SHOOTOUT`) sin puntuar oficialmente;
+- ejecuta `score_match_predictions(match_id)` solo para partidos `FINISHED`;
+- no modifica predicciones directamente;
+- registra la ejecución en `sync_runs`;
+- está desactivado en producción.
+
+La tabla `/posiciones` sigue usando puntos oficiales ya calculados. Los puntos
+provisionales durante partidos en vivo quedan como mejora futura.
+
 El sandbox está desactivado en producción. Antes de desplegar una operación real,
 `/admin/sync` debe reemplazarse por un flujo con autorización admin explícita,
 auditoría y controles de sincronización.

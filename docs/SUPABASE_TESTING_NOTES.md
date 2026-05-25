@@ -38,6 +38,10 @@ npx supabase test db
   - verifies match status, winner, score, and minute checks;
   - verifies default and settings-driven `lock_at` calculation.
 
+- `supabase/tests/database/match_live_status_schema.test.sql`
+  - verifies supported Football-Data live/result statuses are accepted,
+    including `EXTRA_TIME`, `PENALTY_SHOOTOUT`, `SUSPENDED`, and `AWARDED`.
+
 - `supabase/tests/database/match_foundation_rls.test.sql`
   - verifies RLS is enabled on fixture foundation tables;
   - verifies authenticated read access;

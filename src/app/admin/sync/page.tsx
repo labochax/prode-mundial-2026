@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { syncFootballDataFixturesAction } from "@/app/actions/api-sync-fixtures";
 import { previewFootballDataDryRunAction } from "@/app/actions/api-sync-preview";
+import { syncFootballDataResultsAction } from "@/app/actions/api-sync-results";
 import { finalizeAndScoreMatchAction } from "@/app/actions/dev-scoring";
 import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
 import { ProdeBadge } from "@/components/prode/prode-badge";
@@ -61,6 +62,16 @@ export default async function AdminSyncPage({
   const fixtureSyncRun = getSearchValue(resolvedSearchParams, "sync_run");
   const fixtureSyncText = getSearchValue(resolvedSearchParams, "sync_text");
   const fixtureSyncReset = getSearchValue(resolvedSearchParams, "sync_reset");
+  const resultsSyncState = getSearchValue(resolvedSearchParams, "results_estado");
+  const resultsSyncError = getSearchValue(resolvedSearchParams, "results_error");
+  const resultsSyncRun = getSearchValue(resolvedSearchParams, "results_run");
+  const resultsChecked = getSearchValue(resolvedSearchParams, "results_checked");
+  const resultsLive = getSearchValue(resolvedSearchParams, "results_live");
+  const resultsFinished = getSearchValue(resolvedSearchParams, "results_finished");
+  const resultsStopped = getSearchValue(resolvedSearchParams, "results_stopped");
+  const resultsScored = getSearchValue(resolvedSearchParams, "results_scored");
+  const resultsText = getSearchValue(resolvedSearchParams, "results_text");
+  const resultsReset = getSearchValue(resolvedSearchParams, "results_reset");
   const scoredPredictions = getSearchValue(resolvedSearchParams, "predicciones");
   const isProduction = process.env.NODE_ENV === "production";
   const activeMatches = isProduction
@@ -207,6 +218,59 @@ export default async function AdminSyncPage({
                     fixtureSyncReset
                       ? `Reset de cuota en ${fixtureSyncReset}s.`
                       : ""
+                  }`}
+          </div>
+        )}
+      </ProdeCard>
+
+      <ProdeCard className="p-5 sm:p-6">
+        <div className="flex flex-col gap-4 border-b-[3px] border-prode-black pb-5 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <ProdeBadge variant="primary">Sincronización de resultados</ProdeBadge>
+            <h2 className="mt-4 font-display text-4xl uppercase leading-none sm:text-5xl">
+              Resultados en vivo
+            </h2>
+            <p className="mt-3 max-w-3xl font-body text-base">
+              Actualiza estados, minutos y marcadores desde Football-Data. Los
+              puntos oficiales solo se recalculan cuando un partido queda
+              finalizado.
+            </p>
+          </div>
+
+          <form action={syncFootballDataResultsAction}>
+            <button
+              className="prode-frame prode-hard-shadow prode-pressable inline-flex min-h-14 items-center justify-center bg-prode-yellow px-4 py-3 font-technical text-xs font-bold uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper disabled:pointer-events-none disabled:opacity-50"
+              disabled={isProduction}
+              type="submit"
+            >
+              Sincronizar resultados ahora
+            </button>
+          </form>
+        </div>
+
+        {(resultsSyncState || resultsSyncError || isProduction) && (
+          <div
+            className={cn(
+              "prode-frame mt-5 px-4 py-3 font-technical text-xs font-bold uppercase",
+              resultsSyncError || isProduction
+                ? "bg-[#ffe2d8] text-red-800"
+                : "bg-prode-yellow text-prode-black",
+            )}
+          >
+            {isProduction
+              ? "La sincronización de resultados está desactivada en producción."
+              : resultsSyncError
+                ? resultsSyncError
+                : `Ejecución ${
+                    resultsSyncRun ?? "local"
+                  } completada. Revisados: ${resultsChecked ?? "0"}. En juego: ${
+                    resultsLive ?? "0"
+                  }. Finalizados puntuados: ${resultsFinished ?? "0"}. Estados especiales: ${
+                    resultsStopped ?? "0"
+                  }. Puntos recalculados: ${resultsScored ?? "0"}. ${
+                    resultsText ?? "Predicciones directas modificadas: 0."
+                  } ${
+                    resultsReset ? `Reset de cuota en ${resultsReset}s.` : ""
                   }`}
           </div>
         )}

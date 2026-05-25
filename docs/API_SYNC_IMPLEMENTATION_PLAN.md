@@ -509,3 +509,25 @@ Las pantallas principales seleccionan una fuente activa: fixtures oficiales
 cuando existen, seed local solo cuando todavía no hay oficiales. Además de
 `football_data_id`, la app reconoce `raw_json.seed_note` para ocultar fixtures
 fake heredados que habían sido sembrados con IDs falsos.
+
+## Nota De Implementacion Phase D Inicial
+
+Se agregó la base de sincronización manual de resultados/live:
+
+- Migración para preservar estados Football-Data: `EXTRA_TIME`,
+  `PENALTY_SHOOTOUT`, `SUSPENDED` y `AWARDED`, además de los estados ya
+  soportados.
+- Acción server-only desde `/admin/sync` con botón
+  `Sincronizar resultados ahora`.
+- Escritura con cliente admin server-only, desactivada en producción.
+- Actualización de partidos existentes por `football_data_id`.
+- Se actualizan `status`, `minute`, marcador, `winner`, `raw_json`,
+  `last_synced_at` y `kickoff_at`.
+- No se modifican predicciones directamente.
+- `score_match_predictions(match_id)` se ejecuta solo para partidos
+  `FINISHED`.
+- Estados live se muestran como información parcial; el leaderboard oficial
+  sigue dependiendo de partidos puntuados/finalizados.
+
+`AWARDED`, `SUSPENDED`, `POSTPONED` y `CANCELLED` se registran, pero no puntúan
+automáticamente hasta definir una regla de producto.

@@ -53,6 +53,13 @@ export type PredictionMatch = {
   lockAt: string;
   locked: boolean;
   lockLabel: string;
+  status: {
+    code: string;
+    label: string;
+    minuteLabel: string | null;
+    scoreLabel: string | null;
+    tone: "finished" | "live" | "scheduled" | "stopped";
+  };
   tendency: {
     away: number;
     draw: number;
@@ -220,15 +227,101 @@ function getLockLabel(match: MatchRow, locked: boolean) {
   return `Cierra ${lockMinutes} min antes`;
 }
 
+function getStatusLabel(status: string) {
+  switch (status) {
+    case "AWARDED":
+      return "Asignado";
+    case "CANCELLED":
+      return "Cancelado";
+    case "EXTRA_TIME":
+      return "Alargue";
+    case "FINISHED":
+      return "Finalizado";
+    case "IN_PLAY":
+      return "En juego";
+    case "PAUSED":
+      return "Entretiempo";
+    case "PENALTY_SHOOTOUT":
+      return "Penales";
+    case "POSTPONED":
+      return "Postergado";
+    case "SUSPENDED":
+      return "Suspendido";
+    case "TIMED":
+    case "SCHEDULED":
+    default:
+      return "Programado";
+  }
+}
+
+function getStatusTone(status: string): PredictionMatch["status"]["tone"] {
+  if (status === "FINISHED") {
+    return "finished";
+  }
+
+  if (
+    status === "IN_PLAY" ||
+    status === "PAUSED" ||
+    status === "EXTRA_TIME" ||
+    status === "PENALTY_SHOOTOUT"
+  ) {
+    return "live";
+  }
+
+  if (
+    status === "AWARDED" ||
+    status === "CANCELLED" ||
+    status === "POSTPONED" ||
+    status === "SUSPENDED"
+  ) {
+    return "stopped";
+  }
+
+  return "scheduled";
+}
+
+function getMinuteLabel(match: MatchRow) {
+  if (typeof match.minute !== "number") {
+    return null;
+  }
+
+  if (
+    match.status !== "IN_PLAY" &&
+    match.status !== "EXTRA_TIME" &&
+    match.status !== "PENALTY_SHOOTOUT"
+  ) {
+    return null;
+  }
+
+  return `${match.minute}'`;
+}
+
+function getScoreLabel(
+  match: MatchRow,
+  homeTeam: PredictionMatchTeam,
+  awayTeam: PredictionMatchTeam,
+) {
+  if (
+    typeof match.home_score !== "number" ||
+    typeof match.away_score !== "number"
+  ) {
+    return null;
+  }
+
+  return `${homeTeam.code} ${match.home_score} - ${match.away_score} ${awayTeam.code}`;
+}
+
 export function mapSupabaseMatchToPredictionMatch(
   match: MatchWithRelations,
   prediction: PredictionRow | null,
 ): PredictionMatch {
   const locked = new Date(match.lock_at).getTime() <= Date.now();
   const tendency = readPercentBlock(match.raw_json, "tendency", defaultTendency);
+  const homeTeam = mapTeam(match.home_team, "Equipo A");
+  const awayTeam = mapTeam(match.away_team, "Equipo B");
 
   return {
-    away: mapTeam(match.away_team, "Equipo B"),
+    away: awayTeam,
     detail: {
       directHistory: readPercentBlock(
         match.raw_json,
@@ -244,7 +337,7 @@ export function mapSupabaseMatchToPredictionMatch(
       timerLabel: getTimerLabel(match.lock_at),
     },
     groupLabel: getGroupLabel(match),
-    home: mapTeam(match.home_team, "Equipo A"),
+    home: homeTeam,
     id: match.id,
     initialPrediction: {
       away: prediction?.predicted_away_score ?? 0,
@@ -255,6 +348,13 @@ export function mapSupabaseMatchToPredictionMatch(
     lockAt: match.lock_at,
     locked,
     lockLabel: getLockLabel(match, locked),
+    status: {
+      code: match.status,
+      label: getStatusLabel(match.status),
+      minuteLabel: getMinuteLabel(match),
+      scoreLabel: getScoreLabel(match, homeTeam, awayTeam),
+      tone: getStatusTone(match.status),
+    },
     tendency,
     timeLabel: formatDashboardTime(match.kickoff_at),
   };

@@ -224,3 +224,23 @@ Other-pool predictions are not visible through RLS.
 - Leaderboard tie-breakers are currently points, exact hits, outcome hits, scored prediction count, and display name. Product may choose different tie-breakers.
 - No prediction edit history exists yet.
 - No penalty shootout fields exist in MVP.
+
+## Migration: Match Live Status Expansion
+
+Adds Football-Data live/result statuses to `matches.status`:
+
+- `EXTRA_TIME`
+- `PENALTY_SHOOTOUT`
+- `SUSPENDED`
+- `AWARDED`
+
+The existing states remain valid. This migration only changes the check
+constraint; it does not change prediction locks, scoring functions, or RLS.
+
+Product behavior:
+
+- `FINISHED` is the only status that triggers official scoring.
+- `IN_PLAY`, `PAUSED`, `EXTRA_TIME` and `PENALTY_SHOOTOUT` can update visible
+  live score/status without awarding points.
+- `SUSPENDED`, `POSTPONED`, `CANCELLED` and `AWARDED` are stored for visibility
+  and require explicit future product decisions before automatic scoring.

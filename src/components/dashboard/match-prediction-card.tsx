@@ -35,6 +35,13 @@ const initialActionState = {
   status: "idle",
 } as const satisfies SavePredictionActionState;
 
+const statusClassName = {
+  finished: "bg-prode-black text-prode-yellow",
+  live: "bg-prode-yellow text-prode-black",
+  scheduled: "bg-prode-surface text-prode-black",
+  stopped: "bg-[#ffe2d8] text-red-800",
+} as const;
+
 function TeamColumn({ disabled, onScoreChange, score, team }: TeamColumnProps) {
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center gap-3">
@@ -112,10 +119,28 @@ export function MatchPredictionCard({
           <p className="font-technical text-xs font-bold uppercase text-muted-foreground">
             {match.groupLabel}
           </p>
-          <p className="font-technical text-[0.68rem] font-bold uppercase text-muted-foreground">
-            {match.lockLabel}
-          </p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <span
+              className={cn(
+                "prode-frame px-2 py-1 font-technical text-[0.68rem] font-bold uppercase",
+                statusClassName[match.status.tone],
+              )}
+            >
+              {[match.status.label, match.status.minuteLabel]
+                .filter(Boolean)
+                .join(" ")}
+            </span>
+            <span className="font-technical text-[0.68rem] font-bold uppercase text-muted-foreground">
+              {match.lockLabel}
+            </span>
+          </div>
         </div>
+
+        {match.status.scoreLabel && (
+          <div className="prode-frame mx-auto w-fit bg-[#f7f4df] px-3 py-1 font-technical text-xs font-black uppercase">
+            {match.status.scoreLabel}
+          </div>
+        )}
 
         <div className="flex items-start justify-between gap-3 sm:gap-5">
           <TeamColumn

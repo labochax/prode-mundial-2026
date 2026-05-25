@@ -66,6 +66,19 @@ export type FootballDataMatchTeam = {
   tla?: string | null;
 };
 
+export type FootballDataMatchStatus =
+  | "AWARDED"
+  | "CANCELLED"
+  | "EXTRA_TIME"
+  | "FINISHED"
+  | "IN_PLAY"
+  | "PAUSED"
+  | "PENALTY_SHOOTOUT"
+  | "POSTPONED"
+  | "SCHEDULED"
+  | "SUSPENDED"
+  | "TIMED";
+
 export type FootballDataMatch = {
   area?: FootballDataArea | null;
   awayTeam?: FootballDataMatchTeam | null;
@@ -79,7 +92,7 @@ export type FootballDataMatch = {
   score?: FootballDataMatchScore | null;
   season?: FootballDataSeason | null;
   stage?: string | null;
-  status?: string | null;
+  status?: FootballDataMatchStatus | string | null;
   utcDate: string;
 };
 
@@ -99,6 +112,7 @@ export type FootballDataRateLimitInfo = {
   apiVersion: string | null;
   authenticatedClient: string | null;
   requestCounterReset: string | null;
+  requestsAvailableMinute: string | null;
   requestsAvailable: string | null;
 };
 
@@ -123,9 +137,10 @@ export type FootballDataMatchCandidate = {
   kickoff_at: string;
   last_synced_at: string;
   match_number: number | null;
+  minute: number | null;
   raw_json: Json;
   stage: string | null;
-  status: string;
+  status: FootballDataMatchStatus;
   winner: "AWAY_TEAM" | "DRAW" | "HOME_TEAM" | null;
 };
 
@@ -143,4 +158,10 @@ export type FootballDataFixtureSyncCandidates = {
     teams: FootballDataRateLimitInfo;
   };
   teams: FootballDataTeamCandidate[];
+};
+
+export type FootballDataResultsSyncCandidates = {
+  fetchedAt: string;
+  matches: FootballDataMatchCandidate[];
+  rateLimit: FootballDataRateLimitInfo;
 };

@@ -22,9 +22,27 @@ export function MatchDetailToolbar({ match }: MatchDetailToolbarProps) {
           </Link>
 
           <div>
-            <ProdeBadge className="shadow-[2px_2px_0_var(--prode-black)]">
-              {match.groupLabel}
-            </ProdeBadge>
+            <div className="flex flex-wrap gap-2">
+              <ProdeBadge className="shadow-[2px_2px_0_var(--prode-black)]">
+                {match.groupLabel}
+              </ProdeBadge>
+              <ProdeBadge
+                className="shadow-[2px_2px_0_var(--prode-black)]"
+                variant={match.status.tone === "live" ? "primary" : "surface"}
+              >
+                {[match.status.label, match.status.minuteLabel]
+                  .filter(Boolean)
+                  .join(" ")}
+              </ProdeBadge>
+              {match.status.scoreLabel && (
+                <ProdeBadge
+                  className="shadow-[2px_2px_0_var(--prode-black)]"
+                  variant="ink"
+                >
+                  {match.status.scoreLabel}
+                </ProdeBadge>
+              )}
+            </div>
             <h1 className="mt-3 max-w-full font-display text-4xl uppercase leading-none min-[430px]:text-5xl sm:text-6xl">
               Ingresar
               <br className="sm:hidden" />

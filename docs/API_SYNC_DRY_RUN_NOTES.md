@@ -62,3 +62,22 @@ ocultos de las pantallas principales.
 
 Después de verificar la importación manual, implementar sync de resultados y
 scoring oficial con el mismo patrón de `sync_runs`.
+
+## Sync Manual De Resultados
+
+`/admin/sync` incluye `Sincronizar resultados ahora`.
+
+La acción:
+
+- corre solo en desarrollo/test;
+- usa el cliente server-only de Football-Data;
+- actualiza partidos existentes por `football_data_id`;
+- guarda `status`, `minute`, marcador, `winner`, `raw_json` y `last_synced_at`;
+- actualiza `kickoff_at` si el proveedor lo corrige;
+- no modifica predicciones directamente;
+- ejecuta `score_match_predictions(match_id)` solo cuando el estado es `FINISHED`;
+- no puntúa automáticamente `AWARDED`, `SUSPENDED`, `POSTPONED` ni `CANCELLED`.
+
+Los estados en vivo (`IN_PLAY`, `PAUSED`, `EXTRA_TIME`,
+`PENALTY_SHOOTOUT`) se reflejan como información parcial. Los puntos
+provisionales quedan como mejora futura de UI.
