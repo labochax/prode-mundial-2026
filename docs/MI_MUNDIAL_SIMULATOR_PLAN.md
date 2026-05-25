@@ -287,3 +287,17 @@ No incluye todavía:
 Las proyecciones no se guardan en la base. Se calculan desde `matches`, `teams` y `predictions` usando el cliente Supabase server bajo RLS normal, sin service role.
 
 Los placeholders oficiales de eliminatorias deben mostrarse como labels de slot o `Por definir`, no como nombres falsos de equipos. La siguiente fase debería tomar los clasificados simulados del usuario y usarlos para proyectar esos slots sin sobreescribir el fixture oficial.
+
+## Nota de verificación
+
+La lógica pura de torneo tiene tests unitarios con Vitest:
+
+- cálculo de tablas de grupo;
+- victorias, empates, derrotas y diferencia de gol;
+- desempates por puntos, diferencia de gol, goles a favor y fallback estable;
+- grupos incompletos;
+- empates 0-0 y marcadores altos;
+- ranking de mejores terceros;
+- clasificación del top 8 de terceros.
+
+Los tests de base de datos, RLS y funciones SQL siguen separados en Supabase pgTAP (`npx supabase test db`).
