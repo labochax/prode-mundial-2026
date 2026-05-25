@@ -1,4 +1,4 @@
-import { AlertTriangle, Eye, LockKeyhole, Pencil, Target } from "lucide-react";
+import { AlertTriangle, Database, Target } from "lucide-react";
 
 import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
 import { ProdeBadge } from "@/components/prode/prode-badge";
@@ -41,7 +41,7 @@ export default function RulesPage() {
           >
             <div className="flex items-start justify-between gap-4">
               <ProdeBadge variant={rule.points === "3" ? "primary" : "surface"}>
-                {rule.points} puntos
+                {rule.points === "1" ? "1 punto" : `${rule.points} puntos`}
               </ProdeBadge>
               <Target aria-hidden="true" className="size-7 stroke-[3]" />
             </div>
@@ -57,7 +57,7 @@ export default function RulesPage() {
         <RulesCard eyebrow="Bloqueo" title="Cada partido cierra solo">
           <p>
             Las predicciones se bloquean por partido, no de manera global. El
-            cierre predeterminado es 10 minutos antes del inicio.
+            cierre actual es 10 minutos antes del inicio de cada partido.
           </p>
         </RulesCard>
 
@@ -68,18 +68,20 @@ export default function RulesPage() {
           </p>
         </RulesCard>
 
-        <RulesCard eyebrow="Visibilidad" title="Pronósticos públicos al cerrar">
+        <RulesCard eyebrow="Visibilidad" title="Pronósticos visibles al cerrar">
           <p>
-            Cuando un partido se bloquea, las predicciones de todos para ese
-            partido pasan a estar visibles.
+            Cuando un partido queda bloqueado, las predicciones de los demás
+            jugadores para ese partido pasan a estar visibles. La intención es
+            poder verlas desde el detalle del partido y desde los perfiles o
+            ranking de jugadores cuando esa vista esté disponible.
           </p>
         </RulesCard>
 
-        <RulesCard eyebrow="MVP" title="Alcance actual">
+        <RulesCard eyebrow="Estado actual" title="Datos conectados">
           <p>
-            Los penales no se predicen todavía. Los partidos, puntos y estados
-            actuales son datos mock hasta integrar Supabase y las APIs
-            deportivas.
+            Los partidos y predicciones ya se guardan en Supabase. Los fixtures
+            oficiales se pueden sincronizar con Football-Data y la tabla de
+            posiciones usa los puntos calculados desde la base de datos.
           </p>
         </RulesCard>
       </section>
@@ -90,38 +92,28 @@ export default function RulesPage() {
         </div>
         <div>
           <h2 className="font-display text-3xl uppercase leading-none">
-            Decisiones pendientes
+            Penales y predicción de campeón
           </h2>
           <p className="mt-2 max-w-4xl leading-7">
-            La lógica definitiva de bloqueo, visibilidad y puntaje deberá quedar
-            protegida en servidor y base de datos cuando se conecte Supabase.
+            Por ahora no se predicen penales. También queda pendiente definir si
+            habrá bonus por acertar el campeón del mundo antes del inicio del
+            torneo.
           </p>
         </div>
       </section>
 
-      <section
-        aria-label="Resumen operativo"
-        className="grid grid-cols-1 gap-4 md:grid-cols-3"
-      >
-        <div className="prode-frame bg-prode-surface p-4">
-          <LockKeyhole aria-hidden="true" className="size-6 stroke-[3]" />
-          <p className="mt-3 font-technical text-sm font-bold uppercase">
-            Cierre por partido
+      <RulesCard eyebrow="Bonus" title="Campeón del mundo">
+        <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-start">
+          <div className="flex size-14 items-center justify-center border-[3px] border-prode-black bg-prode-yellow">
+            <Database aria-hidden="true" className="size-7 stroke-[3]" />
+          </div>
+          <p>
+            La predicción de campeón es una regla candidata: se cerraría antes
+            del primer partido del Mundial y podría sumar puntos bonus. Todavía
+            no está activa.
           </p>
         </div>
-        <div className="prode-frame bg-prode-surface p-4">
-          <Eye aria-hidden="true" className="size-6 stroke-[3]" />
-          <p className="mt-3 font-technical text-sm font-bold uppercase">
-            Visibilidad al bloquear
-          </p>
-        </div>
-        <div className="prode-frame bg-prode-surface p-4">
-          <Pencil aria-hidden="true" className="size-6 stroke-[3]" />
-          <p className="mt-3 font-technical text-sm font-bold uppercase">
-            Edición antes del cierre
-          </p>
-        </div>
-      </section>
+      </RulesCard>
     </AuthenticatedAppShell>
   );
 }
