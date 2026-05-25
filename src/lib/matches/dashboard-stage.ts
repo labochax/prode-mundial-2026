@@ -69,7 +69,7 @@ export function getMatchStageLabel(match: StageSource) {
     case "semi-finals":
       return "Semifinal";
     case "third-place":
-      return "Tercer puesto";
+      return "3.º Puesto";
     default:
       return knockoutStage.heading;
   }
@@ -137,7 +137,7 @@ function getKnockoutStage(stage: string): DashboardStageDisplay | null {
 
   if (stage.includes("THIRD") || stage.includes("TERCER")) {
     return {
-      heading: "TERCER PUESTO",
+      heading: "3.º PUESTO",
       key: "third-place",
       marker: "3P",
       order: 70,

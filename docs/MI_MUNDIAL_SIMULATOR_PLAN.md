@@ -324,3 +324,49 @@ Limitaciones intencionales:
 - no se persisten tablas ni llaves proyectadas;
 - no se sobreescriben fixtures oficiales ni predicciones guardadas.
 - los desempates de grupos todavía usan reglas MVP simplificadas; antes de producción habría que implementar todos los criterios oficiales de Article 13 si el Prode decide copiarlos estrictamente.
+
+## Nota de implementación Phase 3
+
+Phase 3 agrega interacción local sobre la `Llave proyectada`.
+
+Incluye:
+
+- selección de ganadores sin ingresar marcadores;
+- avance derivado por rondas: `16avos`, `Octavos`, `Cuartos`, `Semifinales`, `Final` y `3.º puesto`;
+- derivación automática de `Campeón`, `Subcampeón`, `3.º` y `4.º`;
+- resumen `No guardado todavía`;
+- botón deshabilitado `Guardar predicción próximamente`;
+- helpers puros en `src/lib/tournament/knockout-selection.ts`;
+- tests unitarios para avance de rondas, final, tercer puesto, bonus y no mutación.
+
+Modelo de bonus propuesto, todavía sin persistencia ni scoring:
+
+- equipo correcto en `Octavos`: +1 cada uno;
+- equipo correcto en `Cuartos`: +1 cada uno;
+- equipo correcto en `Semifinales`: +2 cada uno;
+- campeón exacto: +10;
+- subcampeón exacto: +5;
+- tercer puesto exacto: +3;
+- cuarto puesto exacto: +2.
+
+No hay bonus por llegar a `16avos`: esa ronda es la base proyectada desde fase de grupos. El máximo total mostrado es `52 puntos`.
+
+Limitaciones intencionales:
+
+- refrescar la página borra la selección de llave;
+- no se guarda en Supabase;
+- no hay migración para bracket pre-torneo;
+- no hay scoring final de bonus;
+- la futura fase debe persistir la llave completa y bloquearla antes del inicio del torneo.
+
+## Nota de reglas finales
+
+`/reglas` documenta el modelo final previsto para Mi Mundial:
+
+- la llave completa se arma antes del inicio del torneo;
+- se bloquea al inicio del primer partido del Mundial;
+- el bonus empieza en `Octavos`, sin puntos por llegar a `16avos`;
+- la selección de campeón, subcampeón, tercer y cuarto puesto se deriva de la llave completa;
+- el máximo de bonus de Mi Mundial es `52 puntos`.
+
+La próxima fase técnica debe alinear persistencia, bloqueo y scoring con estas reglas antes de activar puntos reales por la llave pre-torneo.

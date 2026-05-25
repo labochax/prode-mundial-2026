@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
 import { ProdeBadge } from "@/components/prode/prode-badge";
+import { InteractiveKnockoutBracket } from "@/components/tournament/interactive-knockout-bracket";
 import type { MatchWithRelations } from "@/lib/matches/prediction-match";
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
 import { getActiveUpcomingMatchesWithDetails } from "@/lib/supabase/queries/matches";
@@ -15,8 +16,6 @@ import { rankThirdPlacedTeams } from "@/lib/tournament/rank-third-placed";
 import { simulateGroupTables } from "@/lib/tournament/simulate-groups";
 import type {
   ProjectedBracket,
-  ProjectedBracketMatch,
-  ProjectedBracketSlot,
   RankedThirdPlacedTeam,
   TournamentGroupMatch,
   TournamentGroupSimulation,
@@ -215,69 +214,6 @@ function BestThirdRow({ row }: { row: RankedThirdPlacedTeam }) {
   );
 }
 
-function BracketTeamSlot({ slot }: { slot: ProjectedBracketSlot }) {
-  return (
-    <div
-      className={cn(
-        "prode-frame bg-[#f7f4df] p-3",
-        slot.isPlaceholder && "bg-prode-surface text-muted-foreground",
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            "prode-frame px-2 py-1 font-technical text-xs font-black uppercase leading-none",
-            slot.isPlaceholder ? "bg-[#f7f4df]" : "bg-prode-yellow",
-          )}
-        >
-          {slot.slotLabel}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-technical text-sm font-black uppercase">
-            {slot.team.name}
-          </p>
-          <p className="mt-1 font-technical text-[0.68rem] font-black uppercase text-muted-foreground">
-            {slot.originLabel}
-          </p>
-          {slot.ruleLabel && (
-            <p className="mt-1 font-technical text-[0.62rem] font-black uppercase text-muted-foreground">
-              {slot.ruleLabel}
-            </p>
-          )}
-        </div>
-      </div>
-      <p className="mt-3 border-t-[2px] border-prode-black/30 pt-2 font-technical text-[0.62rem] font-black uppercase text-muted-foreground">
-        {slot.qualificationType}
-      </p>
-    </div>
-  );
-}
-
-function BracketMatchCard({ matchup }: { matchup: ProjectedBracketMatch }) {
-  return (
-    <article className="prode-frame prode-hard-shadow bg-prode-surface p-3">
-      <header className="mb-3 flex items-center justify-between gap-3 border-b-[3px] border-prode-black pb-2">
-        <h3 className="font-technical text-xs font-black uppercase">
-          {matchup.slotLabel}
-        </h3>
-        <span className="prode-frame bg-prode-yellow px-2 py-1 font-technical text-[0.62rem] font-black uppercase">
-          {matchup.roundLabel}
-        </span>
-      </header>
-
-      <div className="space-y-3">
-        <BracketTeamSlot slot={matchup.home} />
-        <div className="flex items-center gap-2">
-          <span className="h-[3px] flex-1 bg-prode-black" />
-          <span className="font-display text-3xl uppercase leading-none">VS</span>
-          <span className="h-[3px] flex-1 bg-prode-black" />
-        </div>
-        <BracketTeamSlot slot={matchup.away} />
-      </div>
-    </article>
-  );
-}
-
 function ProjectedBracketSection({ bracket }: { bracket: ProjectedBracket }) {
   const isComplete = bracket.status === "complete";
 
@@ -329,11 +265,7 @@ function ProjectedBracketSection({ bracket }: { bracket: ProjectedBracket }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-4">
-        {bracket.roundOf32.map((matchup) => (
-          <BracketMatchCard key={matchup.id} matchup={matchup} />
-        ))}
-      </div>
+      <InteractiveKnockoutBracket bracket={bracket} />
     </section>
   );
 }

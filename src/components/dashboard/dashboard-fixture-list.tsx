@@ -68,6 +68,10 @@ const stageFilterLabels: Record<string, { label: string; order: number }> = {
     label: "Semifinales",
     order: 60,
   },
+  "third-place": {
+    label: "3.º Puesto",
+    order: 70,
+  },
 };
 
 function normalizeFilterValue(value: string | null) {

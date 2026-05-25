@@ -1,4 +1,4 @@
-import { AlertTriangle, Database, Target } from "lucide-react";
+import { Medal, ShieldCheck, Target, Trophy } from "lucide-react";
 
 import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
 import { ProdeBadge } from "@/components/prode/prode-badge";
@@ -22,13 +22,23 @@ const scoringRules = [
   },
 ] as const;
 
+const bonusRules = [
+  "Equipo correcto en Octavos: +1",
+  "Equipo correcto en Cuartos: +1",
+  "Equipo correcto en Semifinales: +2",
+  "Campeón exacto: +10",
+  "Subcampeón exacto: +5",
+  "3.º puesto exacto: +3",
+  "4.º puesto exacto: +2",
+] as const;
+
 export default function RulesPage() {
   return (
     <AuthenticatedAppShell
       className="max-w-[88rem]"
       eyebrow="Manual del juego"
       title="Reglas del Prode"
-      description="Reglas simples para cargar pronósticos, esperar el bloqueo de cada partido y competir por la tabla del grupo."
+      description="Reglas para cargar pronósticos, armar Mi Mundial y competir por puntos partido a partido y bonus pre-torneo."
     >
       <section
         aria-label="Sistema de puntaje"
@@ -53,7 +63,7 @@ export default function RulesPage() {
         ))}
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <RulesCard eyebrow="Bloqueo" title="Cada partido cierra solo">
           <p>
             Las predicciones se bloquean por partido, no de manera global. El
@@ -71,46 +81,95 @@ export default function RulesPage() {
         <RulesCard eyebrow="Visibilidad" title="Pronósticos visibles al cerrar">
           <p>
             Cuando un partido queda bloqueado, las predicciones de los demás
-            jugadores para ese partido pasan a estar visibles. La intención es
-            poder verlas desde el detalle del partido y desde los perfiles o
-            ranking de jugadores cuando esa vista esté disponible.
+            jugadores para ese partido pasan a estar visibles.
           </p>
         </RulesCard>
+      </section>
 
-        <RulesCard eyebrow="Estado actual" title="Datos conectados">
+      <section className="prode-frame prode-hard-shadow bg-prode-yellow p-5 text-prode-black sm:p-6">
+        <div className="grid gap-5 lg:grid-cols-[auto_1fr] lg:items-start">
+          <div className="flex size-16 items-center justify-center border-[3px] border-prode-black bg-prode-surface">
+            <Trophy aria-hidden="true" className="size-9 stroke-[3]" />
+          </div>
+          <div>
+            <ProdeBadge variant="surface">Mi Mundial</ProdeBadge>
+            <h2 className="mt-4 font-display text-4xl uppercase leading-none sm:text-5xl">
+              Armá tu Mundial antes de que empiece
+            </h2>
+            <p className="mt-3 max-w-5xl leading-7">
+              En Mi Mundial proyectás tus grupos, mejores terceros y cruces de
+              eliminación según tus propios pronósticos. Después completás la
+              llave hasta definir campeón, subcampeón, tercer y cuarto puesto.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <RulesCard
+          eyebrow="Cierre pre-torneo"
+          title="La llave completa se bloquea al inicio del Mundial"
+        >
           <p>
-            Los partidos y predicciones ya se guardan en Supabase. Los fixtures
-            oficiales se pueden sincronizar con Football-Data y la tabla de
-            posiciones usa los puntos calculados desde la base de datos.
+            La predicción completa de Mi Mundial se puede editar hasta el inicio
+            del primer partido del torneo. Después queda bloqueada y visible para
+            competir por bonus.
+          </p>
+        </RulesCard>
+
+        <RulesCard eyebrow="Equilibrio" title="El Prode se sigue jugando partido a partido">
+          <p>
+            El bonus premia una gran predicción inicial, pero no reemplaza el
+            juego diario. Aunque falles la llave, todavía podés competir sumando
+            puntos en cada partido.
           </p>
         </RulesCard>
       </section>
 
-      <section className="prode-frame prode-hard-shadow grid gap-5 bg-prode-yellow p-5 sm:p-6 lg:grid-cols-[auto_1fr] lg:items-center">
-        <div className="flex size-16 items-center justify-center border-[3px] border-prode-black bg-prode-surface">
-          <AlertTriangle aria-hidden="true" className="size-9 stroke-[3]" />
+      <section className="prode-frame prode-hard-shadow bg-prode-surface p-5 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-4xl">
+            <ProdeBadge variant="primary">Bonus</ProdeBadge>
+            <h2 className="mt-4 font-display text-4xl uppercase leading-none sm:text-5xl">
+              Puntos bonus por Mi Mundial
+            </h2>
+            <p className="mt-3 leading-7 text-muted-foreground">
+              Además de los puntos partido a partido, podés sumar bonus si tu
+              llave pre-torneo acierta equipos en instancias decisivas.
+            </p>
+          </div>
+          <div className="flex size-16 shrink-0 items-center justify-center border-[3px] border-prode-black bg-prode-yellow">
+            <Medal aria-hidden="true" className="size-9 stroke-[3]" />
+          </div>
         </div>
-        <div>
-          <h2 className="font-display text-3xl uppercase leading-none">
-            Penales y predicción de campeón
-          </h2>
-          <p className="mt-2 max-w-4xl leading-7">
-            Por ahora no se predicen penales. También queda pendiente definir si
-            habrá bonus por acertar el campeón del mundo antes del inicio del
-            torneo.
-          </p>
+
+        <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {bonusRules.map((rule) => (
+            <div
+              className="prode-frame bg-[#f7f4df] px-4 py-3 font-technical text-sm font-black uppercase"
+              key={rule}
+            >
+              {rule}
+            </div>
+          ))}
         </div>
+
+        <p className="mt-5 border-t-[3px] border-prode-black pt-4 font-technical text-sm font-black uppercase">
+          No hay bonus por llegar a 16avos: esa ronda sirve como punto de partida
+          de la llave.
+        </p>
       </section>
 
-      <RulesCard eyebrow="Bonus" title="Campeón del mundo">
+      <RulesCard eyebrow="Penales" title="En eliminatorias importa quién avanza">
         <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-start">
           <div className="flex size-14 items-center justify-center border-[3px] border-prode-black bg-prode-yellow">
-            <Database aria-hidden="true" className="size-7 stroke-[3]" />
+            <ShieldCheck aria-hidden="true" className="size-7 stroke-[3]" />
           </div>
           <p>
-            La predicción de campeón es una regla candidata: se cerraría antes
-            del primer partido del Mundial y podría sumar puntos bonus. Todavía
-            no está activa.
+            Para la llave de Mi Mundial no hace falta predecir penales ni
+            marcador exacto: elegís qué equipo avanza. Los partidos reales de
+            eliminación siguen pudiendo pronosticarse por resultado como
+            cualquier otro partido.
           </p>
         </div>
       </RulesCard>
