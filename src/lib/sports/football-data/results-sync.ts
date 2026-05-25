@@ -15,6 +15,7 @@ type SupabaseAdminClient = SupabaseClient<Database>;
 type MatchUpdate = Database["public"]["Tables"]["matches"]["Update"];
 type SyncRunInsert = Database["public"]["Tables"]["sync_runs"]["Insert"];
 type SyncRunUpdate = Database["public"]["Tables"]["sync_runs"]["Update"];
+type FootballDataResultsSyncTrigger = "cron" | "manual";
 
 type ExistingMatch = Pick<
   Database["public"]["Tables"]["matches"]["Row"],
@@ -42,6 +43,8 @@ export type FootballDataResultsSyncResult = {
   matchesUpdated: number;
   predictionsChanged: 0;
   rateLimitReset: string | null;
+  requestsAvailable: string | null;
+  requestsAvailableMinute: string | null;
   scoredPredictions: number;
   stoppedMatchesUpdated: number;
   syncRunId: string;
@@ -51,13 +54,20 @@ function toJson(value: unknown): Json {
   return JSON.parse(JSON.stringify(value)) as Json;
 }
 
-async function createSyncRun(client: SupabaseAdminClient) {
+async function createSyncRun(
+  client: SupabaseAdminClient,
+  trigger: FootballDataResultsSyncTrigger,
+) {
   const insertRow = {
     provider: "football-data",
     status: "running",
     sync_type: "results",
     summary: {
-      note: "Sync local/manual de resultados iniciada desde /admin/sync.",
+      note:
+        trigger === "cron"
+          ? "Sync automatizable de resultados iniciada desde la ruta cron."
+          : "Sync local/manual de resultados iniciada desde /admin/sync.",
+      trigger,
     },
   } satisfies SyncRunInsert;
 
@@ -218,9 +228,11 @@ async function syncResultsToDatabase(
   };
 }
 
-export async function syncFootballDataResults(): Promise<FootballDataResultsSyncResult> {
+export async function syncFootballDataResults(
+  options: { trigger?: FootballDataResultsSyncTrigger } = {},
+): Promise<FootballDataResultsSyncResult> {
   const client = createSupabaseAdminClient();
-  const syncRunId = await createSyncRun(client);
+  const syncRunId = await createSyncRun(client, options.trigger ?? "manual");
 
   try {
     const candidates = await fetchFootballDataResultsSyncCandidates({
@@ -241,6 +253,8 @@ export async function syncFootballDataResults(): Promise<FootballDataResultsSync
       matchesUpdated,
       predictionsChanged: 0,
       rateLimitReset: candidates.rateLimit.requestCounterReset,
+      requestsAvailable: candidates.rateLimit.requestsAvailable,
+      requestsAvailableMinute: candidates.rateLimit.requestsAvailableMinute,
       scoredPredictions,
       stoppedMatchesUpdated,
       syncRunId,

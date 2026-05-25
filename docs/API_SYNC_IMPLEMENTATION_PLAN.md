@@ -531,3 +531,21 @@ Se agregó la base de sincronización manual de resultados/live:
 
 `AWARDED`, `SUSPENDED`, `POSTPONED` y `CANCELLED` se registran, pero no puntúan
 automáticamente hasta definir una regla de producto.
+
+## Nota De Implementacion Cron-Ready
+
+Se agregó la preparación para sincronización automática sin desplegar todavía:
+
+- Route Handler server-only `GET /api/cron/football-data`.
+- Autorización obligatoria por `CRON_SECRET`.
+- Modo default `smart`, más modos manuales `fixtures` y `results`.
+- Orquestador server-only que decide si ejecutar fixtures y/o resultados según
+  estado de la base, ventana live y última sync exitosa.
+- `vercel.json` preparado con cron cada 5 minutos en
+  `/api/cron/football-data`; la ruta decide si debe llamar al proveedor.
+- Se reutilizan las funciones server-only existentes de fixtures y resultados.
+- No se persisten puntos provisionales; solo se puntúan partidos `FINISHED`.
+- No se exponen tokens ni service role en código client.
+
+La activación productiva todavía requiere configurar `CRON_SECRET`,
+variables privadas del proyecto y revisar permisos/admin antes de desplegar.

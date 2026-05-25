@@ -180,7 +180,9 @@ export default async function AdminSyncPage({
               Importa equipos y partidos oficiales en Supabase local. No borra
               datos existentes, no modifica predicciones y no ejecuta puntaje.
               Cuando hay partidos oficiales, las pantallas principales ocultan
-              los partidos de prueba del seed.
+              los partidos de prueba del seed. Usalo para pruebas o
+              reprogramaciones: la automatización futura entrará por
+              /api/cron/football-data.
             </p>
           </div>
 
@@ -233,7 +235,8 @@ export default async function AdminSyncPage({
             <p className="mt-3 max-w-3xl font-body text-base">
               Actualiza estados, minutos y marcadores desde Football-Data. Los
               puntos oficiales solo se recalculan cuando un partido queda
-              finalizado.
+              finalizado. En producción, este flujo quedará a cargo de la ruta
+              cron protegida con CRON_SECRET.
             </p>
           </div>
 

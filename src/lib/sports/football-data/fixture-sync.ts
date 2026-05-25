@@ -17,6 +17,7 @@ type SyncRunInsert = Database["public"]["Tables"]["sync_runs"]["Insert"];
 type SyncRunUpdate = Database["public"]["Tables"]["sync_runs"]["Update"];
 
 type TeamIdLookup = Map<number, string>;
+type FootballDataFixtureSyncTrigger = "cron" | "manual";
 
 export type FootballDataFixtureSyncResult = {
   fetchedMatches: number;
@@ -26,6 +27,8 @@ export type FootballDataFixtureSyncResult = {
   matchesUpserted: number;
   predictionsChanged: 0;
   rateLimitReset: string | null;
+  requestsAvailable: string | null;
+  requestsAvailableMinute: string | null;
   syncRunId: string;
   teamsUpserted: number;
 };
@@ -34,13 +37,20 @@ function toJson(value: unknown): Json {
   return JSON.parse(JSON.stringify(value)) as Json;
 }
 
-async function createSyncRun(client: SupabaseAdminClient) {
+async function createSyncRun(
+  client: SupabaseAdminClient,
+  trigger: FootballDataFixtureSyncTrigger,
+) {
   const insertRow = {
     provider: "football-data",
     status: "running",
     sync_type: "fixtures",
     summary: {
-      note: "Sync local/manual iniciada desde /admin/sync.",
+      note:
+        trigger === "cron"
+          ? "Sync automatizable iniciada desde la ruta cron."
+          : "Sync local/manual iniciada desde /admin/sync.",
+      trigger,
     },
   } satisfies SyncRunInsert;
 
@@ -295,9 +305,11 @@ async function syncCandidatesToDatabase(
   };
 }
 
-export async function syncFootballDataFixtures(): Promise<FootballDataFixtureSyncResult> {
+export async function syncFootballDataFixtures(
+  options: { trigger?: FootballDataFixtureSyncTrigger } = {},
+): Promise<FootballDataFixtureSyncResult> {
   const client = createSupabaseAdminClient();
-  const syncRunId = await createSyncRun(client);
+  const syncRunId = await createSyncRun(client, options.trigger ?? "manual");
 
   try {
     const candidates = await fetchFootballDataFixtureSyncCandidates({
@@ -314,6 +326,9 @@ export async function syncFootballDataFixtures(): Promise<FootballDataFixtureSyn
       matchesUpserted: matchesInserted + matchesUpdated,
       predictionsChanged: 0,
       rateLimitReset: candidates.rateLimit.matches.requestCounterReset,
+      requestsAvailable: candidates.rateLimit.matches.requestsAvailable,
+      requestsAvailableMinute:
+        candidates.rateLimit.matches.requestsAvailableMinute,
       syncRunId,
       teamsUpserted,
     } satisfies FootballDataFixtureSyncResult;
