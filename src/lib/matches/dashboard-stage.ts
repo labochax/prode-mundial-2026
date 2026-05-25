@@ -47,9 +47,9 @@ function getKnockoutStage(stage: string): DashboardStageDisplay | null {
     stage.includes("32AVOS")
   ) {
     return {
-      heading: "32AVOS DE FINAL",
+      heading: "16AVOS DE FINAL",
       key: "round-64",
-      marker: "32",
+      marker: "16",
       order: 20,
     };
   }
