@@ -7,6 +7,7 @@ import type { Database } from "@/lib/supabase/database.types";
 const protectedRoutePrefixes = [
   "/admin",
   "/dashboard",
+  "/mi-mundial",
   "/onboarding",
   "/partidos",
   "/perfil",

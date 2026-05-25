@@ -59,7 +59,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
 
   const [prediction, nextMatchRow] = await Promise.all([
     getPredictionForMatch(supabase, matchRow.id, pool.id),
-    getNextActiveMatchAfter(supabase, matchRow.kickoff_at),
+    getNextActiveMatchAfter(supabase, matchRow),
   ]);
   const match = mapSupabaseMatchToPredictionMatch(matchRow, prediction);
   const nextMatch = nextMatchRow

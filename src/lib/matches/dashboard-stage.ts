@@ -1,10 +1,13 @@
-import type { MatchWithRelations } from "@/lib/matches/prediction-match";
-
 export type DashboardStageDisplay = {
   heading: string;
   key: string;
   marker: string;
   order: number;
+};
+
+type StageSource = {
+  group_code: string | null;
+  stage: string | null;
 };
 
 export type DashboardStageItem<T> = {
@@ -38,6 +41,38 @@ function getGroupLetter(groupCode: string | null) {
   const match = group.match(/[A-Z0-9]+$/);
 
   return match?.[0]?.slice(-2) ?? "G";
+}
+
+export function getMatchStageLabel(match: StageSource) {
+  const stage = normalizeStage(match.stage);
+
+  if (!stage || stage.includes("GROUP")) {
+    return `Grupo ${getGroupLetter(match.group_code)}`;
+  }
+
+  const knockoutStage = getKnockoutStage(stage);
+
+  if (!knockoutStage) {
+    return stage.replaceAll("_", " ");
+  }
+
+  switch (knockoutStage.key) {
+    case "final":
+      return "Final";
+    case "quarter-finals":
+      return "Cuartos";
+    case "round-16":
+      return "Octavos";
+    case "round-32":
+    case "round-64":
+      return "16avos";
+    case "semi-finals":
+      return "Semifinal";
+    case "third-place":
+      return "Tercer puesto";
+    default:
+      return knockoutStage.heading;
+  }
 }
 
 function getKnockoutStage(stage: string): DashboardStageDisplay | null {
@@ -122,7 +157,7 @@ function getKnockoutStage(stage: string): DashboardStageDisplay | null {
 }
 
 export function getDashboardStageDisplay(
-  match: Pick<MatchWithRelations, "group_code" | "stage">,
+  match: StageSource,
 ): DashboardStageDisplay {
   const stage = normalizeStage(match.stage);
 

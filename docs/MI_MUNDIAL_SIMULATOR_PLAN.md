@@ -265,3 +265,25 @@ Después:
 - Nivel de fidelidad con desempates oficiales FIFA.
 - Momento exacto de bloqueo de campeón.
 - Si la llave debe permitir pronosticar eliminatorias antes de que los equipos estén oficialmente definidos.
+
+## Nota de implementación Phase 1
+
+Phase 1 queda implementada como `/mi-mundial`, una vista read-only bajo el shell autenticado.
+
+Incluye:
+
+- tablas de grupos derivadas de los pronósticos del usuario actual;
+- ranking de mejores terceros;
+- avisos de grupos incompletos;
+- link a `/dashboard` para cargar más pronósticos.
+
+No incluye todavía:
+
+- predicción de campeón;
+- bonus de campeón;
+- llave eliminatoria proyectada;
+- persistencia de tablas simuladas.
+
+Las proyecciones no se guardan en la base. Se calculan desde `matches`, `teams` y `predictions` usando el cliente Supabase server bajo RLS normal, sin service role.
+
+Los placeholders oficiales de eliminatorias deben mostrarse como labels de slot o `Por definir`, no como nombres falsos de equipos. La siguiente fase debería tomar los clasificados simulados del usuario y usarlos para proyectar esos slots sin sobreescribir el fixture oficial.

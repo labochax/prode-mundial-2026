@@ -75,15 +75,15 @@ export async function AuthenticatedAppShell({
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r-[3px] border-prode-black bg-prode-paper p-5 lg:flex">
         <Link
           aria-label="Ir a predicciones"
-          className="prode-frame prode-hard-shadow prode-pressable flex min-h-28 items-center justify-center bg-prode-surface p-3 outline-none hover:bg-[#fff7b5] focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
+          className="prode-frame prode-hard-shadow prode-pressable flex min-h-24 items-center justify-center bg-prode-surface p-3 outline-none hover:bg-[#fff7b5] focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
           href="/dashboard"
         >
-          <ProdeCompactLogo imageClassName="w-36 sm:w-36" priority />
+          <ProdeCompactLogo imageClassName="w-32 sm:w-32" priority />
         </Link>
 
-        <PlayerIdentityBlock className="mt-7" identity={playerIdentity} />
+        <PlayerIdentityBlock className="mt-5" identity={playerIdentity} />
 
-        <div aria-hidden="true" className="my-5 border-t-[3px] border-prode-black" />
+        <div aria-hidden="true" className="my-4 border-t-[3px] border-prode-black" />
 
         <AuthenticatedNavigation variant="sidebar" />
 

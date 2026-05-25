@@ -3,6 +3,7 @@ import {
   stitchFlagAssets,
   type StitchFlagAsset,
 } from "@/lib/design/stitch-assets";
+import { getMatchStageLabel } from "@/lib/matches/dashboard-stage";
 
 type MatchRow = Database["public"]["Tables"]["matches"]["Row"];
 type PredictionRow = Database["public"]["Tables"]["predictions"]["Row"];
@@ -90,6 +91,12 @@ function readNumber(value: Json | undefined, fallback: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+function readString(value: Json | undefined) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
+}
+
 function readPercentBlock(
   rawJson: Json | null,
   key: "direct_history" | "tendency",
@@ -124,8 +131,56 @@ function getTeamCode(team: TeamRow | null, fallback: string) {
   return (team?.tla ?? team?.short_name ?? fallback).slice(0, 3).toUpperCase();
 }
 
-function mapTeam(team: TeamRow | null, fallbackName: string): PredictionMatchTeam {
-  const code = getTeamCode(team, fallbackName);
+function getProviderTeamPlaceholder(
+  rawJson: Json | null,
+  side: "awayTeam" | "homeTeam",
+) {
+  if (!isRecord(rawJson) || !isRecord(rawJson[side])) {
+    return null;
+  }
+
+  return (
+    readString(rawJson[side].name) ??
+    readString(rawJson[side].shortName) ??
+    readString(rawJson[side].tla)
+  );
+}
+
+function formatPlaceholderTeamName(value: string | null) {
+  if (!value) {
+    return "Por definir";
+  }
+
+  const normalized = value.trim();
+  const winnerMatch = normalized.match(/winner\s+match\s+(\d+)/i);
+
+  if (winnerMatch) {
+    return `Ganador Partido ${winnerMatch[1]}`;
+  }
+
+  if (/best\s+third/i.test(normalized)) {
+    return "Mejor 3°";
+  }
+
+  if (/to\s+be\s+defined|tbd|undefined/i.test(normalized)) {
+    return "Por definir";
+  }
+
+  return normalized;
+}
+
+function mapTeam(
+  team: TeamRow | null,
+  fallbackName: string,
+  rawJson: Json | null,
+  side: "awayTeam" | "homeTeam",
+): PredictionMatchTeam {
+  const placeholderName = formatPlaceholderTeamName(
+    getProviderTeamPlaceholder(rawJson, side),
+  );
+  const isPlaceholder = !team;
+  const name = isPlaceholder ? placeholderName : team.name_es ?? fallbackName;
+  const code = isPlaceholder ? "P/D" : getTeamCode(team, fallbackName);
   const flag = findFlagBySrc(team?.flag_url ?? null);
   const detailFlag =
     code === "ARG" ? stitchFlagAssets["argentina-detalle"] : flag;
@@ -134,8 +189,8 @@ function mapTeam(team: TeamRow | null, fallbackName: string): PredictionMatchTea
     code,
     detailFlag,
     flag,
-    id: team?.id ?? fallbackName.toLowerCase(),
-    name: team?.name_es ?? fallbackName,
+    id: team?.id ?? `${side}-por-definir`,
+    name,
   };
 }
 
@@ -205,10 +260,7 @@ function getTimerLabel(lockAt: string) {
 }
 
 function getGroupLabel(match: MatchRow) {
-  const group = match.group_code ?? "Grupo";
-  const stage = match.stage ?? "Fecha";
-
-  return `${group} - ${stage}`;
+  return getMatchStageLabel(match);
 }
 
 function getLockLabel(match: MatchRow, locked: boolean) {
@@ -317,8 +369,8 @@ export function mapSupabaseMatchToPredictionMatch(
 ): PredictionMatch {
   const locked = new Date(match.lock_at).getTime() <= Date.now();
   const tendency = readPercentBlock(match.raw_json, "tendency", defaultTendency);
-  const homeTeam = mapTeam(match.home_team, "Equipo A");
-  const awayTeam = mapTeam(match.away_team, "Equipo B");
+  const homeTeam = mapTeam(match.home_team, "Por definir", match.raw_json, "homeTeam");
+  const awayTeam = mapTeam(match.away_team, "Por definir", match.raw_json, "awayTeam");
 
   return {
     away: awayTeam,

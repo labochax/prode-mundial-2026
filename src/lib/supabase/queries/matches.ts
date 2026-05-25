@@ -43,15 +43,40 @@ function getActiveMatches(matches: MatchWithRelations[]): ActiveMatchesWithDetai
 
   if (officialMatches.length > 0) {
     return {
-      matches: officialMatches,
+      matches: sortMatchesForNavigation(officialMatches),
       source: "official",
     };
   }
 
   return {
-    matches: matches.filter(isSeedFixture),
+    matches: sortMatchesForNavigation(matches.filter(isSeedFixture)),
     source: "seed",
   };
+}
+
+function compareMatchesForNavigation(
+  left: Pick<MatchWithRelations, "id" | "kickoff_at" | "match_number">,
+  right: Pick<MatchWithRelations, "id" | "kickoff_at" | "match_number">,
+) {
+  const kickoffDiff =
+    new Date(left.kickoff_at).getTime() - new Date(right.kickoff_at).getTime();
+
+  if (kickoffDiff !== 0) {
+    return kickoffDiff;
+  }
+
+  const leftMatchNumber = left.match_number ?? Number.MAX_SAFE_INTEGER;
+  const rightMatchNumber = right.match_number ?? Number.MAX_SAFE_INTEGER;
+
+  if (leftMatchNumber !== rightMatchNumber) {
+    return leftMatchNumber - rightMatchNumber;
+  }
+
+  return left.id.localeCompare(right.id);
+}
+
+function sortMatchesForNavigation(matches: MatchWithRelations[]) {
+  return [...matches].sort(compareMatchesForNavigation);
 }
 
 export async function getMatches(client: SupabaseDatabaseClient) {
@@ -139,15 +164,18 @@ export async function getNextMatchAfter(
 
 export async function getNextActiveMatchAfter(
   client: SupabaseDatabaseClient,
-  currentKickoffAt: string,
+  currentMatch: Pick<MatchWithRelations, "id" | "kickoff_at" | "match_number">,
 ) {
   const { matches } = await getActiveUpcomingMatchesWithDetails(client);
+  const currentIndex = matches.findIndex((match) => match.id === currentMatch.id);
+
+  if (currentIndex >= 0) {
+    return matches[currentIndex + 1] ?? null;
+  }
 
   return (
     matches.find(
-      (match) =>
-        new Date(match.kickoff_at).getTime() >
-        new Date(currentKickoffAt).getTime(),
+      (match) => compareMatchesForNavigation(match, currentMatch) > 0,
     ) ?? null
   );
 }
