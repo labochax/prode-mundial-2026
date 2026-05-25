@@ -17,6 +17,37 @@ const allowedLocalStatuses = new Set([
   "TIMED",
 ]);
 
+const spanishTeamNamesByKey: Record<string, string> = {
+  argentina: "Argentina",
+  australia: "Australia",
+  belgium: "Bélgica",
+  brazil: "Brasil",
+  canada: "Canadá",
+  chile: "Chile",
+  colombia: "Colombia",
+  croatia: "Croacia",
+  denmark: "Dinamarca",
+  ecuador: "Ecuador",
+  england: "Inglaterra",
+  france: "Francia",
+  germany: "Alemania",
+  italy: "Italia",
+  japan: "Japón",
+  mexico: "México",
+  morocco: "Marruecos",
+  netherlands: "Países Bajos",
+  paraguay: "Paraguay",
+  peru: "Perú",
+  portugal: "Portugal",
+  qatar: "Qatar",
+  senegal: "Senegal",
+  spain: "España",
+  switzerland: "Suiza",
+  uruguay: "Uruguay",
+  usa: "Estados Unidos",
+  "united states": "Estados Unidos",
+};
+
 function toJson(value: unknown): Json {
   return JSON.parse(JSON.stringify(value)) as Json;
 }
@@ -79,21 +110,38 @@ function mapStatus(status: string | null | undefined) {
   return "SCHEDULED";
 }
 
+function getSpanishTeamName(team: FootballDataTeam, fallback: string) {
+  const candidates = [team.name, team.shortName, team.tla]
+    .map((value) => normalizeText(value)?.toLowerCase())
+    .filter((value): value is string => Boolean(value));
+
+  for (const candidate of candidates) {
+    const mappedName = spanishTeamNamesByKey[candidate];
+
+    if (mappedName) {
+      return mappedName;
+    }
+  }
+
+  return fallback;
+}
+
 export function mapFootballDataTeamToCandidate(
   team: FootballDataTeam,
 ): FootballDataTeamCandidate {
   const name = normalizeText(team.name) ?? `Equipo ${team.id}`;
+  const shortName = normalizeText(team.shortName);
 
   return {
     badge_url: normalizeText(team.crest),
     flag_url: normalizeText(team.area?.flag),
     football_data_id: team.id,
     name_en: name,
-    // Spanish names need a curated alias table later. Until then, keep the
-    // provider name as fallback and let UI/local edits override it.
-    name_es: normalizeText(team.shortName) ?? name,
+    // This intentionally stays as a small alias table. A complete Spanish
+    // naming policy belongs in a later data-quality pass.
+    name_es: getSpanishTeamName(team, shortName ?? name),
     raw_json: toJson(team),
-    short_name: normalizeText(team.shortName),
+    short_name: shortName,
     tla: normalizeText(team.tla),
   };
 }

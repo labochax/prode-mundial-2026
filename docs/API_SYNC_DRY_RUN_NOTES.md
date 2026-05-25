@@ -23,7 +23,7 @@ La acción:
 - corre solo en desarrollo/test;
 - llama Football-Data desde servidor;
 - mapea equipos y partidos a candidatos locales;
-- muestra conteos y una muestra breve;
+- muestra conteos y una muestra breve, no el calendario completo;
 - no escribe en Supabase;
 - no muestra tokens ni raw JSON grande.
 
@@ -33,6 +33,32 @@ La acción:
 - Si el proveedor rechaza token: se muestra error de token.
 - Si hay rate limit: se muestra error de límite de uso.
 
+## Sync Manual De Fixtures
+
+Después de validar la vista previa, `/admin/sync` también incluye
+`Sincronizar fixtures oficiales`.
+
+La acción:
+
+- corre solo en desarrollo/test;
+- usa el cliente server-only de Football-Data;
+- escribe con el cliente admin server-only porque `teams` y `matches` no aceptan
+  escrituras de usuarios normales;
+- upsertea equipos por `football_data_id`;
+- inserta o actualiza partidos por `football_data_id`;
+- deja que el trigger de `matches` calcule `lock_at` para partidos nuevos y
+  recalcule si cambia `kickoff_at`;
+- registra el intento en `sync_runs`;
+- no modifica predicciones;
+- no ejecuta scoring;
+- no llama TheSportsDB.
+
+La semilla local sigue disponible como fallback de desarrollo. El sync oficial
+no borra esos partidos, pero `/dashboard` y la navegación normal prefieren
+fixtures oficiales cuando existen. En ese caso los fixtures fake del seed quedan
+ocultos de las pantallas principales.
+
 ## Siguiente Paso
 
-Después de verificar payloads reales manualmente, implementar sync de DB en modo local con upserts idempotentes y `sync_runs`.
+Después de verificar la importación manual, implementar sync de resultados y
+scoring oficial con el mismo patrón de `sync_runs`.

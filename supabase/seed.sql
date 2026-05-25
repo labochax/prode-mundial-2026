@@ -153,7 +153,6 @@ set
 
 insert into public.matches (
   id,
-  football_data_id,
   match_number,
   stage,
   group_code,
@@ -167,7 +166,6 @@ insert into public.matches (
 values
   (
     '00000000-0000-4000-8000-000000000301',
-    990001,
     1,
     'Fecha de muestra',
     'Grupo A',
@@ -184,7 +182,6 @@ values
   ),
   (
     '00000000-0000-4000-8000-000000000302',
-    990002,
     2,
     'Fecha de muestra',
     'Grupo B',
@@ -201,7 +198,6 @@ values
   ),
   (
     '00000000-0000-4000-8000-000000000303',
-    990003,
     3,
     'Fecha de muestra',
     'Grupo C',
@@ -218,7 +214,6 @@ values
   ),
   (
     '00000000-0000-4000-8000-000000000304',
-    990004,
     4,
     'Fecha de muestra',
     'Grupo D',
@@ -235,7 +230,7 @@ values
   )
 on conflict (id) do update
 set
-  football_data_id = excluded.football_data_id,
+  football_data_id = null,
   match_number = excluded.match_number,
   stage = excluded.stage,
   group_code = excluded.group_code,

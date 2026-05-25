@@ -5,6 +5,7 @@ export const FOOTBALL_DATA_PROVIDER = {
 
 // Future sync code must run server-side and read FOOTBALL_DATA_API_TOKEN there.
 export type {
+  FootballDataFixtureSyncCandidates,
   FootballDataMatchCandidate,
   FootballDataTeamCandidate,
 } from "@/lib/sports/football-data/types";

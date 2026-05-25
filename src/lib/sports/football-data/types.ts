@@ -134,3 +134,13 @@ export type FootballDataDryRunPreview = {
   rateLimit: FootballDataRateLimitInfo;
   teams: FootballDataTeamCandidate[];
 };
+
+export type FootballDataFixtureSyncCandidates = {
+  fetchedAt: string;
+  matches: FootballDataMatchCandidate[];
+  rateLimit: {
+    matches: FootballDataRateLimitInfo;
+    teams: FootballDataRateLimitInfo;
+  };
+  teams: FootballDataTeamCandidate[];
+};

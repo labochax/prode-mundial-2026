@@ -342,6 +342,44 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_errors: {
+        Row: {
+          context: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          message: string
+          provider: string
+          sync_run_id: string | null
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          message: string
+          provider: string
+          sync_run_id?: string | null
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          message?: string
+          provider?: string
+          sync_run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_errors_sync_run_id_fkey"
+            columns: ["sync_run_id"]
+            isOneToOne: false
+            referencedRelation: "sync_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settings: {
         Row: {
           created_at: string
@@ -393,6 +431,42 @@ export type Database = {
           name?: string
           raw_json?: Json | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sync_runs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          provider: string
+          started_at: string
+          status: string
+          summary: Json | null
+          sync_type: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          provider: string
+          started_at?: string
+          status: string
+          summary?: Json | null
+          sync_type: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          provider?: string
+          started_at?: string
+          status?: string
+          summary?: Json | null
+          sync_type?: string
         }
         Relationships: []
       }

@@ -15,6 +15,11 @@
 
 Estos partidos no son fixtures oficiales del Mundial 2026. Son datos locales para validar el MVP visual y el flujo de pronósticos.
 
+Los partidos fake del seed deben tener `football_data_id = null` y un marcador
+`raw_json.seed_note`. Las instalaciones locales antiguas pueden conservar IDs
+fake de seed; por eso la app también detecta `raw_json.seed_note` como fixture
+de prueba.
+
 ## Dashboard
 
 El panel autenticado ahora:
@@ -23,6 +28,8 @@ El panel autenticado ahora:
 - busca el pool local por slug;
 - agrega al usuario al pool como `member` si todavía no pertenece;
 - carga partidos desde `public.matches` con equipos y estadio;
+- si existen fixtures oficiales de Football-Data, muestra solo esos partidos;
+- si no existen fixtures oficiales, usa los partidos fake del seed como fallback;
 - carga las predicciones propias del usuario para esos partidos;
 - guarda predicciones rápidas mediante Server Action y RLS normal.
 
@@ -32,9 +39,14 @@ El panel autenticado ahora:
 
 - busca el partido por UUID real de Supabase;
 - carga la predicción existente del usuario en el pool activo;
-- calcula el siguiente partido por `kickoff_at`;
+- calcula el siguiente partido por `kickoff_at` dentro de la fuente activa:
+  fixtures oficiales si existen, seed local si no existen;
 - guarda cambios de predicción mediante Server Action;
 - respeta el estado bloqueado que expone la base por `matches.lock_at`.
+
+La navegación directa a un partido fake por UUID puede seguir funcionando en
+desarrollo local, pero el dashboard no los promociona cuando ya hay fixtures
+oficiales importados.
 
 ## Persistencia De Predicciones
 
@@ -50,9 +62,7 @@ No se usa service role para el flujo normal de usuario. La base mantiene el bloq
 
 ## Limitaciones Actuales
 
-- No hay sincronización con Football-Data.org.
+- La sincronización de Football-Data.org es manual/local desde `/admin/sync`.
 - No hay assets oficiales desde TheSportsDB.
-- No hay fixtures oficiales.
 - No hay Supabase remoto ni deploy.
 - El seed local no crea usuarios, perfiles ni predicciones reales.
-- La tabla de posiciones todavía no consume el leaderboard SQL real.

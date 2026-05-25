@@ -1,13 +1,14 @@
 import { Trophy, Wrench } from "lucide-react";
 import { redirect } from "next/navigation";
 
+import { syncFootballDataFixturesAction } from "@/app/actions/api-sync-fixtures";
 import { previewFootballDataDryRunAction } from "@/app/actions/api-sync-preview";
 import { finalizeAndScoreMatchAction } from "@/app/actions/dev-scoring";
 import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
 import { ProdeBadge } from "@/components/prode/prode-badge";
 import { ProdeCard } from "@/components/prode/prode-card";
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
-import { getUpcomingMatchesWithDetails } from "@/lib/supabase/queries/matches";
+import { getActiveUpcomingMatchesWithDetails } from "@/lib/supabase/queries/matches";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -53,9 +54,19 @@ export default async function AdminSyncPage({
   const apiPreviewMatches = getSearchValue(resolvedSearchParams, "api_matches");
   const apiPreviewText = getSearchValue(resolvedSearchParams, "api_texto");
   const apiPreviewReset = getSearchValue(resolvedSearchParams, "api_reset");
+  const fixtureSyncState = getSearchValue(resolvedSearchParams, "sync_estado");
+  const fixtureSyncError = getSearchValue(resolvedSearchParams, "sync_error");
+  const fixtureSyncTeams = getSearchValue(resolvedSearchParams, "sync_teams");
+  const fixtureSyncMatches = getSearchValue(resolvedSearchParams, "sync_matches");
+  const fixtureSyncRun = getSearchValue(resolvedSearchParams, "sync_run");
+  const fixtureSyncText = getSearchValue(resolvedSearchParams, "sync_text");
+  const fixtureSyncReset = getSearchValue(resolvedSearchParams, "sync_reset");
   const scoredPredictions = getSearchValue(resolvedSearchParams, "predicciones");
   const isProduction = process.env.NODE_ENV === "production";
-  const matches = isProduction ? [] : await getUpcomingMatchesWithDetails(supabase);
+  const activeMatches = isProduction
+    ? { matches: [], source: "seed" as const }
+    : await getActiveUpcomingMatchesWithDetails(supabase);
+  const matches = activeMatches.matches;
 
   return (
     <AuthenticatedAppShell
@@ -107,8 +118,8 @@ export default async function AdminSyncPage({
               Probar Football-Data
             </h2>
             <p className="mt-3 max-w-3xl font-body text-base">
-              Ejecuta una lectura local de prueba, mapea candidatos y no escribe
-              datos en Supabase.
+              La vista previa muestra una muestra limitada, mapea candidatos y
+              no escribe en la base.
             </p>
           </div>
 
@@ -141,6 +152,60 @@ export default async function AdminSyncPage({
                   }. ${apiPreviewText ?? ""} ${
                     apiPreviewReset
                       ? `Reset de cuota en ${apiPreviewReset}s.`
+                      : ""
+                  }`}
+          </div>
+        )}
+      </ProdeCard>
+
+      <ProdeCard className="p-5 sm:p-6">
+        <div className="flex flex-col gap-4 border-b-[3px] border-prode-black pb-5 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <ProdeBadge variant="primary">Sincronización oficial</ProdeBadge>
+            <h2 className="mt-4 font-display text-4xl uppercase leading-none sm:text-5xl">
+              Partidos Football-Data
+            </h2>
+            <p className="mt-3 max-w-3xl font-body text-base">
+              Importa equipos y partidos oficiales en Supabase local. No borra
+              datos existentes, no modifica predicciones y no ejecuta puntaje.
+              Cuando hay partidos oficiales, las pantallas principales ocultan
+              los partidos de prueba del seed.
+            </p>
+          </div>
+
+          <form action={syncFootballDataFixturesAction}>
+            <button
+              className="prode-frame prode-hard-shadow prode-pressable inline-flex min-h-14 items-center justify-center bg-prode-yellow px-4 py-3 font-technical text-xs font-bold uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper disabled:pointer-events-none disabled:opacity-50"
+              disabled={isProduction}
+              type="submit"
+            >
+              Sincronizar fixtures oficiales
+            </button>
+          </form>
+        </div>
+
+        {(fixtureSyncState || fixtureSyncError || isProduction) && (
+          <div
+            className={cn(
+              "prode-frame mt-5 px-4 py-3 font-technical text-xs font-bold uppercase",
+              fixtureSyncError || isProduction
+                ? "bg-[#ffe2d8] text-red-800"
+                : "bg-prode-yellow text-prode-black",
+            )}
+          >
+            {isProduction
+              ? "La sincronización oficial está desactivada en producción."
+              : fixtureSyncError
+                ? fixtureSyncError
+                : `Ejecución ${
+                    fixtureSyncRun ?? "local"
+                  } completada. Equipos: ${
+                    fixtureSyncTeams ?? "0"
+                  } / Partidos: ${fixtureSyncMatches ?? "0"}. ${
+                    fixtureSyncText ?? "Predicciones modificadas: 0."
+                  } ${
+                    fixtureSyncReset
+                      ? `Reset de cuota en ${fixtureSyncReset}s.`
                       : ""
                   }`}
           </div>

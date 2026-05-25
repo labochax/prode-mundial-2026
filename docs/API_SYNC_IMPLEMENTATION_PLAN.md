@@ -491,3 +491,21 @@ Se agregaron los primeros bloques seguros de integracion:
 - Vista previa local en `/admin/sync` mediante `Probar Football-Data`.
 
 La vista previa no escribe en Supabase. Los tokens permanecen en contexto servidor y no se importan en componentes client.
+
+## Nota De Implementacion Phase C Inicial
+
+Se agregó la primera sincronización manual local de fixtures:
+
+- Migración `sync_runs` y `provider_errors` para observabilidad mínima.
+- Acción server-only desde `/admin/sync` con botón `Sincronizar fixtures oficiales`.
+- Escritura con cliente admin server-only, desactivada en producción.
+- Upsert de `teams` por `football_data_id`.
+- Inserción/actualización de `matches` por `football_data_id`.
+- `lock_at` queda a cargo del trigger existente: en inserts se envía `null` para que la base lo calcule, y en updates no se escribe `lock_at`.
+- No se modifican predicciones, no se ejecuta `score_match_predictions`, no se llama TheSportsDB y no hay cron.
+
+La semilla local sigue como fallback; el sync oficial no elimina filas locales.
+Las pantallas principales seleccionan una fuente activa: fixtures oficiales
+cuando existen, seed local solo cuando todavía no hay oficiales. Además de
+`football_data_id`, la app reconoce `raw_json.seed_note` para ocultar fixtures
+fake heredados que habían sido sembrados con IDs falsos.

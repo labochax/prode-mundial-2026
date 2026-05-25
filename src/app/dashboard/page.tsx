@@ -7,7 +7,7 @@ import { MatchPredictionCard } from "@/components/dashboard/match-prediction-car
 import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
 import { mapSupabaseMatchToPredictionMatch } from "@/lib/matches/prediction-match";
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
-import { getUpcomingMatchesWithDetails } from "@/lib/supabase/queries/matches";
+import { getActiveUpcomingMatchesWithDetails } from "@/lib/supabase/queries/matches";
 import { getPredictionsForMatches } from "@/lib/supabase/queries/predictions";
 import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -21,7 +21,7 @@ export default async function DashboardPage() {
   }
 
   const pool = await getOrJoinDefaultPool(supabase);
-  const matches = await getUpcomingMatchesWithDetails(supabase);
+  const { matches, source } = await getActiveUpcomingMatchesWithDetails(supabase);
   const predictionsByMatchId = await getPredictionsForMatches(
     supabase,
     pool.id,
@@ -37,7 +37,7 @@ export default async function DashboardPage() {
   return (
     <AuthenticatedAppShell
       className="max-w-[90rem] gap-10"
-      header={<DashboardHeader />}
+      header={<DashboardHeader source={source} />}
     >
       {predictionMatches.length > 0 ? (
         <section
@@ -59,7 +59,8 @@ export default async function DashboardPage() {
           </h2>
           <p className="mt-3 max-w-2xl font-body text-base">
             Todavía no hay partidos disponibles en la base local. Ejecutá la
-            semilla de desarrollo antes de probar el flujo de pronósticos.
+            semilla de desarrollo o la sincronización oficial antes de probar el
+            flujo de pronósticos.
           </p>
         </section>
       )}

@@ -7,6 +7,7 @@ import {
 } from "@/lib/sports/football-data/mappers";
 import type {
   FootballDataDryRunPreview,
+  FootballDataFixtureSyncCandidates,
   FootballDataMatchesResponse,
   FootballDataRateLimitInfo,
   FootballDataTeamsResponse,
@@ -136,4 +137,37 @@ export async function fetchFootballDataDryRunPreview(options?: {
     rateLimit: matchesResponse.rateLimit,
     teams: teams.slice(0, 8).map((team) => mapFootballDataTeamToCandidate(team)),
   } satisfies FootballDataDryRunPreview;
+}
+
+export async function fetchFootballDataFixtureSyncCandidates(options?: {
+  competitionCode?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  season?: string;
+}) {
+  const competitionCode = options?.competitionCode ?? "WC";
+  const fetchedAt = new Date().toISOString();
+  const [teamsResponse, matchesResponse] = await Promise.all([
+    fetchFootballDataCompetitionTeams(competitionCode, options?.season),
+    fetchFootballDataCompetitionMatches(competitionCode, {
+      dateFrom: options?.dateFrom,
+      dateTo: options?.dateTo,
+      season: options?.season,
+    }),
+  ]);
+
+  const teams = teamsResponse.data.teams ?? [];
+  const matches = matchesResponse.data.matches ?? [];
+
+  return {
+    fetchedAt,
+    matches: matches.map((match) =>
+      mapFootballDataMatchToCandidate(match, fetchedAt),
+    ),
+    rateLimit: {
+      matches: matchesResponse.rateLimit,
+      teams: teamsResponse.rateLimit,
+    },
+    teams: teams.map((team) => mapFootballDataTeamToCandidate(team)),
+  } satisfies FootballDataFixtureSyncCandidates;
 }

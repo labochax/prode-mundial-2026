@@ -25,6 +25,20 @@ Por ahora `Global` y `Amigos` muestran el mismo pool local. La separación real 
 
 La acción usa el cliente admin server-only porque los usuarios normales no tienen permisos para actualizar resultados. No se importa service role en componentes client.
 
+## Sync Local De Fixtures
+
+`/admin/sync` también incluye `Sincronizar fixtures oficiales` para desarrollo
+local. Esa acción importa equipos y partidos desde Football-Data usando módulos
+server-only y registra el intento en `sync_runs`.
+
+El sync de fixtures:
+
+- está desactivado en producción;
+- no modifica predicciones;
+- no ejecuta scoring;
+- no elimina los partidos del seed local;
+- no llama TheSportsDB todavía.
+
 El sandbox está desactivado en producción. Antes de desplegar una operación real,
 `/admin/sync` debe reemplazarse por un flujo con autorización admin explícita,
 auditoría y controles de sincronización.
@@ -39,14 +53,14 @@ Solo se conservan errores de desarrollo con detalles técnicos no secretos.
 2. Completar onboarding si hace falta.
 3. Guardar predicciones en `/dashboard` o `/partidos/[matchId]`.
 4. Abrir `/admin/sync`.
-5. Cargar un resultado final y usar `Finalizar y puntuar`.
-6. Abrir `/posiciones` y verificar los puntos.
-7. Finalizar otro partido y confirmar que la tabla se actualiza.
+5. Opcional: usar `Sincronizar fixtures oficiales` para importar fixtures de Football-Data en local.
+6. Cargar un resultado final y usar `Finalizar y puntuar`.
+7. Abrir `/posiciones` y verificar los puntos.
+8. Finalizar otro partido y confirmar que la tabla se actualiza.
 
 ## Limitaciones
 
-- No hay sincronización real con Football-Data.org.
-- No hay fixtures oficiales.
+- La sincronización con Football-Data.org es manual y local-only.
 - No hay permisos admin productivos.
 - `/admin/sync` está desactivado en producción.
 - No hay integración con TheSportsDB.

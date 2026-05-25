@@ -11,7 +11,7 @@ import { mapSupabaseMatchToPredictionMatch } from "@/lib/matches/prediction-matc
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
 import {
   getMatchWithDetailsById,
-  getNextMatchAfter,
+  getNextActiveMatchAfter,
 } from "@/lib/supabase/queries/matches";
 import { getPredictionForMatch } from "@/lib/supabase/queries/predictions";
 import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
@@ -59,7 +59,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
 
   const [prediction, nextMatchRow] = await Promise.all([
     getPredictionForMatch(supabase, matchRow.id, pool.id),
-    getNextMatchAfter(supabase, matchRow.kickoff_at),
+    getNextActiveMatchAfter(supabase, matchRow.kickoff_at),
   ]);
   const match = mapSupabaseMatchToPredictionMatch(matchRow, prediction);
   const nextMatch = nextMatchRow

@@ -1,6 +1,13 @@
 import { ProdeBadge } from "@/components/prode/prode-badge";
+import type { ActiveMatchSource } from "@/lib/supabase/queries/matches";
 
-export function DashboardHeader() {
+type DashboardHeaderProps = {
+  source: ActiveMatchSource;
+};
+
+export function DashboardHeader({ source }: DashboardHeaderProps) {
+  const isOfficial = source === "official";
+
   return (
     <section className="border-b-[3px] border-prode-black pb-8">
       <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
@@ -19,13 +26,15 @@ export function DashboardHeader() {
               className="size-3 rounded-full border-[3px] border-prode-black bg-prode-yellow motion-safe:animate-pulse"
             />
             <span className="font-technical text-xs font-bold uppercase">
-              Fase de grupos - Fecha de muestra
+              {isOfficial
+                ? "Calendario oficial - Football-Data"
+                : "Fase de grupos - Fecha de muestra"}
             </span>
           </div>
         </div>
 
         <ProdeBadge className="w-fit" variant="surface">
-          Datos de prueba
+          {isOfficial ? "Fixtures oficiales" : "Datos de prueba"}
         </ProdeBadge>
       </div>
     </section>
