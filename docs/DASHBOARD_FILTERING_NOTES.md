@@ -31,6 +31,16 @@ Esto evita mezclar equipos proyectados con equipos oficiales y previene que resu
 
 El reset local `Eliminar datos Mundial de prueba` vuelve a limpiar equipos dev asignados a eliminatorias, por lo que esas tarjetas pasan otra vez al estado no disponible. No borra las predicciones del usuario.
 
+## Editabilidad
+
+Una tarjeta permite editar solo si:
+
+- ambos equipos oficiales están asignados;
+- todavía no pasó `lock_at`;
+- el estado sigue siendo programado (`SCHEDULED` / `TIMED`).
+
+Si el partido está en vivo, finalizado o en estado especial, el score stepper y el guardado quedan desactivados. El desglose `Exacto +3`, `Resultado +1` o `Fallado +0` sigue visible cuando `predictions.points` ya fue calculado.
+
 ## UI
 
 El filtro vive debajo del encabezado `Próximos Partidos`, con una barra horizontal brutalista. En mobile puede desplazarse horizontalmente.

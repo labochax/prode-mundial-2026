@@ -389,7 +389,7 @@ La persistencia no modifica `predictions` partido a partido ni persiste tablas s
 
 ## Nota de implementación Phase 5
 
-Phase 5 agrega la base de scoring de bonus de Mi Mundial, sin integrarlo todavía al leaderboard principal.
+Phase 5 agrega la base de scoring de bonus de Mi Mundial.
 
 Incluye:
 
@@ -401,13 +401,21 @@ Incluye:
 
 La acción actualiza `tournament_predictions.bonus_points` y `scored_at` solo cuando hay resultados suficientes. No toca `predictions` partido a partido ni cambia la lógica de puntaje normal.
 
-Limitación intencional: `/posiciones` todavía no suma `bonus_points` al ranking general. Esa integración debe hacerse en un pase posterior, idealmente con un desglose visible para separar puntos por partido y bonus de Mi Mundial.
+## Nota de implementación Phase 6
+
+`/posiciones` suma el bonus de `Mi Mundial` al ranking general:
+
+- `match_points`: total de predicciones partido a partido;
+- `mi_mundial_bonus_points`: `tournament_predictions.bonus_points` del pool activo, con `0` por defecto;
+- `total_points`: suma de ambos.
+
+La pantalla rankea por `total_points` y mantiene desempates por exactos, aciertos, predicciones puntuadas y fallback estable. La UI muestra `Puntos partidos`, `Bonus Mi Mundial`, `Total` y el desglose por fila.
 
 ### Ajuste de QA local
 
 El scoring de bonus ahora distingue entre resultados faltantes y cruces de eliminatorias finalizados sin equipos oficiales asignados. Este segundo caso ocurre con fixtures placeholder de Football-Data: puede haber marcador cargado, pero sin `home_team_id` / `away_team_id` no hay forma confiable de saber qué equipo avanzó.
 
-Para pruebas locales, `/admin/sync` agrega `Autocompletar Mundial de prueba`. La herramienta usa la llave guardada del usuario actual para completar equipos y marcadores ficticios de eliminatorias, además de marcadores determinísticos de grupos. No llama APIs, no persiste proyecciones nuevas y no modifica pronósticos de usuarios.
+Para pruebas locales, `/admin/sync` agrega `Autocompletar Mundial de prueba`. La herramienta usa la llave guardada del usuario actual para completar equipos y marcadores ficticios de eliminatorias, además de marcadores determinísticos de grupos. No llama APIs, no persiste proyecciones nuevas, no cambia marcadores pronosticados por usuarios y recalcula puntos regulares con `score_match_predictions(match_id)`.
 
 El pase también agrega desglose visual de puntos por partido en dashboard y detalle usando `predictions.points`. La UI no recalcula reglas: solo muestra el resultado ya calculado por servidor/base.
 
@@ -425,4 +433,32 @@ El dashboard queda explícitamente fuera de la proyección personal. Solo maneja
 
 La progresión de fases en `/mi-mundial` queda separada de los outcomes oficiales: `Octavos`, `Cuartos`, `Semifinales`, Final y `3.º` puesto se habilitan cuando el usuario elige ganadores de la ronda anterior. Los resultados oficiales solo sirven para evaluar bonus. Si faltan, se muestra `Bonus pendiente` en el resumen, no se reemplazan rondas editables por estados bloqueados.
 
+### Ajuste de coherencia de llave
+
+La interacción de `/mi-mundial` sanea selecciones contra la proyección actual:
+
+- si cambia un ganador de una ronda anterior, las selecciones posteriores que ya no tienen ese equipo disponible se limpian;
+- si el usuario cambia predicciones de grupos en `/dashboard`, al volver a `/mi-mundial` se reconstruyen grupos, mejores terceros y `16avos`;
+- si la llave guardada no encaja con esa nueva proyección, se descartan solo las selecciones inválidas y se muestra el aviso para revisar fases pendientes;
+- los headers muestran `COMPLETO`, `INCOMPLETO` o `PENDIENTE`.
+
+### Ajuste de bloqueo por torneo iniciado
+
+`Mi Mundial` queda bloqueado cuando:
+
+- `now() >= public.get_tournament_lock_at()` / primer kickoff oficial; o
+- cualquier fixture oficial ya tiene estado de torneo iniciado (`IN_PLAY`, `PAUSED`, `EXTRA_TIME`, `PENALTY_SHOOTOUT`, `FINISHED`, `AWARDED`, `SUSPENDED`).
+
+Esto cubre el caso local/dev donde la fecha real todavía está antes del Mundial, pero `Autocompletar Mundial de prueba` marcó partidos como `FINISHED`. En ese estado `/mi-mundial` muestra la llave guardada en modo lectura, desactiva selección/guardado y muestra `Mi Mundial está bloqueado`.
+
+`Eliminar datos Mundial de prueba` vuelve los partidos a `TIMED`; si la fecha real sigue antes del primer kickoff, `Mi Mundial` vuelve a ser editable.
+
 `/admin/sync` ahora permite deshacer el simulador dev con `Eliminar datos Mundial de prueba`. Ese reset conserva predicciones y llaves guardadas, pero limpia resultados, puntos calculados y equipos dev asignados a eliminatorias para volver a probar el flujo desde un estado sin resultados.
+
+### Ajuste visual de estados criticos
+
+`Mi Mundial` usa tres tratamientos visuales consistentes:
+
+- amarillo fuerte para seleccion activa, estado positivo o accion principal;
+- rojo brutalista para estados criticos que requieren accion o atencion, como `Cambios sin guardar`, `INCOMPLETO` o errores de guardado;
+- amarillo apagado/gris para selecciones bloqueadas en modo lectura, manteniendo el badge `Seleccionado` sin sugerir que el cruce todavia es editable.

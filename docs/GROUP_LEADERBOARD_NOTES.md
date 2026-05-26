@@ -7,6 +7,8 @@
 - `GLOBAL`: muestra la tabla completa del pool activo.
 - `GRUPOS`: filtra esa misma tabla combinando datos compartidos del perfil.
 
+El ranking usa puntos totales: puntos de partidos + bonus de `Mi Mundial`. El desglose se conserva por jugador como `Partidos X · Mi Mundial Y`.
+
 El modo `GRUPOS` arranca con el filtro `Subgrupo` si el jugador actual tiene un valor disponible. Se usa primero el primer valor de `profiles.prode_subgroups`; si no existe, se usa `profiles.prode_subgroup`.
 
 ## Filtros soportados
@@ -56,6 +58,8 @@ La pantalla conserva la primera variante legible encontrada para mostrar el valo
 ## Limitaciones actuales
 
 - El ranking de grupos se calcula filtrando el leaderboard del pool activo con datos reales cargados desde Supabase, no con una función SQL dedicada.
+- El bonus de `Mi Mundial` se toma de `tournament_predictions.bonus_points` y vale `0` hasta que se puntúe.
+- Los filtros de grupo deciden quién aparece; el orden se mantiene por puntos totales.
 - `GLOBAL` y `GRUPOS` usan el mismo pool local por ahora.
 - Las tendencias siguen siendo derivadas/placeholder hasta tener historial real de movimientos de ranking.
 - Si un jugador no completa un dato de perfil, esa dimensión no puede usarse para compararlo.

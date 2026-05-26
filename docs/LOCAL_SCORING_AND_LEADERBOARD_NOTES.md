@@ -8,9 +8,20 @@
 2. asegura el perfil local;
 3. obtiene o crea la membresía del usuario en el pool `prode-mundial-2026`;
 4. llama `public.get_pool_leaderboard(pool_id)`;
-5. mapea los resultados a la UI Stitch existente.
+5. lee `tournament_predictions.bonus_points` del mismo pool bajo RLS;
+6. calcula `total_points = match_points + mi_mundial_bonus_points`;
+7. mapea los resultados a la UI Stitch existente.
 
-Por ahora `Global` y `Amigos` muestran el mismo pool local. La separación real entre rankings queda pendiente hasta implementar grupos/pools productivos.
+`GLOBAL` muestra el pool completo. `GRUPOS` filtra ese mismo ranking por datos compartidos del perfil. En ambos casos el orden usa puntos totales.
+
+La UI muestra:
+
+- `Puntos partidos`;
+- `Bonus Mi Mundial`;
+- `Total`;
+- desglose por fila: `Partidos X · Mi Mundial Y`.
+
+Si el bonus de `Mi Mundial` todavía no fue puntuado, se muestra como `0` y no se oculta al jugador.
 
 ## Puntaje Local
 
@@ -38,11 +49,11 @@ El simulador dev:
 - completa los fixtures knockout aunque Football-Data los haya importado con `match_number` nulo;
 - al completar eliminatorias, guarda el `match_number` FIFA esperado para que `actual-outcomes` pueda derivar rondas y posiciones finales;
 - completa marcadores determinísticos de fase de grupos;
+- ejecuta `score_match_predictions(match_id)` para todos los partidos finalizados por la simulación;
 - no llama APIs externas;
-- no modifica pronósticos de usuarios;
-- no ejecuta scoring por sí mismo.
+- no cambia los marcadores pronosticados por usuarios.
 
-Después de autocompletar, `Calcular bonus Mi Mundial` puede puntuar llaves guardadas si existe una predicción completa. Esta herramienta no debe convertirse en flujo productivo.
+Después de autocompletar, `/posiciones` vuelve a mostrar `Puntos partidos` calculados. Luego `Calcular bonus Mi Mundial` puede puntuar llaves guardadas si existe una predicción completa. Esta herramienta no debe convertirse en flujo productivo.
 
 La sección también incluye `Eliminar datos Mundial de prueba` para volver al estado previo a resultados.
 
@@ -57,6 +68,12 @@ El reset local/dev:
 - limpia `predictions.points`, `predictions.scored_at`, `tournament_predictions.bonus_points` y `tournament_predictions.scored_at`.
 
 Después del reset, `/dashboard` vuelve a mostrar grupos jugables con predicciones existentes y eliminatorias sin equipos oficiales como no disponibles. `/mi-mundial` mantiene la llave guardada y vuelve a mostrar bonus pendiente hasta que haya outcomes oficiales.
+
+Después de autocompletar, los partidos quedan `FINISHED`; por eso:
+
+- `/dashboard` y `/partidos/[matchId]` muestran predicciones y desglose, pero no permiten editar;
+- `/mi-mundial` queda bloqueado/solo lectura aunque la fecha local todavía esté antes del Mundial;
+- `/posiciones` puede mostrar puntos de partidos recalculados y, después de `Calcular bonus Mi Mundial`, bonus integrado.
 
 ## Desglose De Puntos Por Partido
 
@@ -81,6 +98,25 @@ El detalle del partido muestra `Tu pronóstico`, `Resultado final`, `Puntos obte
 Si faltan resultados o equipos oficiales en eliminatorias, muestra estado pendiente y no marca fallos prematuros.
 
 La progresión editable de la llave no depende de esos resultados oficiales: las fases se habilitan por selecciones del usuario en la ronda anterior. El bloqueo real de edición es el cierre pre-torneo.
+
+Si cambia una selección de una ronda anterior, la UI limpia selecciones posteriores que ya no correspondan a los equipos clasificados. Si el usuario modifica pronósticos de grupos desde `/dashboard`, al volver a `/mi-mundial` se reconstruyen tablas, mejores terceros y `16avos`; cualquier selección guardada que ya no encaje se descarta localmente y se muestra un aviso para revisar fases pendientes.
+
+Los headers de fase muestran estado:
+
+- `COMPLETO`: todos los cruces visibles tienen ganador elegido;
+- `INCOMPLETO`: la fase está disponible pero faltan ganadores;
+- `PENDIENTE`: falta completar la ronda anterior.
+
+## Editabilidad De Partidos
+
+Las predicciones partido a partido son editables solo si:
+
+- ambos equipos oficiales están asignados;
+- `lock_at` todavía no pasó;
+- el estado sigue siendo programado (`SCHEDULED` / `TIMED`);
+- el partido no está en vivo, finalizado, suspendido, cancelado, postergado o asignado.
+
+Si falta un equipo oficial, la UI enlaza a `Mi Mundial`. Si el partido ya empezó/finalizó, muestra `Este partido ya empezó o fue finalizado.` y conserva el desglose de puntos cuando `predictions.points` existe.
 
 ## Sync Local De Fixtures
 
@@ -110,8 +146,9 @@ El sync de resultados:
 - registra la ejecución en `sync_runs`;
 - está desactivado en producción.
 
-La tabla `/posiciones` sigue usando puntos oficiales ya calculados. Los puntos
-provisionales durante partidos en vivo quedan como mejora futura.
+La tabla `/posiciones` usa puntos oficiales ya calculados de partidos y suma
+`tournament_predictions.bonus_points` cuando exista. Los puntos provisionales
+durante partidos en vivo quedan como mejora futura.
 
 El sandbox está desactivado en producción. Antes de desplegar una operación real,
 `/admin/sync` debe reemplazarse por un flujo con autorización admin explícita,
@@ -141,4 +178,3 @@ Solo se conservan errores de desarrollo con detalles técnicos no secretos.
 - `/admin/sync` está desactivado en producción.
 - No hay integración con TheSportsDB.
 - Las celdas de últimos resultados y tendencia todavía son derivadas mínimas porque `get_pool_leaderboard` devuelve totales, no historial por partido.
-- El leaderboard principal todavía no suma `tournament_predictions.bonus_points`.

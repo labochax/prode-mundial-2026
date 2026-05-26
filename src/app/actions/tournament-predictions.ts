@@ -7,7 +7,7 @@ import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
 import { getActiveUpcomingMatchesWithDetails } from "@/lib/supabase/queries/matches";
 import { getPredictionsForMatches } from "@/lib/supabase/queries/predictions";
 import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
-import { getTournamentLockAt } from "@/lib/supabase/queries/tournament-predictions";
+import { getTournamentLockState } from "@/lib/supabase/queries/tournament-predictions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { KnockoutSelectionMap } from "@/lib/tournament/knockout-selection";
 import { buildTournamentProjection } from "@/lib/tournament/projection";
@@ -101,19 +101,19 @@ export async function saveTournamentPredictionAction(
 
   try {
     const pool = await getOrJoinDefaultPool(supabase);
-    const tournamentLockAt = await getTournamentLockAt(supabase);
+    const tournamentLockState = await getTournamentLockState(supabase);
 
-    if (!tournamentLockAt) {
+    if (!tournamentLockState.lockAt) {
       return {
         message: "No pudimos calcular el cierre de Mi Mundial.",
         status: "error",
       };
     }
 
-    if (new Date(tournamentLockAt).getTime() <= Date.now()) {
+    if (tournamentLockState.isLocked) {
       return {
-        lockedAt: tournamentLockAt,
-        message: "La predicción ya está bloqueada",
+        lockedAt: tournamentLockState.lockAt,
+        message: "Mi Mundial ya está bloqueado.",
         status: "error",
       };
     }

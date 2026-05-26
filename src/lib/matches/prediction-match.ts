@@ -4,6 +4,10 @@ import {
   type StitchFlagAsset,
 } from "@/lib/design/stitch-assets";
 import { getMatchStageLabel } from "@/lib/matches/dashboard-stage";
+import {
+  getMatchEditability,
+  type MatchEditabilityReason,
+} from "@/lib/matches/match-editability";
 
 type MatchRow = Database["public"]["Tables"]["matches"]["Row"];
 type PredictionRow = Database["public"]["Tables"]["predictions"]["Row"];
@@ -30,7 +34,12 @@ export type PredictionMatchAvailability = {
   ctaLabel: "Ver Mi Mundial" | null;
   helper: string | null;
   notice: string | null;
-  status: "available" | "official-teams-pending";
+  status:
+    | "available"
+    | "locked-by-time"
+    | "official-teams-pending"
+    | "started-or-finished"
+    | "stopped";
 };
 
 export type PredictionMatchDetail = {
@@ -283,25 +292,27 @@ function getGroupLabel(match: MatchRow) {
   return getMatchStageLabel(match);
 }
 
-function isKnockoutWithoutOfficialTeams(match: MatchWithRelations) {
-  const stage = (match.stage ?? "").toUpperCase();
-
-  if (!stage || stage.includes("GROUP")) {
-    return false;
-  }
-
-  return !match.home_team || !match.away_team;
-}
-
 function getAvailability(match: MatchWithRelations): PredictionMatchAvailability {
-  if (isKnockoutWithoutOfficialTeams(match)) {
+  const editability = getMatchEditability(match);
+  const statusByReason: Record<
+    MatchEditabilityReason,
+    PredictionMatchAvailability["status"]
+  > = {
+    available: "available",
+    locked_by_time: "locked-by-time",
+    missing_teams: "official-teams-pending",
+    started_or_finished: "started-or-finished",
+    stopped: "stopped",
+  };
+
+  if (!editability.canEdit) {
     return {
       canPredict: false,
-      ctaHref: "/mi-mundial",
-      ctaLabel: "Ver Mi Mundial",
-      helper: "Para proyectar tu llave antes del torneo, usá Mi Mundial.",
-      notice: "Este partido se habilita cuando el cruce esté definido oficialmente.",
-      status: "official-teams-pending",
+      ctaHref: editability.reason === "missing_teams" ? "/mi-mundial" : null,
+      ctaLabel: editability.reason === "missing_teams" ? "Ver Mi Mundial" : null,
+      helper: editability.helper,
+      notice: editability.notice,
+      status: statusByReason[editability.reason],
     };
   }
 
@@ -466,7 +477,10 @@ export function mapSupabaseMatchToPredictionMatch(
   match: MatchWithRelations,
   prediction: PredictionRow | null,
 ): PredictionMatch {
-  const locked = new Date(match.lock_at).getTime() <= Date.now();
+  const availability = getAvailability(match);
+  const locked =
+    availability.status === "locked-by-time" ||
+    availability.status === "started-or-finished";
   const tendency = readPercentBlock(match.raw_json, "tendency", defaultTendency);
   const homeTeam = mapTeam(
     match.home_team,
@@ -482,7 +496,7 @@ export function mapSupabaseMatchToPredictionMatch(
   );
 
   return {
-    availability: getAvailability(match),
+    availability,
     away: awayTeam,
     detail: {
       directHistory: readPercentBlock(
@@ -496,7 +510,7 @@ export function mapSupabaseMatchToPredictionMatch(
         groupPhase: getGroupLabel(match),
         stadium: match.stadium?.name ?? "Estadio a confirmar",
       },
-      timerLabel: getTimerLabel(match.lock_at),
+      timerLabel: locked ? "Cerrado" : getTimerLabel(match.lock_at),
     },
     groupLabel: getGroupLabel(match),
     home: homeTeam,

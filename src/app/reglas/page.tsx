@@ -105,7 +105,7 @@ export default function RulesPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <RulesCard
           eyebrow="Cierre pre-torneo"
           title="La llave completa se bloquea al inicio del Mundial"
@@ -114,6 +114,14 @@ export default function RulesPage() {
             La predicción completa de Mi Mundial se puede editar hasta el inicio
             del primer partido del torneo. Después queda bloqueada y visible para
             competir por bonus.
+          </p>
+        </RulesCard>
+
+        <RulesCard eyebrow="Proyección" title="La llave se recalcula">
+          <p>
+            Antes del cierre pre-torneo, podés cambiar tus pronósticos y ajustar
+            la llave. Si modificás grupos o una ronda anterior, las fases
+            siguientes pueden actualizarse para mantener la proyección coherente.
           </p>
         </RulesCard>
 

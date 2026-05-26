@@ -104,8 +104,14 @@ export function LeaderboardView({ players }: LeaderboardViewProps) {
         }))
       : activePlayers;
   const currentPlayer = rankedPlayers.find((player) => player.isCurrentPlayer);
-  const hasScoredPredictions = rankedPlayers.some(
-    (player) => player.predictedMatchesCount > 0,
+  const hasLeaderboardPoints = rankedPlayers.some(
+    (player) =>
+      player.predictedMatchesCount > 0 ||
+      player.matchPoints > 0 ||
+      player.miMundialBonusPoints > 0,
+  );
+  const hasMiMundialBonus = rankedPlayers.some(
+    (player) => player.miMundialBonusPoints > 0,
   );
   const hasCurrentPlayerSubgroup = Boolean(defaultSubgroupValue);
   const hasActiveAgeFilter = activeGroupFilters.some(
@@ -229,26 +235,32 @@ export function LeaderboardView({ players }: LeaderboardViewProps) {
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="prode-frame bg-prode-surface p-4">
-          <ProdeBadge variant="primary">Exactos</ProdeBadge>
+          <ProdeBadge variant="primary">Puntos partidos</ProdeBadge>
           <p className="mt-3 font-technical text-3xl font-black">
-            {currentPlayer?.exactHits ?? 0}
+            {(currentPlayer?.matchPoints ?? 0).toLocaleString("es-AR")}
           </p>
         </div>
         <div className="prode-frame bg-prode-surface p-4">
-          <ProdeBadge variant="surface">Aciertos</ProdeBadge>
+          <ProdeBadge variant="surface">Bonus Mi Mundial</ProdeBadge>
           <p className="mt-3 font-technical text-3xl font-black">
-            {currentPlayer?.outcomeHits ?? 0}
+            {(currentPlayer?.miMundialBonusPoints ?? 0).toLocaleString("es-AR")}
           </p>
         </div>
         <div className="prode-frame bg-prode-yellow p-4">
-          <ProdeBadge variant="ink">Puntos</ProdeBadge>
+          <ProdeBadge variant="ink">Total</ProdeBadge>
           <p className="mt-3 font-technical text-3xl font-black">
             {(currentPlayer?.totalPoints ?? 0).toLocaleString("es-AR")}
           </p>
         </div>
       </section>
 
-      {hasScoredPredictions ? (
+      {!hasMiMundialBonus && (
+        <p className="max-w-3xl font-technical text-xs font-bold uppercase text-muted-foreground">
+          El bonus de Mi Mundial se suma cuando esté puntuado.
+        </p>
+      )}
+
+      {hasLeaderboardPoints ? (
         <LeaderboardTable
           onLoadMore={() =>
             setVisibleCount((current) =>

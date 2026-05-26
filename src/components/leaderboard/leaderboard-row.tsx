@@ -183,8 +183,14 @@ export function LeaderboardRow({ player, reduceMotion }: LeaderboardRowProps) {
         {player.outcomeHits}
       </div>
 
-      <div className="text-right font-technical text-xl font-black uppercase sm:text-2xl">
-        {player.totalPoints.toLocaleString("es-AR")}
+      <div className="text-right font-technical uppercase">
+        <p className="text-xl font-black leading-none sm:text-2xl">
+          {player.totalPoints.toLocaleString("es-AR")}
+        </p>
+        <p className="mt-1 max-w-28 text-[0.58rem] font-bold leading-tight text-muted-foreground sm:max-w-none sm:text-[0.66rem]">
+          Partidos {player.matchPoints.toLocaleString("es-AR")} · Mi Mundial{" "}
+          {player.miMundialBonusPoints.toLocaleString("es-AR")}
+        </p>
       </div>
     </motion.div>
   );

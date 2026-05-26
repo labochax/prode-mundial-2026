@@ -17,7 +17,10 @@ import type { TournamentBonusPrediction } from "@/lib/tournament/bonus-scoring";
 import {
   buildDerivedKnockoutRounds,
   getBracketBonusPreview,
+  getKnockoutPhaseStatus,
+  sanitizeKnockoutSelections,
   type DerivedKnockoutMatch,
+  type KnockoutPhaseStatus,
   type KnockoutSelectionMap,
   type KnockoutSummary,
 } from "@/lib/tournament/knockout-selection";
@@ -47,8 +50,14 @@ type TeamBonusBadge = {
   variant: "placement" | "stage";
 };
 
+const warningBadgeClass =
+  "bg-[#ff4b3e] text-prode-black shadow-[4px_4px_0_var(--prode-black)]";
+const warningPanelClass =
+  "bg-[#ffd8d2] text-prode-black shadow-[4px_4px_0_var(--prode-black)]";
+
 function TeamButton({
   disabled,
+  isReadOnly,
   isSelected,
   matchupId,
   onSelect,
@@ -57,20 +66,31 @@ function TeamButton({
 }: {
   bonusBadge?: TeamBonusBadge;
   disabled?: boolean;
+  isReadOnly?: boolean;
   isSelected: boolean;
   matchupId: string;
   onSelect: (matchupId: string, teamId: string) => void;
   slot: ProjectedBracketSlot;
 }) {
   const isDisabled = disabled || slot.isPlaceholder;
+  const isLockedSelected = Boolean(isReadOnly && isSelected);
+  const isLockedUnselected = Boolean(isReadOnly && !isSelected);
 
   return (
     <button
       aria-pressed={isSelected}
       className={cn(
-        "prode-frame prode-pressable w-full bg-[#f7f4df] p-3 text-left outline-none transition focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper",
-        isSelected && "prode-hard-shadow bg-prode-yellow",
-        isDisabled && "cursor-not-allowed bg-prode-surface text-muted-foreground",
+        "prode-frame w-full bg-[#f7f4df] p-3 text-left outline-none transition focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper",
+        !isDisabled && "prode-pressable",
+        isSelected && !isReadOnly && "prode-hard-shadow bg-prode-yellow",
+        isLockedSelected &&
+          "prode-hard-shadow cursor-not-allowed bg-[#eee4a8] text-prode-black",
+        isLockedUnselected &&
+          "cursor-not-allowed bg-[#e6e0cc] text-muted-foreground",
+        isDisabled &&
+          !isLockedSelected &&
+          !isLockedUnselected &&
+          "cursor-not-allowed bg-prode-surface text-muted-foreground",
       )}
       disabled={isDisabled}
       onClick={() => onSelect(matchupId, slot.team.id)}
@@ -81,6 +101,8 @@ function TeamButton({
           className={cn(
             "prode-frame px-2 py-1 font-technical text-xs font-black uppercase leading-none",
             isSelected ? "bg-prode-surface" : "bg-prode-yellow",
+            isLockedSelected && "bg-prode-yellow",
+            isLockedUnselected && "bg-[#f7f4df]",
             slot.isPlaceholder && "bg-[#f7f4df]",
           )}
         >
@@ -103,6 +125,11 @@ function TeamButton({
       <p className="mt-3 border-t-[2px] border-prode-black/30 pt-2 font-technical text-[0.62rem] font-black uppercase text-muted-foreground">
         {slot.qualificationType}
       </p>
+      {isLockedSelected && (
+        <span className="prode-frame mt-3 inline-flex bg-prode-yellow px-2 py-1 font-technical text-[0.62rem] font-black uppercase text-prode-black shadow-[3px_3px_0_var(--prode-black)]">
+          Seleccionado
+        </span>
+      )}
       {bonusBadge && (
         <div
           className={cn(
@@ -124,6 +151,7 @@ function TeamButton({
 
 function SelectableMatchCard({
   disabled,
+  isReadOnly,
   matchup,
   onSelect,
   bonusByTeamId,
@@ -132,6 +160,7 @@ function SelectableMatchCard({
 }: {
   bonusByTeamId?: Map<string, TeamBonusBadge>;
   disabled?: boolean;
+  isReadOnly?: boolean;
   matchup: DerivedKnockoutMatch;
   onSelect: (matchupId: string, teamId: string) => void;
   selections: KnockoutSelectionMap;
@@ -161,6 +190,7 @@ function SelectableMatchCard({
         <TeamButton
           bonusBadge={bonusByTeamId?.get(matchup.home.team.id)}
           disabled={disabled}
+          isReadOnly={isReadOnly}
           isSelected={selectedTeamId === matchup.home.team.id}
           matchupId={matchup.id}
           onSelect={onSelect}
@@ -174,6 +204,7 @@ function SelectableMatchCard({
         <TeamButton
           bonusBadge={bonusByTeamId?.get(matchup.away.team.id)}
           disabled={disabled}
+          isReadOnly={isReadOnly}
           isSelected={selectedTeamId === matchup.away.team.id}
           matchupId={matchup.id}
           onSelect={onSelect}
@@ -194,6 +225,28 @@ function PendingRoundState() {
         Elegí los ganadores de la ronda anterior para completar esta fase.
       </p>
     </div>
+  );
+}
+
+function PhaseStatusBadge({ status }: { status: KnockoutPhaseStatus }) {
+  const label =
+    status === "complete"
+      ? "COMPLETO"
+      : status === "pending"
+        ? "PENDIENTE"
+        : "INCOMPLETO";
+
+  return (
+    <span
+      className={cn(
+        "prode-frame px-3 py-2 font-technical text-[0.68rem] font-black uppercase",
+        status === "complete" && "bg-prode-yellow text-prode-black",
+        status === "incomplete" && warningBadgeClass,
+        status === "pending" && "bg-[#f7f4df] text-muted-foreground",
+      )}
+    >
+      {label}
+    </span>
   );
 }
 
@@ -291,31 +344,38 @@ function buildPlacementBonusByTeamId(
 
 function RoundSection({
   disabled,
+  isReadOnly,
   matches,
   onSelect,
+  placementBonusByTeamId,
   stageBonus,
   selections,
   title,
 }: {
   disabled?: boolean;
+  isReadOnly?: boolean;
   matches: DerivedKnockoutMatch[];
   onSelect: (matchupId: string, teamId: string) => void;
+  placementBonusByTeamId?: Map<string, TeamBonusBadge>;
   stageBonus?: StageBonusDetails | null;
   selections: KnockoutSelectionMap;
   title: string;
 }) {
-  const bonusByTeamId = stageBonus
-    ? new Map(
-        stageBonus.items.map((item) => [
-          item.teamId,
-          {
-            hit: item.hit,
-            label: getStageTeamBonusStatusLabel(item.hit),
-            variant: "stage" as const,
-          },
-        ]),
-      )
-    : undefined;
+  const status = getKnockoutPhaseStatus(matches, selections);
+  const bonusByTeamId =
+    placementBonusByTeamId ??
+    (stageBonus
+      ? new Map(
+          stageBonus.items.map((item) => [
+            item.teamId,
+            {
+              hit: item.hit,
+              label: getStageTeamBonusStatusLabel(item.hit),
+              variant: "stage" as const,
+            },
+          ]),
+        )
+      : undefined);
   const stageBonusLabel = stageBonus
     ? getStageBonusBadgeLabel(stageBonus.pointsPerHit)
     : undefined;
@@ -323,7 +383,12 @@ function RoundSection({
   return (
     <section className="space-y-4">
       <div className="border-y-[3px] border-prode-black bg-prode-yellow px-4 py-3 shadow-[6px_6px_0_var(--prode-black)]">
-        <h3 className="font-display text-4xl uppercase leading-none">{title}</h3>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="font-display text-4xl uppercase leading-none">
+            {title}
+          </h3>
+          <PhaseStatusBadge status={status} />
+        </div>
       </div>
 
       {matches.length > 0 ? (
@@ -332,53 +397,11 @@ function RoundSection({
             <SelectableMatchCard
               bonusByTeamId={bonusByTeamId}
               disabled={disabled}
+              isReadOnly={isReadOnly}
               key={matchup.id}
               matchup={matchup}
               onSelect={onSelect}
               stageBonusLabel={stageBonusLabel}
-              selections={selections}
-            />
-          ))}
-        </div>
-      ) : (
-        <PendingRoundState />
-      )}
-    </section>
-  );
-}
-
-function FinalRoundSection({
-  disabled,
-  final,
-  onSelect,
-  placementBonusByTeamId,
-  selections,
-  thirdPlace,
-}: {
-  disabled?: boolean;
-  final: DerivedKnockoutMatch[];
-  onSelect: (matchupId: string, teamId: string) => void;
-  placementBonusByTeamId?: Map<string, TeamBonusBadge>;
-  selections: KnockoutSelectionMap;
-  thirdPlace: DerivedKnockoutMatch[];
-}) {
-  return (
-    <section className="space-y-4">
-      <div className="border-y-[3px] border-prode-black bg-prode-yellow px-4 py-3 shadow-[6px_6px_0_var(--prode-black)]">
-        <h3 className="font-display text-4xl uppercase leading-none">
-          Final y 3.º puesto
-        </h3>
-      </div>
-
-      {final.length > 0 && thirdPlace.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          {[...final, ...thirdPlace].map((matchup) => (
-            <SelectableMatchCard
-              bonusByTeamId={placementBonusByTeamId}
-              disabled={disabled}
-              key={matchup.id}
-              matchup={matchup}
-              onSelect={onSelect}
               selections={selections}
             />
           ))}
@@ -490,12 +513,24 @@ function SummaryCard({
         ? "Cambios sin guardar"
         : "No guardado todavía";
   const canSave = !isLocked && isBracketComplete;
+  const isCriticalSaveState = saveStatus === "dirty" || saveStatus === "error";
 
   return (
     <section className="prode-frame prode-hard-shadow bg-prode-surface p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <span className="prode-frame bg-prode-yellow px-3 py-2 font-technical text-xs font-black uppercase">
+          <span
+            className={cn(
+              "prode-frame px-3 py-2 font-technical text-xs font-black uppercase",
+              saveStatus === "dirty" || saveStatus === "error"
+                ? warningBadgeClass
+                : saveStatus === "locked"
+                  ? "bg-prode-black text-prode-yellow"
+                  : saveStatus === "saved"
+                    ? "bg-prode-yellow text-prode-black"
+                    : "bg-[#f7f4df] text-prode-black",
+            )}
+          >
             {statusLabel}
           </span>
           <h3 className="mt-4 font-display text-5xl uppercase leading-none">
@@ -577,7 +612,9 @@ function SummaryCard({
         <p
           className={cn(
             "mb-3 font-technical text-xs font-black uppercase",
-            saveStatus === "error" ? "text-red-700" : "text-muted-foreground",
+            isCriticalSaveState
+              ? cn("prode-frame inline-flex px-3 py-2", warningPanelClass)
+              : "text-muted-foreground",
           )}
         >
           {saveMessage}
@@ -631,8 +668,15 @@ export function InteractiveKnockoutBracket({
   saveAction,
   savedAt,
 }: InteractiveKnockoutBracketProps) {
+  const initialSanitization = useMemo(
+    () => sanitizeKnockoutSelections(bracket.roundOf32, initialSelections),
+    [bracket.roundOf32, initialSelections],
+  );
   const [selections, setSelections] =
-    useState<KnockoutSelectionMap>(initialSelections);
+    useState<KnockoutSelectionMap>(initialSanitization.selections);
+  const [hasInvalidatedSelections, setHasInvalidatedSelections] = useState(
+    initialSanitization.removedSelectionIds.length > 0,
+  );
   const [isPending, startTransition] = useTransition();
   const [saveState, setSaveState] = useState<{
     message: string;
@@ -641,9 +685,22 @@ export function InteractiveKnockoutBracket({
   }>(() => {
     if (initialSaveState === "locked") {
       return {
-        message: "Predicción bloqueada",
+        message:
+          "La predicción completa se cerró porque el torneo ya empezó. Podés ver tu llave guardada, pero no editarla.",
         savedAt,
         status: "locked",
+      };
+    }
+
+    if (
+      initialSaveState === "saved" &&
+      initialSanitization.removedSelectionIds.length > 0
+    ) {
+      return {
+        message:
+          "Tu llave cambió porque modificaste pronósticos anteriores. Revisá las fases pendientes.",
+        savedAt,
+        status: "dirty",
       };
     }
 
@@ -689,10 +746,15 @@ export function InteractiveKnockoutBracket({
       return;
     }
 
-    setSelections((current) => ({
-      ...current,
+    const sanitized = sanitizeKnockoutSelections(bracket.roundOf32, {
+      ...selections,
       [matchupId]: teamId,
-    }));
+    });
+
+    setSelections(sanitized.selections);
+    setHasInvalidatedSelections(
+      (current) => current || sanitized.removedSelectionIds.length > 0,
+    );
     setSaveState((current) =>
       current.status !== "locked"
         ? {
@@ -707,13 +769,18 @@ export function InteractiveKnockoutBracket({
     startTransition(async () => {
       const result = await saveAction({ selections });
 
+      if (result.status === "success") {
+        setHasInvalidatedSelections(false);
+      }
+
       setSaveState((current) => ({
         message: result.message,
         savedAt: result.savedAt ?? current.savedAt,
         status:
           result.status === "success"
             ? "saved"
-            : result.message === "La predicción ya está bloqueada"
+            : result.message === "La predicción ya está bloqueada" ||
+                result.message === "Mi Mundial ya está bloqueado."
               ? "locked"
               : "error",
       }));
@@ -730,22 +797,50 @@ export function InteractiveKnockoutBracket({
           <h2 className="mt-4 font-display text-5xl uppercase leading-none">
             Completá tu llave
           </h2>
+          {isInteractionLocked && (
+            <div className="prode-frame mt-4 bg-prode-yellow px-4 py-3 text-prode-black">
+              <p className="font-display text-4xl uppercase leading-none">
+                Mi Mundial está bloqueado
+              </p>
+              <p className="mt-2 font-body text-sm leading-6">
+                La predicción completa se cerró porque el torneo ya empezó.
+                Podés ver tu llave guardada, pero no editarla.
+              </p>
+            </div>
+          )}
           <p className="mt-3 font-body text-base leading-7 text-muted-foreground">
             Elegí quién avanza en cada cruce y guardá tu Mi Mundial completo
             antes del inicio del torneo.
           </p>
+          <p className="mt-3 max-w-3xl font-body text-sm leading-6 text-muted-foreground">
+            Si cambiás pronósticos de grupos o ganadores de rondas anteriores,
+            las fases siguientes se actualizan para mantener la llave coherente.
+          </p>
+          {hasInvalidatedSelections && (
+            <div
+              className={cn(
+                "prode-frame mt-4 px-4 py-3 font-technical text-xs font-black uppercase",
+                warningPanelClass,
+              )}
+            >
+              Tu llave cambió porque modificaste pronósticos anteriores. Revisá
+              las fases pendientes.
+            </div>
+          )}
         </div>
       </div>
 
       <RoundSection
         disabled={isInteractionLocked || bracket.status !== "complete"}
+        isReadOnly={isInteractionLocked}
         matches={rounds.roundOf32}
         onSelect={handleSelect}
         selections={selections}
-        title="16avos"
+        title="16AVOS DE FINAL"
       />
       <RoundSection
         disabled={isInteractionLocked}
+        isReadOnly={isInteractionLocked}
         matches={rounds.roundOf16}
         onSelect={handleSelect}
         stageBonus={
@@ -754,10 +849,11 @@ export function InteractiveKnockoutBracket({
             : null
         }
         selections={selections}
-        title="Octavos"
+        title="OCTAVOS"
       />
       <RoundSection
         disabled={isInteractionLocked}
+        isReadOnly={isInteractionLocked}
         matches={rounds.quarterfinals}
         onSelect={handleSelect}
         stageBonus={
@@ -766,10 +862,11 @@ export function InteractiveKnockoutBracket({
             : null
         }
         selections={selections}
-        title="Cuartos"
+        title="CUARTOS"
       />
       <RoundSection
         disabled={isInteractionLocked}
+        isReadOnly={isInteractionLocked}
         matches={rounds.semifinals}
         onSelect={handleSelect}
         stageBonus={
@@ -778,15 +875,25 @@ export function InteractiveKnockoutBracket({
             : null
         }
         selections={selections}
-        title="Semifinales"
+        title="SEMIFINALES"
       />
-      <FinalRoundSection
+      <RoundSection
         disabled={isInteractionLocked}
-        final={rounds.final}
+        isReadOnly={isInteractionLocked}
+        matches={rounds.final}
         onSelect={handleSelect}
         placementBonusByTeamId={placementBonusByTeamId}
         selections={selections}
-        thirdPlace={rounds.thirdPlace}
+        title="FINAL"
+      />
+      <RoundSection
+        disabled={isInteractionLocked}
+        isReadOnly={isInteractionLocked}
+        matches={rounds.thirdPlace}
+        onSelect={handleSelect}
+        placementBonusByTeamId={placementBonusByTeamId}
+        selections={selections}
+        title="3.º PUESTO"
       />
       <SummaryCard
         isBracketComplete={

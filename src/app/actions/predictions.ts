@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { getMatchEditability } from "@/lib/matches/match-editability";
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
 import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -141,7 +142,7 @@ export async function savePredictionAction(
     const pool = await getOrJoinDefaultPool(supabase);
     const { data: match, error: matchError } = await supabase
       .from("matches")
-      .select("id,lock_at")
+      .select("id,lock_at,status,home_team_id,away_team_id")
       .eq("id", parsed.data.match_id)
       .maybeSingle();
 
@@ -160,9 +161,13 @@ export async function savePredictionAction(
       };
     }
 
-    if (new Date(match.lock_at).getTime() <= Date.now()) {
+    const editability = getMatchEditability(match);
+
+    if (!editability.canEdit) {
       return {
-        message: "Este partido ya cerró. No se puede editar el pronóstico.",
+        message:
+          editability.notice ??
+          "Este partido ya cerró. No se puede editar el pronóstico.",
         status: "error",
       };
     }

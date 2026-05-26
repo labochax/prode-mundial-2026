@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/supabase/database.types";
+import {
+  getTournamentLockState as getPureTournamentLockState,
+  type TournamentLockState,
+} from "@/lib/tournament/tournament-lock";
 
 type SupabaseDatabaseClient = SupabaseClient<Database>;
 export type TournamentPredictionRow =
@@ -47,4 +51,22 @@ export async function getTournamentLockAt(
   }
 
   return data;
+}
+
+export async function getTournamentLockState(
+  client: SupabaseDatabaseClient,
+): Promise<TournamentLockState> {
+  const lockAt = await getTournamentLockAt(client);
+  const { data, error } = await client
+    .from("matches")
+    .select("football_data_id,raw_json,status");
+
+  if (error) {
+    throw error;
+  }
+
+  return getPureTournamentLockState({
+    lockAt,
+    matches: data ?? [],
+  });
 }

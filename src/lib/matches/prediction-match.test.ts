@@ -92,7 +92,7 @@ describe("mapSupabaseMatchToPredictionMatch", () => {
     });
   });
 
-  it("keeps official knockout fixtures playable and preserves points breakdown", () => {
+  it("keeps finished official knockout breakdown visible while blocking edits", () => {
     const mapped = mapSupabaseMatchToPredictionMatch(
       matchFixture({
         away_score: 0,
@@ -102,7 +102,10 @@ describe("mapSupabaseMatchToPredictionMatch", () => {
       prediction(1),
     );
 
-    expect(mapped.availability.canPredict).toBe(true);
+    expect(mapped.availability).toMatchObject({
+      canPredict: false,
+      status: "started-or-finished",
+    });
     expect(mapped.pointsBreakdown?.shortLabel).toBe("Resultado +1");
   });
 });

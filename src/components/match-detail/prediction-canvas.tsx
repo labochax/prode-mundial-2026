@@ -174,17 +174,22 @@ function MatchUnavailablePanel({ match }: { match: PredictionMatch }) {
   return (
     <section className="prode-frame prode-hard-shadow bg-prode-yellow p-4 sm:p-5">
       <p className="font-technical text-xs font-black uppercase">
-        Este cruce todavía no tiene equipos oficiales asignados.
+        {match.availability.notice ??
+          "Este partido no está disponible para editar."}
       </p>
-      <p className="mt-2 max-w-2xl font-body text-sm leading-6">
-        Para proyectar tu llave antes del torneo, usá Mi Mundial.
-      </p>
-      <Link
-        className="prode-frame prode-pressable mt-4 inline-flex min-h-11 items-center justify-center bg-prode-surface px-4 py-2 font-technical text-xs font-black uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
-        href="/mi-mundial"
-      >
-        Proyectar en Mi Mundial
-      </Link>
+      {match.availability.helper && (
+        <p className="mt-2 max-w-2xl font-body text-sm leading-6">
+          {match.availability.helper}
+        </p>
+      )}
+      {match.availability.ctaHref && match.availability.ctaLabel && (
+        <Link
+          className="prode-frame prode-pressable mt-4 inline-flex min-h-11 items-center justify-center bg-prode-surface px-4 py-2 font-technical text-xs font-black uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
+          href={match.availability.ctaHref}
+        >
+          {match.availability.ctaLabel}
+        </Link>
+      )}
     </section>
   );
 }
@@ -336,7 +341,9 @@ export function PredictionCanvas({
             <Save aria-hidden="true" className="size-5" />
           )}
           {!match.availability.canPredict
-            ? "Cruce no habilitado"
+            ? match.availability.status === "official-teams-pending"
+              ? "Cruce no habilitado"
+              : "Predicción cerrada"
             : isSaved
               ? "Predicción guardada"
               : "Guardar predicción"}

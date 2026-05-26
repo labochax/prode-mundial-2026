@@ -13,7 +13,7 @@ Guarda una predicción completa por usuario y pool:
 - `bracket_json`;
 - equipos proyectados a `Octavos`, `Cuartos` y `Semifinales`;
 - `champion_team_id`, `runner_up_team_id`, `third_place_team_id`, `fourth_place_team_id`;
-- `bonus_points`, reservado para scoring futuro;
+- `bonus_points`, usado por el scoring de bonus de `Mi Mundial` e integrado en `/posiciones`;
 - timestamps de creación, actualización y scoring.
 
 La tabla tiene `unique (pool_id, user_id)` para que cada jugador tenga una sola llave activa por pool.
@@ -62,7 +62,6 @@ Esto permite reconstruir la UI guardada sin persistir tablas simuladas de grupos
 
 ## Pendiente
 
-- scoring real de bonus;
 - vista pública de llaves ajenas después del cierre;
-- autorización/admin productiva para calcular bonus;
-- comparación contra resultados oficiales del Mundial.
+- autorización/admin productiva para calcular bonus fuera del sandbox local/dev;
+- comparación contra resultados oficiales del Mundial en producción.

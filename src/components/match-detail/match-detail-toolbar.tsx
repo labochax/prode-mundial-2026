@@ -50,8 +50,10 @@ export function MatchDetailToolbar({ match }: MatchDetailToolbarProps) {
                   <br className="sm:hidden" />
                   <span className="sm:ml-3">Predicción</span>
                 </>
-              ) : (
+              ) : match.availability.status === "official-teams-pending" ? (
                 "Cruce pendiente"
+              ) : (
+                "Predicción cerrada"
               )}
             </h1>
           </div>

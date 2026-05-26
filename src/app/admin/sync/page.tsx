@@ -92,6 +92,14 @@ export default async function AdminSyncPage({
     resolvedSearchParams,
     "mundial_dev_knockout",
   );
+  const devWorldCupPredictions = getSearchValue(
+    resolvedSearchParams,
+    "mundial_dev_predictions",
+  );
+  const devWorldCupScoredMatches = getSearchValue(
+    resolvedSearchParams,
+    "mundial_dev_scored_matches",
+  );
   const devWorldCupResetState = getSearchValue(
     resolvedSearchParams,
     "mundial_dev_reset_estado",
@@ -175,8 +183,8 @@ export default async function AdminSyncPage({
             <p className="mt-3 max-w-3xl font-body text-base">
               Simulador dev local. Usa tu llave guardada de Mi Mundial para
               asignar equipos y resultados a las eliminatorias, y completa
-              marcadores de prueba para la fase de grupos. No llama APIs y no
-              modifica pronósticos de usuarios.
+              marcadores de prueba para la fase de grupos. No llama APIs, no
+              cambia los pronósticos cargados y recalcula sus puntos.
             </p>
           </div>
 
@@ -234,7 +242,9 @@ export default async function AdminSyncPage({
                     devWorldCupMatches ?? "0"
                   }. Grupos: ${devWorldCupGroup ?? "0"}. Eliminatorias: ${
                     devWorldCupKnockout ?? "0"
-                  }.`}
+                  }. Partidos puntuados: ${
+                    devWorldCupScoredMatches ?? "0"
+                  }. Predicciones puntuadas: ${devWorldCupPredictions ?? "0"}.`}
           </div>
         )}
       </ProdeCard>
@@ -407,8 +417,8 @@ export default async function AdminSyncPage({
             <p className="mt-3 max-w-3xl font-body text-base">
               Herramienta local de prueba. Calcula bonus de Mi Mundial usando
               resultados oficiales ya finalizados de eliminatorias. No modifica
-              pronósticos partido a partido y todavía no se suma al ranking
-              principal.
+              marcadores pronosticados partido a partido; el bonus calculado se
+              suma al total de `/posiciones`.
             </p>
           </div>
 

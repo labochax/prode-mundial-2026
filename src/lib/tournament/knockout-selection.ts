@@ -4,6 +4,7 @@ import type {
 } from "@/lib/tournament/types";
 
 export type KnockoutSelectionMap = Record<string, string>;
+export type KnockoutPhaseStatus = "complete" | "incomplete" | "pending";
 
 export type DerivedRoundKey =
   | "roundOf32"
@@ -148,6 +149,13 @@ function getSelectedSlot(
   }
 
   return cloneSlot(selectedSlot);
+}
+
+function hasValidSelection(
+  matchup: Pick<ProjectedBracketMatch, "away" | "home" | "id">,
+  selections: KnockoutSelectionMap,
+) {
+  return Boolean(getSelectedSlot(matchup, selections));
 }
 
 function getLoserSlot(
@@ -307,4 +315,80 @@ export function getBracketBonusPreview() {
     ),
     rules: BRACKET_BONUS_RULES,
   };
+}
+
+function copyValidSelectionsForRound(
+  matches: Pick<ProjectedBracketMatch, "away" | "home" | "id">[],
+  sourceSelections: KnockoutSelectionMap,
+  targetSelections: KnockoutSelectionMap,
+) {
+  const copiedIds: string[] = [];
+
+  for (const matchup of matches) {
+    if (!hasValidSelection(matchup, sourceSelections)) {
+      continue;
+    }
+
+    targetSelections[matchup.id] = sourceSelections[matchup.id];
+    copiedIds.push(matchup.id);
+  }
+
+  return copiedIds;
+}
+
+export function sanitizeKnockoutSelections(
+  roundOf32: ProjectedBracketMatch[],
+  selections: KnockoutSelectionMap,
+) {
+  const sanitized: KnockoutSelectionMap = {};
+  const validSelectionIds = new Set<string>();
+
+  copyValidSelectionsForRound(roundOf32, selections, sanitized).forEach((id) =>
+    validSelectionIds.add(id),
+  );
+
+  let rounds = buildDerivedKnockoutRounds(roundOf32, sanitized);
+  copyValidSelectionsForRound(rounds.roundOf16, selections, sanitized).forEach(
+    (id) => validSelectionIds.add(id),
+  );
+
+  rounds = buildDerivedKnockoutRounds(roundOf32, sanitized);
+  copyValidSelectionsForRound(rounds.quarterfinals, selections, sanitized).forEach(
+    (id) => validSelectionIds.add(id),
+  );
+
+  rounds = buildDerivedKnockoutRounds(roundOf32, sanitized);
+  copyValidSelectionsForRound(rounds.semifinals, selections, sanitized).forEach(
+    (id) => validSelectionIds.add(id),
+  );
+
+  rounds = buildDerivedKnockoutRounds(roundOf32, sanitized);
+  copyValidSelectionsForRound(rounds.final, selections, sanitized).forEach((id) =>
+    validSelectionIds.add(id),
+  );
+  copyValidSelectionsForRound(rounds.thirdPlace, selections, sanitized).forEach(
+    (id) => validSelectionIds.add(id),
+  );
+
+  const removedSelectionIds = Object.keys(selections).filter(
+    (id) => !validSelectionIds.has(id),
+  );
+
+  return {
+    removedSelectionIds,
+    selections: sanitized,
+  };
+}
+
+export function getKnockoutPhaseStatus(
+  matches: Pick<ProjectedBracketMatch, "away" | "home" | "id">[],
+  selections: KnockoutSelectionMap,
+): KnockoutPhaseStatus {
+  if (matches.length === 0) {
+    return "pending";
+  }
+
+  return matches.every((matchup) => hasValidSelection(matchup, selections))
+    ? "complete"
+    : "incomplete";
 }

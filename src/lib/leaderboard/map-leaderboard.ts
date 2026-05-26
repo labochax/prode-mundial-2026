@@ -8,10 +8,7 @@ import type {
   LeaderboardResultMarker,
 } from "@/lib/leaderboard/leaderboard-types";
 import type { LeaderboardProfileGroups } from "@/lib/supabase/queries/leaderboard-profiles";
-import type { Database } from "@/lib/supabase/database.types";
-
-type PoolLeaderboardRow =
-  Database["public"]["Functions"]["get_pool_leaderboard"]["Returns"][number];
+import type { PoolLeaderboardRow } from "@/lib/supabase/queries/leaderboard";
 
 const defaultLeaderboardGroups: LeaderboardPlayer["groups"] = {
   age: null,
@@ -96,6 +93,8 @@ export function mapPoolLeaderboardRows(
       id: row.user_id,
       isCurrentPlayer: row.user_id === currentUserId,
       lastFive: getDerivedRecentMarkers(row),
+      matchPoints: row.match_points,
+      miMundialBonusPoints: row.mi_mundial_bonus_points,
       name: row.display_name,
       outcomeHits: row.outcome_hits,
       predictedMatchesCount: row.predicted_matches_count,

@@ -77,8 +77,9 @@ Este flujo:
 - escribe equipos y marcadores en `matches` para eliminatorias 73-104;
 - asigna `match_number` FIFA 73-104 a los fixtures knockout cuando Football-Data los trae sin ese número;
 - completa marcadores determinísticos de fase de grupos;
+- recalcula puntos regulares de predicciones para todos los partidos finalizados con `score_match_predictions(match_id)`;
 - no llama Football-Data ni TheSportsDB;
-- no modifica `predictions` partido a partido;
+- no cambia los marcadores pronosticados por los usuarios;
 - permite probar `Calcular bonus Mi Mundial` aunque los fixtures oficiales todavía tengan placeholders.
 
 Es una herramienta de QA local, no una estrategia productiva de sync o scoring.
@@ -96,6 +97,8 @@ Ese reset:
 - limpia `predictions.points`, `predictions.scored_at`, `tournament_predictions.bonus_points` y `tournament_predictions.scored_at`.
 
 Después del reset, los outcomes de eliminatorias vuelven a estar incompletos y el bonus queda pendiente hasta cargar resultados oficiales o volver a usar el simulador dev.
+
+El autocomplete también pone la app en estado de torneo iniciado porque deja partidos oficiales en `FINISHED`. Por eso `/mi-mundial` queda bloqueado/solo lectura hasta usar `Eliminar datos Mundial de prueba` o hasta volver a un estado sin partidos iniciados.
 
 ## Desglose En Mi Mundial
 
@@ -119,15 +122,29 @@ No se muestran falsos `0 / 52` ni falsos `+0` mientras el torneo real no tenga d
 
 La disponibilidad de fases en `/mi-mundial` no depende de estos outcomes. `Octavos`, `Cuartos`, `Semifinales`, Final y `3.º` puesto dependen únicamente de que el usuario haya elegido ganadores en la ronda anterior. Los outcomes oficiales solo controlan la evaluación del bonus.
 
+La editabilidad completa de `Mi Mundial` sí depende del cierre pre-torneo: se bloquea por tiempo de primer kickoff o por estado oficial iniciado/finalizado de cualquier partido. Si está bloqueado, la llave se muestra completa en modo lectura y no se puede guardar.
+
+Las selecciones de la llave se mantienen coherentes en cliente:
+
+- cambiar un ganador de `16avos` limpia selecciones inválidas de `Octavos` en adelante;
+- cambiar un ganador de `Octavos`, `Cuartos` o `Semifinales` limpia las fases posteriores afectadas;
+- si cambian pronósticos de grupos y se reconstruye la proyección de `16avos`, las selecciones guardadas que ya no coinciden se descartan y la UI avisa al usuario;
+- cada fase muestra estado `COMPLETO`, `INCOMPLETO` o `PENDIENTE`.
+
 ## Leaderboard
 
-La tabla de posiciones principal todavía muestra puntos de predicciones partido a partido mediante `get_pool_leaderboard(pool_id)`.
+La tabla de posiciones principal suma el bonus guardado de `Mi Mundial` al puntaje regular:
 
-`tournament_predictions.bonus_points` queda almacenado aparte. Un pase posterior debe decidir cómo sumar ese bonus al ranking general y cómo mostrar el desglose sin romper el leaderboard actual.
+- `match_points`: puntos de predicciones partido a partido desde `get_pool_leaderboard(pool_id)`;
+- `mi_mundial_bonus_points`: `tournament_predictions.bonus_points` del pool activo, con `0` por defecto si todavía no fue puntuado;
+- `total_points`: `match_points + mi_mundial_bonus_points`.
+
+`/posiciones` rankea por `total_points` y mantiene los desempates existentes: exactos, aciertos, cantidad de predicciones puntuadas y fallback estable por nombre/usuario.
+
+La UI muestra el total como puntaje principal y el desglose `Partidos X · Mi Mundial Y` en cada fila. El bonus se lee con el cliente Supabase normal bajo RLS; no se usa service role para mostrar la tabla.
 
 ## Pendiente
 
 - scoring automático después de sincronizar resultados finales de eliminatorias;
-- integración de bonus en `/posiciones`;
 - vista pública de llaves guardadas después del cierre;
 - autorización admin productiva para scoring fuera del entorno local/dev.

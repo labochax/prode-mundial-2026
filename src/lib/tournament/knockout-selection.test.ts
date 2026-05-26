@@ -5,6 +5,8 @@ import {
   advanceBracketRound,
   buildDerivedKnockoutRounds,
   getBracketBonusPreview,
+  getKnockoutPhaseStatus,
+  sanitizeKnockoutSelections,
 } from "@/lib/tournament/knockout-selection";
 import { rankThirdPlacedTeams } from "@/lib/tournament/rank-third-placed";
 import type {
@@ -228,5 +230,93 @@ describe("knockout selection helpers", () => {
     expect(rounds.final).toHaveLength(1);
     expect(rounds.thirdPlace).toHaveLength(1);
     expect(rounds.summary.champion).not.toBeNull();
+  });
+
+  it("clears invalid downstream selections when a Round of 32 winner changes", () => {
+    const roundOf32 = completeRoundOf32();
+    const firstPass = buildDerivedKnockoutRounds(roundOf32, selectHome(roundOf32));
+    const originalSelections = {
+      ...selectHome(roundOf32),
+      ...selectHome(firstPass.roundOf16),
+    };
+    const changedSelections = {
+      ...originalSelections,
+      [roundOf32[1].id]: roundOf32[1].away.team.id,
+    };
+
+    const result = sanitizeKnockoutSelections(roundOf32, changedSelections);
+
+    expect(result.selections[roundOf32[1].id]).toBe(roundOf32[1].away.team.id);
+    expect(result.selections["match-89"]).toBeUndefined();
+    expect(result.removedSelectionIds).toContain("match-89");
+  });
+
+  it("clears invalid quarterfinal and semifinal selections when a Round of 16 winner changes", () => {
+    const roundOf32 = completeRoundOf32();
+    const withRoundOf16 = buildDerivedKnockoutRounds(
+      roundOf32,
+      selectHome(roundOf32),
+    );
+    const withQuarters = buildDerivedKnockoutRounds(roundOf32, {
+      ...selectHome(roundOf32),
+      ...selectHome(withRoundOf16.roundOf16),
+    });
+    const withSemis = buildDerivedKnockoutRounds(roundOf32, {
+      ...selectHome(roundOf32),
+      ...selectHome(withRoundOf16.roundOf16),
+      ...selectHome(withQuarters.quarterfinals),
+    });
+    const originalSelections = {
+      ...selectHome(roundOf32),
+      ...selectHome(withRoundOf16.roundOf16),
+      ...selectHome(withQuarters.quarterfinals),
+      ...selectHome(withSemis.semifinals),
+    };
+    const changedSelections = {
+      ...originalSelections,
+      [withRoundOf16.roundOf16[0].id]: withRoundOf16.roundOf16[0].away.team.id,
+    };
+
+    const result = sanitizeKnockoutSelections(roundOf32, changedSelections);
+
+    expect(result.selections[withRoundOf16.roundOf16[0].id]).toBe(
+      withRoundOf16.roundOf16[0].away.team.id,
+    );
+    expect(result.selections["match-97"]).toBeUndefined();
+    expect(result.selections["match-101"]).toBeUndefined();
+    expect(result.removedSelectionIds).toEqual(
+      expect.arrayContaining(["match-97", "match-101"]),
+    );
+  });
+
+  it("drops saved selections that no longer fit a rebuilt projected Round of 32", () => {
+    const roundOf32 = completeRoundOf32();
+    const savedSelections = selectHome(roundOf32);
+    const rebuiltRoundOf32 = roundOf32.map((matchup, index) =>
+      index === 0
+        ? {
+            ...matchup,
+            home: {
+              ...matchup.home,
+              team: team("changed-home", "Equipo cambiado"),
+            },
+          }
+        : matchup,
+    );
+
+    const result = sanitizeKnockoutSelections(rebuiltRoundOf32, savedSelections);
+
+    expect(result.selections[roundOf32[0].id]).toBeUndefined();
+    expect(result.removedSelectionIds).toContain(roundOf32[0].id);
+  });
+
+  it("classifies phase status as complete, incomplete, or pending", () => {
+    const roundOf32 = completeRoundOf32();
+
+    expect(getKnockoutPhaseStatus([], {})).toBe("pending");
+    expect(getKnockoutPhaseStatus(roundOf32, {})).toBe("incomplete");
+    expect(getKnockoutPhaseStatus(roundOf32, selectHome(roundOf32))).toBe(
+      "complete",
+    );
   });
 });

@@ -42,6 +42,8 @@ export type LeaderboardPlayer = {
   id: string;
   isCurrentPlayer?: boolean;
   lastFive: LeaderboardResultMarker[];
+  matchPoints: number;
+  miMundialBonusPoints: number;
   name: string;
   outcomeHits: number;
   predictedMatchesCount: number;

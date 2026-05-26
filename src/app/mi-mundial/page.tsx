@@ -12,7 +12,7 @@ import { getPredictionsForMatches } from "@/lib/supabase/queries/predictions";
 import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
 import {
   getCurrentTournamentPrediction,
-  getTournamentLockAt,
+  getTournamentLockState,
 } from "@/lib/supabase/queries/tournament-predictions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -257,6 +257,9 @@ function ProjectedBracketSection({
       )}
 
       <InteractiveKnockoutBracket
+        key={bracket.roundOf32
+          .map((matchup) => `${matchup.id}:${matchup.home.team.id}:${matchup.away.team.id}`)
+          .join("|")}
         bracket={bracket}
         bonusActualOutcomeResult={bonusActualOutcomeResult}
         initialSaveState={initialSaveState}
@@ -299,9 +302,9 @@ export default async function MyWorldCupPage() {
   }
 
   const pool = await getOrJoinDefaultPool(supabase);
-  const [savedTournamentPrediction, tournamentLockAt] = await Promise.all([
+  const [savedTournamentPrediction, tournamentLockState] = await Promise.all([
     getCurrentTournamentPrediction(supabase, pool.id),
-    getTournamentLockAt(supabase),
+    getTournamentLockState(supabase),
   ]);
   const bonusActualOutcomeResult = await getActualTournamentOutcomeForBonus(
     supabase,
@@ -322,10 +325,9 @@ export default async function MyWorldCupPage() {
       .filter((row) => row.isQualified)
       .map((row) => row.team.id),
   );
-  const lockedAt = tournamentLockAt ?? savedTournamentPrediction?.locked_at ?? null;
-  const isTournamentLocked = lockedAt
-    ? new Date(lockedAt).getTime() <= Date.now()
-    : false;
+  const lockedAt =
+    tournamentLockState.lockAt ?? savedTournamentPrediction?.locked_at ?? null;
+  const isTournamentLocked = tournamentLockState.isLocked;
   const initialSelections = getSelectionsFromSavedTournamentPrediction(
     savedTournamentPrediction?.bracket_json,
   );

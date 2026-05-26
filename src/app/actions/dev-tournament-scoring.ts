@@ -22,6 +22,11 @@ import {
   type DevWorldCupMatchUpdate,
   type DevWorldCupResetMatch,
 } from "@/lib/tournament/dev-world-cup-simulator";
+import {
+  getPredictionScoringResetPatch,
+  scoreDevCompletedMatches,
+  type DevMatchScoringClient,
+} from "@/lib/tournament/dev-match-scoring";
 
 type TournamentPredictionForScoring = {
   champion_team_id: string;
@@ -135,6 +140,7 @@ async function updateGroupMatchesForDevSimulation(
   }
 
   let updatedCount = 0;
+  const updatedMatchIds: string[] = [];
 
   for (const match of (matches ?? []) as DevGroupMatchForSimulation[]) {
     if (typeof match.match_number !== "number") {
@@ -158,9 +164,13 @@ async function updateGroupMatchesForDevSimulation(
     }
 
     updatedCount += 1;
+    updatedMatchIds.push(match.id);
   }
 
-  return updatedCount;
+  return {
+    updatedCount,
+    updatedMatchIds,
+  };
 }
 
 async function updateKnockoutMatchesForDevSimulation(
@@ -195,6 +205,7 @@ async function updateKnockoutMatchesForDevSimulation(
   }
 
   let updatedCount = 0;
+  const updatedMatchIds: string[] = [];
 
   for (const update of databaseUpdates.updates) {
     const { data, error } = await admin
@@ -219,10 +230,14 @@ async function updateKnockoutMatchesForDevSimulation(
 
     if (data) {
       updatedCount += 1;
+      updatedMatchIds.push(update.id);
     }
   }
 
-  return updatedCount;
+  return {
+    updatedCount,
+    updatedMatchIds,
+  };
 }
 
 export async function autocompleteDevWorldCupResultsAction() {
@@ -265,13 +280,17 @@ export async function autocompleteDevWorldCupResultsAction() {
           };
         } else {
           const admin = createSupabaseAdminClient();
-          const groupMatchesUpdated =
+          const groupResult =
             await updateGroupMatchesForDevSimulation(admin);
-          const knockoutMatchesUpdated =
+          const knockoutResult =
             await updateKnockoutMatchesForDevSimulation(
               admin,
               simulation.updates,
             );
+          const scoringResult = await scoreDevCompletedMatches(
+            admin as DevMatchScoringClient,
+            [...groupResult.updatedMatchIds, ...knockoutResult.updatedMatchIds],
+          );
 
           revalidatePath("/admin/sync");
           revalidatePath("/dashboard");
@@ -280,11 +299,13 @@ export async function autocompleteDevWorldCupResultsAction() {
 
           redirectParams = {
             mundial_dev_estado: "autocompletado",
-            mundial_dev_group: String(groupMatchesUpdated),
-            mundial_dev_knockout: String(knockoutMatchesUpdated),
+            mundial_dev_group: String(groupResult.updatedCount),
+            mundial_dev_knockout: String(knockoutResult.updatedCount),
             mundial_dev_matches: String(
-              groupMatchesUpdated + knockoutMatchesUpdated,
+              groupResult.updatedCount + knockoutResult.updatedCount,
             ),
+            mundial_dev_predictions: String(scoringResult.predictionsScored),
+            mundial_dev_scored_matches: String(scoringResult.matchesReviewed),
           };
         }
       }
@@ -359,10 +380,7 @@ export async function resetDevWorldCupResultsAction() {
     for (const prediction of predictions ?? []) {
       const { error } = await admin
         .from("predictions")
-        .update({
-          points: null,
-          scored_at: null,
-        })
+        .update(getPredictionScoringResetPatch())
         .eq("id", prediction.id);
 
       if (error) {
