@@ -55,6 +55,27 @@ function StatCell({ children }: { children: ReactNode }) {
   return <span className="text-center font-technical font-black">{children}</span>;
 }
 
+function TeamNameWithBadge({ team }: { team: TournamentStandingRow["team"] }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      {team.badgeUrl && (
+        <span className="prode-frame flex size-7 shrink-0 items-center justify-center overflow-hidden bg-prode-surface">
+          <img
+            alt={`Escudo de ${team.name}`}
+            className="size-full object-contain p-0.5"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            src={team.badgeUrl}
+          />
+        </span>
+      )}
+      <p className="truncate font-technical text-xs font-black uppercase">
+        {team.name}
+      </p>
+    </div>
+  );
+}
+
 function GroupRow({
   bestThirdQualifiedTeamIds,
   row,
@@ -78,9 +99,12 @@ function GroupRow({
       )}
     >
       <div className="min-w-0">
-        <p className="truncate font-technical text-xs font-black uppercase">
-          {row.rank}. {row.team.name}
-        </p>
+        <div className="flex min-w-0 items-center gap-1">
+          <span className="font-technical text-xs font-black uppercase">
+            {row.rank}.
+          </span>
+          <TeamNameWithBadge team={row.team} />
+        </div>
         {row.team.code && (
           <p className="font-technical text-[0.62rem] font-bold uppercase text-muted-foreground">
             {row.team.code}
@@ -161,9 +185,7 @@ function BestThirdRow({ row }: { row: RankedThirdPlacedTeam }) {
     >
       <span className="font-display text-3xl leading-none">{row.thirdRank}</span>
       <div className="min-w-0">
-        <p className="truncate font-technical text-xs font-black uppercase">
-          {row.team.name}
-        </p>
+        <TeamNameWithBadge team={row.team} />
         <p className="font-technical text-[0.62rem] font-bold uppercase text-muted-foreground">
           {row.groupLabel}
         </p>

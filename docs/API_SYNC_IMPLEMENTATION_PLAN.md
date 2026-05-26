@@ -211,15 +211,33 @@ TheSportsDB debe complementar, no reemplazar, los datos oficiales:
 ### Persistencia
 
 - Guardar `teams.sportsdb_id` al primer match confiable.
-- Guardar `teams.badge_url`, `teams.flag_url` si es mejor que el fallback actual.
+- Guardar `teams.badge_url`, `teams.logo_url`, `teams.jersey_url` y
+  `teams.fanart_url` como metadata visual opcional.
+- Guardar `teams.thesportsdb_raw_json` para diagnostico de enriquecimiento sin
+  pisar `teams.raw_json`, que puede contener payload de Football-Data.
+- Guardar `teams.assets_last_synced_at` cuando el enriquecimiento local escriba
+  assets.
+- `teams.team_aliases` queda disponible para mejorar matching local sin tocar
+  nombres oficiales.
 - Guardar `stadiums.image_url` si el venue match es confiable.
-- Guardar payload original en `raw_json`, idealmente bajo clave separada si se agrega migracion (`raw_json->sportsdb`).
 
 ### Fallos
 
 - Fallo de TheSportsDB no debe bloquear sync de Football-Data.
 - Rate limit documentado: free users 30 requests/min; premium 100/min; business 120/min. Implementar throttle conservador.
 - Si no hay match confiable por nombre, no inventar assets; dejar null/fallback Stitch.
+
+### Implementacion local one-shot
+
+Se agrego un flujo CLI local, no una accion en `/admin/sync`:
+
+- `npm run enrich:teams:thesportsdb:dry`
+- `npm run enrich:teams:thesportsdb`
+
+El script lee equipos actuales, busca candidatos en TheSportsDB, matchea por
+normalizacion/aliases y actualiza solo campos de enriquecimiento visual cuando
+detecta cambios. No toca fixtures, resultados, predicciones ni scoring. El reporte local queda en
+`reports/thesportsdb-team-enrichment-report.json`, ignorado por Git.
 
 ## 4. Opciones De Ejecucion De Sync
 

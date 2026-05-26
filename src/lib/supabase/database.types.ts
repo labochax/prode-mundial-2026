@@ -475,44 +475,62 @@ export type Database = {
       }
       teams: {
         Row: {
+          assets_last_synced_at: string | null
           badge_url: string | null
           created_at: string
+          fanart_url: string | null
           flag_url: string | null
           football_data_id: number | null
           id: string
+          jersey_url: string | null
+          logo_url: string | null
           name_en: string | null
           name_es: string
           raw_json: Json | null
           short_name: string | null
           sportsdb_id: string | null
+          team_aliases: string[]
+          thesportsdb_raw_json: Json | null
           tla: string | null
           updated_at: string
         }
         Insert: {
+          assets_last_synced_at?: string | null
           badge_url?: string | null
           created_at?: string
+          fanart_url?: string | null
           flag_url?: string | null
           football_data_id?: number | null
           id?: string
+          jersey_url?: string | null
+          logo_url?: string | null
           name_en?: string | null
           name_es: string
           raw_json?: Json | null
           short_name?: string | null
           sportsdb_id?: string | null
+          team_aliases?: string[]
+          thesportsdb_raw_json?: Json | null
           tla?: string | null
           updated_at?: string
         }
         Update: {
+          assets_last_synced_at?: string | null
           badge_url?: string | null
           created_at?: string
+          fanart_url?: string | null
           flag_url?: string | null
           football_data_id?: number | null
           id?: string
+          jersey_url?: string | null
+          logo_url?: string | null
           name_en?: string | null
           name_es?: string
           raw_json?: Json | null
           short_name?: string | null
           sportsdb_id?: string | null
+          team_aliases?: string[]
+          thesportsdb_raw_json?: Json | null
           tla?: string | null
           updated_at?: string
         }

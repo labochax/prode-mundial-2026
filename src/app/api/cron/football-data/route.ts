@@ -38,7 +38,10 @@ function isAuthorized(request: NextRequest) {
   }
 
   const bearerToken = getBearerToken(request);
-  const querySecret = request.nextUrl.searchParams.get("secret")?.trim();
+  const querySecret =
+    process.env.NODE_ENV !== "production"
+      ? request.nextUrl.searchParams.get("secret")?.trim()
+      : null;
 
   if (bearerToken === cronSecret || querySecret === cronSecret) {
     return {

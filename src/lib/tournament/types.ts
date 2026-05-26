@@ -1,4 +1,5 @@
 export type TournamentTeam = {
+  badgeUrl?: string | null;
   code: string | null;
   id: string;
   name: string;

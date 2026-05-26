@@ -21,6 +21,7 @@ export type MatchWithRelations = MatchRow & {
 };
 
 export type PredictionMatchTeam = {
+  badgeUrl?: string | null;
   code: string;
   detailFlag?: StitchFlagAsset;
   flag?: StitchFlagAsset;
@@ -215,6 +216,7 @@ function mapTeam(
     code === "ARG" ? stitchFlagAssets["argentina-detalle"] : flag;
 
   return {
+    badgeUrl: team?.badge_url ?? team?.logo_url ?? null,
     code,
     detailFlag,
     flag,

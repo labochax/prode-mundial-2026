@@ -15,7 +15,13 @@ select has_column('public', 'teams', 'short_name', 'teams.short_name exists');
 select has_column('public', 'teams', 'tla', 'teams.tla exists');
 select has_column('public', 'teams', 'flag_url', 'teams.flag_url exists');
 select has_column('public', 'teams', 'badge_url', 'teams.badge_url exists');
+select has_column('public', 'teams', 'logo_url', 'teams.logo_url exists');
+select has_column('public', 'teams', 'jersey_url', 'teams.jersey_url exists');
+select has_column('public', 'teams', 'fanart_url', 'teams.fanart_url exists');
 select has_column('public', 'teams', 'raw_json', 'teams.raw_json exists');
+select has_column('public', 'teams', 'thesportsdb_raw_json', 'teams.thesportsdb_raw_json exists');
+select has_column('public', 'teams', 'assets_last_synced_at', 'teams.assets_last_synced_at exists');
+select has_column('public', 'teams', 'team_aliases', 'teams.team_aliases exists');
 select has_column('public', 'teams', 'created_at', 'teams.created_at exists');
 select has_column('public', 'teams', 'updated_at', 'teams.updated_at exists');
 

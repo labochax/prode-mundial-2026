@@ -8,8 +8,9 @@ cuando haya deploy:
 
 - `GET /api/cron/football-data`
 - modos: `smart`, `fixtures`, `results`
-- autorización obligatoria: `Authorization: Bearer <CRON_SECRET>` o
-  `?secret=<CRON_SECRET>` para prueba local controlada
+- autorización obligatoria: `Authorization: Bearer <CRON_SECRET>`
+- en desarrollo local tambien se acepta `?secret=<CRON_SECRET>` para prueba
+  controlada; en produccion no se acepta secreto por query string
 
 - `Probar Football-Data`: vista previa limitada, sin escrituras.
 - `Sincronizar fixtures oficiales`: importa equipos y calendario disponible.
@@ -71,7 +72,9 @@ Autorización:
 
 - `CRON_SECRET` obligatorio.
 - Comparar `Authorization: Bearer ${CRON_SECRET}`.
-- Para desarrollo local también se acepta `?secret=${CRON_SECRET}`.
+- Para desarrollo local tambien se acepta `?secret=${CRON_SECRET}`.
+- En produccion, `?secret=` se rechaza aunque coincida para evitar secretos en
+  URLs/logs.
 - Logs sin tokens.
 - Reusar los módulos server-only actuales.
 - Registrar cada ejecución en `sync_runs`.

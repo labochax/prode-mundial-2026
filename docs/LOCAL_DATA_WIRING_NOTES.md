@@ -68,6 +68,7 @@ No se usa service role para el flujo normal de usuario. La base mantiene el bloq
 - El snapshot de seed puede quedar desactualizado si Football-Data cambia
   horarios, estados o cruces eliminatorios; usar `/admin/sync` o la ruta cron
   local para refrescar.
-- No hay assets oficiales desde TheSportsDB.
+- Los assets TheSportsDB son opcionales y se cargan solo si se ejecuto el script
+  local `npm run enrich:teams:thesportsdb`.
 - No hay Supabase remoto ni deploy.
 - El seed local no crea usuarios, perfiles ni predicciones reales.

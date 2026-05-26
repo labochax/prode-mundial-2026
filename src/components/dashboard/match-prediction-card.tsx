@@ -114,7 +114,15 @@ function TeamColumn({ disabled, onScoreChange, score, team }: TeamColumnProps) {
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center gap-3">
       <div className="prode-frame flex size-16 items-center justify-center overflow-hidden bg-prode-surface sm:size-20">
-        {team.flag ? (
+        {team.badgeUrl ? (
+          <img
+            alt={`Escudo de ${team.name}`}
+            className="size-full object-contain p-1"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            src={team.badgeUrl}
+          />
+        ) : team.flag ? (
           <Image
             alt={team.flag.alt}
             className="size-full object-cover"

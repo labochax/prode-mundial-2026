@@ -1,10 +1,10 @@
-import type { Json } from "@/lib/supabase/database.types";
+import type { Json } from "../../supabase/database.types";
 import type {
   TheSportsDbTeam,
   TheSportsDbTeamAssetCandidate,
   TheSportsDbVenue,
   TheSportsDbVenueAssetCandidate,
-} from "@/lib/sports/thesportsdb/types";
+} from "./types";
 
 function toJson(value: unknown): Json {
   return JSON.parse(JSON.stringify(value)) as Json;
@@ -28,7 +28,14 @@ export function mapTheSportsDbTeamToAssetCandidate(
 
   return {
     badge_url: normalizeText(team.strTeamBadge) ?? normalizeText(team.strBadge),
+    fanart_url:
+      normalizeText(team.strFanart1) ??
+      normalizeText(team.strFanart2) ??
+      normalizeText(team.strFanart3) ??
+      normalizeText(team.strFanart4),
     flag_url: normalizeText(team.strLogo),
+    jersey_url: normalizeText(team.strTeamJersey),
+    logo_url: normalizeText(team.strTeamLogo) ?? normalizeText(team.strLogo),
     raw_json: toJson(team),
     sportsdb_id: sportsdbId,
     team_name: teamName,

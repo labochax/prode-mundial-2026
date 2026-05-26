@@ -109,9 +109,22 @@ function TeamButton({
           {slot.slotLabel}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-technical text-sm font-black uppercase">
-            {slot.team.name}
-          </p>
+          <div className="flex min-w-0 items-center gap-2">
+            {slot.team.badgeUrl && (
+              <span className="prode-frame flex size-8 shrink-0 items-center justify-center overflow-hidden bg-prode-surface">
+                <img
+                  alt={`Escudo de ${slot.team.name}`}
+                  className="size-full object-contain p-0.5"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  src={slot.team.badgeUrl}
+                />
+              </span>
+            )}
+            <p className="truncate font-technical text-sm font-black uppercase">
+              {slot.team.name}
+            </p>
+          </div>
           <p className="mt-1 font-technical text-[0.68rem] font-black uppercase text-muted-foreground">
             {slot.originLabel}
           </p>

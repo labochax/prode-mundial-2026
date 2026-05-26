@@ -130,7 +130,7 @@ El sync de fixtures:
 - no modifica predicciones;
 - no ejecuta scoring;
 - no elimina los partidos del seed local;
-- no llama TheSportsDB todavía.
+- no llama TheSportsDB.
 
 ## Sync Local De Resultados
 
@@ -176,5 +176,6 @@ Solo se conservan errores de desarrollo con detalles técnicos no secretos.
 - La sincronización con Football-Data.org es manual y local-only.
 - No hay permisos admin productivos.
 - `/admin/sync` está desactivado en producción.
-- No hay integración con TheSportsDB.
+- TheSportsDB se limita a un script local one-shot de enriquecimiento visual de
+  equipos; no forma parte de `/admin/sync`.
 - Las celdas de últimos resultados y tendencia todavía son derivadas mínimas porque `get_pool_leaderboard` devuelve totales, no historial por partido.

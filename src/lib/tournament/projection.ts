@@ -14,6 +14,7 @@ function mapTeam(
   fallbackId: string,
 ): TournamentTeam {
   return {
+    badgeUrl: team?.badge_url ?? team?.logo_url ?? null,
     code: team?.tla ?? team?.short_name ?? null,
     id: team?.id ?? fallbackId,
     name: team?.name_es ?? team?.name_en ?? "Equipo a confirmar",

@@ -56,6 +56,10 @@ El filtrado es solo de presentación. No cambia:
 - reglas de bloqueo;
 - scoring.
 
+El dashboard no usa datos mock ni helpers locales de fixtures fake. La fuente de
+datos es Supabase: fixtures oficiales cuando existen, seed/dev solo como fallback
+si todavia no hay fixtures oficiales.
+
 Las tarjetas finalizadas, tanto de grupos como de eliminatorias, muestran el desglose calculado desde `predictions.points`:
 
 - `Exacto +3`;

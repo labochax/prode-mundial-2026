@@ -66,7 +66,15 @@ function TeamPredictionBlock({
   return (
     <div className="flex w-full flex-1 flex-col items-center">
       <div className="prode-frame prode-hard-shadow mb-4 flex size-24 items-center justify-center overflow-hidden bg-[#f1efd9] sm:size-32">
-        {flag ? (
+        {team.badgeUrl ? (
+          <img
+            alt={`Escudo de ${team.name}`}
+            className="size-full object-contain p-2"
+            loading="eager"
+            referrerPolicy="no-referrer"
+            src={team.badgeUrl}
+          />
+        ) : flag ? (
           <Image
             alt={flag.alt}
             className="size-full object-cover"

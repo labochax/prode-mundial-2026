@@ -1,4 +1,4 @@
-import type { Json } from "@/lib/supabase/database.types";
+import type { Json } from "../../supabase/database.types";
 
 export type TheSportsDbTeam = {
   idTeam?: string | null;
@@ -13,6 +13,8 @@ export type TheSportsDbTeam = {
   strSport?: string | null;
   strTeam?: string | null;
   strTeamBadge?: string | null;
+  strTeamJersey?: string | null;
+  strTeamLogo?: string | null;
   strTeamShort?: string | null;
 };
 
@@ -36,7 +38,10 @@ export type TheSportsDbVenuesResponse = {
 
 export type TheSportsDbTeamAssetCandidate = {
   badge_url: string | null;
+  fanart_url: string | null;
   flag_url: string | null;
+  jersey_url: string | null;
+  logo_url: string | null;
   raw_json: Json;
   sportsdb_id: string;
   team_name: string;
