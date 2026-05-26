@@ -189,4 +189,44 @@ describe("knockout selection helpers", () => {
 
     expect(JSON.stringify(roundOf32)).toBe(original);
   });
+
+  it("derives all saved rounds from complete selections without actual outcomes", () => {
+    const roundOf32 = completeRoundOf32();
+    const withRoundOf16 = buildDerivedKnockoutRounds(
+      roundOf32,
+      selectHome(roundOf32),
+    );
+    const withQuarters = buildDerivedKnockoutRounds(roundOf32, {
+      ...selectHome(roundOf32),
+      ...selectHome(withRoundOf16.roundOf16),
+    });
+    const withSemis = buildDerivedKnockoutRounds(roundOf32, {
+      ...selectHome(roundOf32),
+      ...selectHome(withRoundOf16.roundOf16),
+      ...selectHome(withQuarters.quarterfinals),
+    });
+    const withFinals = buildDerivedKnockoutRounds(roundOf32, {
+      ...selectHome(roundOf32),
+      ...selectHome(withRoundOf16.roundOf16),
+      ...selectHome(withQuarters.quarterfinals),
+      ...selectHome(withSemis.semifinals),
+    });
+    const completeSelections = {
+      ...selectHome(roundOf32),
+      ...selectHome(withRoundOf16.roundOf16),
+      ...selectHome(withQuarters.quarterfinals),
+      ...selectHome(withSemis.semifinals),
+      ...selectHome(withFinals.final),
+      ...selectHome(withFinals.thirdPlace),
+    };
+    const rounds = buildDerivedKnockoutRounds(roundOf32, completeSelections);
+
+    expect(rounds.roundOf32).toHaveLength(16);
+    expect(rounds.roundOf16).toHaveLength(8);
+    expect(rounds.quarterfinals).toHaveLength(4);
+    expect(rounds.semifinals).toHaveLength(2);
+    expect(rounds.final).toHaveLength(1);
+    expect(rounds.thirdPlace).toHaveLength(1);
+    expect(rounds.summary.champion).not.toBeNull();
+  });
 });

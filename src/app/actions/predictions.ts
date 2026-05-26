@@ -217,6 +217,7 @@ export async function savePredictionAction(
 
         if (!retryError) {
           revalidatePath("/dashboard");
+          revalidatePath("/mi-mundial");
           revalidatePath(`/partidos/${parsed.data.match_id}`);
 
           return {
@@ -236,6 +237,7 @@ export async function savePredictionAction(
     }
 
     revalidatePath("/dashboard");
+    revalidatePath("/mi-mundial");
     revalidatePath(`/partidos/${parsed.data.match_id}`);
 
     return {

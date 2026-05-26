@@ -386,3 +386,43 @@ Incluye:
 - UI de `/mi-mundial` con carga inicial de la llave guardada, guardado manual y estado bloqueado.
 
 La persistencia no modifica `predictions` partido a partido ni persiste tablas simuladas de grupo. El scoring de bonus sigue pendiente y debe implementarse en una fase separada alineada con `/reglas`.
+
+## Nota de implementación Phase 5
+
+Phase 5 agrega la base de scoring de bonus de Mi Mundial, sin integrarlo todavía al leaderboard principal.
+
+Incluye:
+
+- helper puro `scoreTournamentPredictionBonus` para comparar la llave guardada contra outcomes reales;
+- helper puro `deriveActualTournamentOutcome` para derivar outcomes desde partidos oficiales de eliminatorias finalizados;
+- tests unitarios para bonus perfecto, parcial, sin aciertos, duplicados, outcomes incompletos y extracción de resultados;
+- acción local/dev `scoreTournamentPredictionsAction`, server-only, usando admin client solo en servidor;
+- sección `/admin/sync` -> `Puntuar Mi Mundial` con botón `Calcular bonus Mi Mundial`.
+
+La acción actualiza `tournament_predictions.bonus_points` y `scored_at` solo cuando hay resultados suficientes. No toca `predictions` partido a partido ni cambia la lógica de puntaje normal.
+
+Limitación intencional: `/posiciones` todavía no suma `bonus_points` al ranking general. Esa integración debe hacerse en un pase posterior, idealmente con un desglose visible para separar puntos por partido y bonus de Mi Mundial.
+
+### Ajuste de QA local
+
+El scoring de bonus ahora distingue entre resultados faltantes y cruces de eliminatorias finalizados sin equipos oficiales asignados. Este segundo caso ocurre con fixtures placeholder de Football-Data: puede haber marcador cargado, pero sin `home_team_id` / `away_team_id` no hay forma confiable de saber qué equipo avanzó.
+
+Para pruebas locales, `/admin/sync` agrega `Autocompletar Mundial de prueba`. La herramienta usa la llave guardada del usuario actual para completar equipos y marcadores ficticios de eliminatorias, además de marcadores determinísticos de grupos. No llama APIs, no persiste proyecciones nuevas y no modifica pronósticos de usuarios.
+
+El pase también agrega desglose visual de puntos por partido en dashboard y detalle usando `predictions.points`. La UI no recalcula reglas: solo muestra el resultado ya calculado por servidor/base.
+
+El simulador dev también cubre fixtures knockout importados sin `match_number`: asigna los números FIFA 73-104 al completar resultados de prueba. Esto permite que el extractor de outcomes derive `Octavos`, `Cuartos`, `Semifinales`, campeón, subcampeón, `3.º` y `4.º` desde `matches`.
+
+`/mi-mundial` muestra desglose de bonus cuando esos outcomes existen. Si faltan datos reales de eliminatorias, mantiene el estado pendiente y evita mostrar `+0` falsos.
+
+### Ajuste de display de bonus y separación con dashboard
+
+El desglose visual de bonus en `Octavos`, `Cuartos` y `Semifinales` muestra el valor numérico como badge de etapa en el header de cada cruce (`BONUS +1` o `BONUS +2`). Los equipos dentro del cruce solo muestran `Acertado` o `No acertado`, para no sugerir que el mismo partido duplica el bonus por lado.
+
+El resumen de `Mi Mundial` reutiliza el diagrama de bonus para mostrar puntos obtenidos por segmento cuando ya existen outcomes completos: `Equipos en octavos`, `Cuartos`, `Semifinales`, campeón, subcampeón, tercero y cuarto. Si los outcomes están pendientes, mantiene el diagrama de máximos posibles y no muestra falsos `0 / 52`.
+
+El dashboard queda explícitamente fuera de la proyección personal. Solo maneja fixtures oficiales jugables: si un cruce de eliminatorias todavía no tiene equipos oficiales asignados, la tarjeta queda bloqueada y deriva al usuario a `/mi-mundial`. Cuando la sincronización oficial o el simulador dev asignen `home_team_id` y `away_team_id`, el cruce se habilita automáticamente como cualquier otro partido.
+
+La progresión de fases en `/mi-mundial` queda separada de los outcomes oficiales: `Octavos`, `Cuartos`, `Semifinales`, Final y `3.º` puesto se habilitan cuando el usuario elige ganadores de la ronda anterior. Los resultados oficiales solo sirven para evaluar bonus. Si faltan, se muestra `Bonus pendiente` en el resumen, no se reemplazan rondas editables por estados bloqueados.
+
+`/admin/sync` ahora permite deshacer el simulador dev con `Eliminar datos Mundial de prueba`. Ese reset conserva predicciones y llaves guardadas, pero limpia resultados, puntos calculados y equipos dev asignados a eliminatorias para volver a probar el flujo desde un estado sin resultados.

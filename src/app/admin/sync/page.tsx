@@ -5,6 +5,11 @@ import { syncFootballDataFixturesAction } from "@/app/actions/api-sync-fixtures"
 import { previewFootballDataDryRunAction } from "@/app/actions/api-sync-preview";
 import { syncFootballDataResultsAction } from "@/app/actions/api-sync-results";
 import { finalizeAndScoreMatchAction } from "@/app/actions/dev-scoring";
+import {
+  autocompleteDevWorldCupResultsAction,
+  resetDevWorldCupResultsAction,
+  scoreTournamentPredictionsAction,
+} from "@/app/actions/dev-tournament-scoring";
 import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
 import { ProdeBadge } from "@/components/prode/prode-badge";
 import { ProdeCard } from "@/components/prode/prode-card";
@@ -72,6 +77,45 @@ export default async function AdminSyncPage({
   const resultsScored = getSearchValue(resolvedSearchParams, "results_scored");
   const resultsText = getSearchValue(resolvedSearchParams, "results_text");
   const resultsReset = getSearchValue(resolvedSearchParams, "results_reset");
+  const tournamentBonusState = getSearchValue(resolvedSearchParams, "mundial_estado");
+  const tournamentBonusError = getSearchValue(resolvedSearchParams, "mundial_error");
+  const tournamentBonusChecked = getSearchValue(resolvedSearchParams, "mundial_checked");
+  const tournamentBonusScored = getSearchValue(resolvedSearchParams, "mundial_scored");
+  const tournamentBonusUpdated = getSearchValue(resolvedSearchParams, "mundial_updated");
+  const tournamentBonusReason = getSearchValue(resolvedSearchParams, "mundial_reason");
+  const tournamentBonusPoints = getSearchValue(resolvedSearchParams, "mundial_points");
+  const devWorldCupState = getSearchValue(resolvedSearchParams, "mundial_dev_estado");
+  const devWorldCupError = getSearchValue(resolvedSearchParams, "mundial_dev_error");
+  const devWorldCupMatches = getSearchValue(resolvedSearchParams, "mundial_dev_matches");
+  const devWorldCupGroup = getSearchValue(resolvedSearchParams, "mundial_dev_group");
+  const devWorldCupKnockout = getSearchValue(
+    resolvedSearchParams,
+    "mundial_dev_knockout",
+  );
+  const devWorldCupResetState = getSearchValue(
+    resolvedSearchParams,
+    "mundial_dev_reset_estado",
+  );
+  const devWorldCupResetError = getSearchValue(
+    resolvedSearchParams,
+    "mundial_dev_reset_error",
+  );
+  const devWorldCupResetText = getSearchValue(
+    resolvedSearchParams,
+    "mundial_dev_reset_text",
+  );
+  const devWorldCupResetMatches = getSearchValue(
+    resolvedSearchParams,
+    "mundial_dev_reset_matches",
+  );
+  const devWorldCupResetPredictions = getSearchValue(
+    resolvedSearchParams,
+    "mundial_dev_reset_predictions",
+  );
+  const devWorldCupResetBonus = getSearchValue(
+    resolvedSearchParams,
+    "mundial_dev_reset_bonus",
+  );
   const scoredPredictions = getSearchValue(resolvedSearchParams, "predicciones");
   const isProduction = process.env.NODE_ENV === "production";
   const activeMatches = isProduction
@@ -116,6 +160,80 @@ export default async function AdminSyncPage({
                 ? errorState
                 : `Partido puntuado. Predicciones actualizadas: ${
                     scoredPredictions ?? "0"
+                  }.`}
+          </div>
+        )}
+      </ProdeCard>
+
+      <ProdeCard className="p-5 sm:p-6">
+        <div className="flex flex-col gap-4 border-b-[3px] border-prode-black pb-5 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <ProdeBadge variant="primary">Resultados de prueba</ProdeBadge>
+            <h2 className="mt-4 font-display text-4xl uppercase leading-none sm:text-5xl">
+              Autocompletar Mundial
+            </h2>
+            <p className="mt-3 max-w-3xl font-body text-base">
+              Simulador dev local. Usa tu llave guardada de Mi Mundial para
+              asignar equipos y resultados a las eliminatorias, y completa
+              marcadores de prueba para la fase de grupos. No llama APIs y no
+              modifica pronósticos de usuarios.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <form action={autocompleteDevWorldCupResultsAction}>
+              <button
+                className="prode-frame prode-hard-shadow prode-pressable inline-flex min-h-14 items-center justify-center bg-prode-yellow px-4 py-3 font-technical text-xs font-bold uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper disabled:pointer-events-none disabled:opacity-50"
+                disabled={isProduction}
+                type="submit"
+              >
+                Autocompletar Mundial de prueba
+              </button>
+            </form>
+            <form action={resetDevWorldCupResultsAction}>
+              <button
+                className="prode-frame prode-hard-shadow prode-pressable inline-flex min-h-14 items-center justify-center bg-prode-surface px-4 py-3 font-technical text-xs font-bold uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper disabled:pointer-events-none disabled:opacity-50"
+                disabled={isProduction}
+                type="submit"
+              >
+                Eliminar datos Mundial de prueba
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {(devWorldCupState ||
+          devWorldCupError ||
+          devWorldCupResetState ||
+          devWorldCupResetError ||
+          isProduction) && (
+          <div
+            className={cn(
+              "prode-frame mt-5 px-4 py-3 font-technical text-xs font-bold uppercase",
+              devWorldCupError || devWorldCupResetError || isProduction
+                ? "bg-[#ffe2d8] text-red-800"
+                : "bg-prode-yellow text-prode-black",
+            )}
+          >
+            {isProduction
+              ? "El simulador de resultados está desactivado en producción."
+              : devWorldCupError || devWorldCupResetError
+                ? devWorldCupError
+                  ? devWorldCupError
+                  : devWorldCupResetError
+              : devWorldCupResetState
+                ? devWorldCupResetText ??
+                  `Datos de prueba eliminados. Partidos reiniciados: ${
+                    devWorldCupResetMatches ?? "0"
+                  }. Predicciones conservadas: ${
+                    devWorldCupResetPredictions ?? "0"
+                  }. Bonus Mi Mundial reiniciado: ${
+                    devWorldCupResetBonus ?? "0"
+                  }.`
+                : `Mundial de prueba autocompletado. Partidos actualizados: ${
+                    devWorldCupMatches ?? "0"
+                  }. Grupos: ${devWorldCupGroup ?? "0"}. Eliminatorias: ${
+                    devWorldCupKnockout ?? "0"
                   }.`}
           </div>
         )}
@@ -275,6 +393,56 @@ export default async function AdminSyncPage({
                   } ${
                     resultsReset ? `Reset de cuota en ${resultsReset}s.` : ""
                   }`}
+          </div>
+        )}
+      </ProdeCard>
+
+      <ProdeCard className="p-5 sm:p-6">
+        <div className="flex flex-col gap-4 border-b-[3px] border-prode-black pb-5 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <ProdeBadge variant="surface">Puntuar Mi Mundial</ProdeBadge>
+            <h2 className="mt-4 font-display text-4xl uppercase leading-none sm:text-5xl">
+              Bonus pre-torneo
+            </h2>
+            <p className="mt-3 max-w-3xl font-body text-base">
+              Herramienta local de prueba. Calcula bonus de Mi Mundial usando
+              resultados oficiales ya finalizados de eliminatorias. No modifica
+              pronósticos partido a partido y todavía no se suma al ranking
+              principal.
+            </p>
+          </div>
+
+          <form action={scoreTournamentPredictionsAction}>
+            <button
+              className="prode-frame prode-hard-shadow prode-pressable inline-flex min-h-14 items-center justify-center bg-prode-yellow px-4 py-3 font-technical text-xs font-bold uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper disabled:pointer-events-none disabled:opacity-50"
+              disabled={isProduction}
+              type="submit"
+            >
+              Calcular bonus Mi Mundial
+            </button>
+          </form>
+        </div>
+
+        {(tournamentBonusState || tournamentBonusError || isProduction) && (
+          <div
+            className={cn(
+              "prode-frame mt-5 px-4 py-3 font-technical text-xs font-bold uppercase",
+              tournamentBonusError || isProduction
+                ? "bg-[#ffe2d8] text-red-800"
+                : "bg-prode-yellow text-prode-black",
+            )}
+          >
+            {isProduction
+              ? "El puntaje de Mi Mundial está desactivado en producción."
+              : tournamentBonusError
+                ? tournamentBonusError
+                : tournamentBonusState === "incompleto"
+                  ? `Bonus no calculado. ${tournamentBonusReason ?? "Faltan resultados oficiales de eliminatorias."}`
+                  : `Llaves revisadas: ${tournamentBonusChecked ?? "0"}. Llaves puntuadas: ${
+                      tournamentBonusScored ?? "0"
+                    }. Bonus actualizados: ${
+                      tournamentBonusUpdated ?? "0"
+                    }. Puntos bonus totales: ${tournamentBonusPoints ?? "0"}.`}
           </div>
         )}
       </ProdeCard>

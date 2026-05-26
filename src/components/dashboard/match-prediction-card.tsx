@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Save } from "lucide-react";
+import { Check, CheckCheck, Save, X } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -43,6 +43,72 @@ const statusClassName = {
   scheduled: "bg-prode-surface text-prode-black",
   stopped: "bg-[#ffe2d8] text-red-800",
 } as const;
+
+const pointsToneClassName = {
+  exact: "bg-prode-yellow text-prode-black",
+  miss: "bg-[#ffe2d8] text-red-800",
+  outcome: "bg-prode-surface text-prode-black",
+} as const;
+
+function MatchPointsBreakdown({ match }: { match: PredictionMatch }) {
+  const breakdown = match.pointsBreakdown;
+
+  if (!breakdown) {
+    return null;
+  }
+
+  const Icon =
+    breakdown.tone === "exact"
+      ? CheckCheck
+      : breakdown.tone === "outcome"
+        ? Check
+        : X;
+
+  return (
+    <div className="prode-frame mb-4 grid gap-2 bg-white px-3 py-3 sm:grid-cols-[auto_1fr] sm:items-center">
+      <span
+        className={cn(
+          "prode-frame inline-flex w-fit items-center gap-2 px-3 py-1 font-technical text-xs font-black uppercase",
+          pointsToneClassName[breakdown.tone],
+        )}
+      >
+        <Icon aria-hidden="true" className="size-4" />
+        {breakdown.shortLabel}
+      </span>
+      <span className="font-technical text-[0.68rem] font-bold uppercase text-muted-foreground">
+        Tu pronóstico: {breakdown.predictionScoreLabel} / Final:{" "}
+        {breakdown.actualScoreLabel}
+      </span>
+    </div>
+  );
+}
+
+function MatchUnavailableNotice({ match }: { match: PredictionMatch }) {
+  if (match.availability.canPredict) {
+    return null;
+  }
+
+  return (
+    <div className="prode-frame mb-4 bg-prode-yellow px-3 py-3">
+      <p className="font-technical text-xs font-black uppercase">
+        {match.availability.notice}
+      </p>
+      {match.availability.helper && (
+        <p className="mt-2 font-body text-sm leading-5">
+          {match.availability.helper}
+        </p>
+      )}
+      {match.availability.ctaHref && match.availability.ctaLabel && (
+        <Link
+          className="prode-frame prode-pressable mt-3 inline-flex min-h-10 items-center justify-center bg-prode-surface px-3 py-2 font-technical text-xs font-black uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
+          href={match.availability.ctaHref}
+        >
+          {match.availability.ctaLabel}
+        </Link>
+      )}
+    </div>
+  );
+}
 
 function TeamColumn({ disabled, onScoreChange, score, team }: TeamColumnProps) {
   return (
@@ -91,6 +157,7 @@ export function MatchPredictionCard({
   );
   const [prediction, setPrediction] = useState(match.initialPrediction);
   const [isSaved, setIsSaved] = useState(match.initialState === "saved");
+  const isPredictionDisabled = match.locked || !match.availability.canPredict;
 
   const updateScore = (side: "away" | "home", value: number) => {
     setPrediction((current) => ({ ...current, [side]: value }));
@@ -152,7 +219,7 @@ export function MatchPredictionCard({
 
         <div className="flex items-start justify-between gap-3 sm:gap-5">
           <TeamColumn
-            disabled={match.locked}
+            disabled={isPredictionDisabled}
             onScoreChange={(value) => updateScore("home", value)}
             score={prediction.home}
             team={match.home}
@@ -165,7 +232,7 @@ export function MatchPredictionCard({
           </div>
 
           <TeamColumn
-            disabled={match.locked}
+            disabled={isPredictionDisabled}
             onScoreChange={(value) => updateScore("away", value)}
             score={prediction.away}
             team={match.away}
@@ -174,6 +241,9 @@ export function MatchPredictionCard({
       </div>
 
       <footer className="border-t-[3px] border-prode-black bg-[#f7f4df] p-4">
+        <MatchUnavailableNotice match={match} />
+        <MatchPointsBreakdown match={match} />
+
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <MatchTendencyStrip match={match} />
 
@@ -197,7 +267,7 @@ export function MatchPredictionCard({
                 "prode-frame prode-pressable flex size-12 items-center justify-center bg-prode-surface text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper",
                 isSaved && "prode-hard-shadow bg-prode-black text-prode-yellow",
               )}
-              disabled={isPending || match.locked}
+              disabled={isPending || isPredictionDisabled}
               type="submit"
             >
               {isSaved ? (
@@ -217,7 +287,8 @@ export function MatchPredictionCard({
           </form>
         </div>
 
-        {(match.locked || actionState.message) && (
+        {((match.locked && match.availability.canPredict) ||
+          actionState.message) && (
           <p
             className={cn(
               "mt-3 font-technical text-[0.68rem] font-bold uppercase",

@@ -20,6 +20,11 @@ import {
   isGroupStageMatch,
 } from "@/lib/tournament/projection";
 import { getSelectionsFromSavedTournamentPrediction } from "@/lib/tournament/tournament-prediction-payload";
+import {
+  deriveActualTournamentOutcome,
+  type ActualTournamentMatch,
+  type ActualTournamentOutcomeResult,
+} from "@/lib/tournament/actual-outcomes";
 import type {
   ProjectedBracket,
   RankedThirdPlacedTeam,
@@ -183,6 +188,7 @@ function BestThirdRow({ row }: { row: RankedThirdPlacedTeam }) {
 }
 
 type ProjectedBracketSectionProps = {
+  bonusActualOutcomeResult: ActualTournamentOutcomeResult;
   bracket: ProjectedBracket;
   initialSaveState: "locked" | "saved" | "unsaved";
   initialSelections: KnockoutSelectionMap;
@@ -192,6 +198,7 @@ type ProjectedBracketSectionProps = {
 };
 
 function ProjectedBracketSection({
+  bonusActualOutcomeResult,
   bracket,
   initialSaveState,
   initialSelections,
@@ -251,6 +258,7 @@ function ProjectedBracketSection({
 
       <InteractiveKnockoutBracket
         bracket={bracket}
+        bonusActualOutcomeResult={bonusActualOutcomeResult}
         initialSaveState={initialSaveState}
         initialSelections={initialSelections}
         isLocked={isLocked}
@@ -260,6 +268,26 @@ function ProjectedBracketSection({
       />
     </section>
   );
+}
+
+async function getActualTournamentOutcomeForBonus(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+) {
+  const { data, error } = await supabase
+    .from("matches")
+    .select(
+      "away_score,away_team_id,football_data_id,home_score,home_team_id,id,kickoff_at,match_number,stage,status,winner",
+    )
+    .not("stage", "is", null)
+    .neq("stage", "GROUP_STAGE")
+    .order("kickoff_at", { ascending: true })
+    .order("football_data_id", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return deriveActualTournamentOutcome((data ?? []) as ActualTournamentMatch[]);
 }
 
 export default async function MyWorldCupPage() {
@@ -275,6 +303,9 @@ export default async function MyWorldCupPage() {
     getCurrentTournamentPrediction(supabase, pool.id),
     getTournamentLockAt(supabase),
   ]);
+  const bonusActualOutcomeResult = await getActualTournamentOutcomeForBonus(
+    supabase,
+  );
   const { matches } = await getActiveUpcomingMatchesWithDetails(supabase);
   const groupMatches = matches.filter(isGroupStageMatch);
   const predictionsByMatchId = await getPredictionsForMatches(
@@ -438,6 +469,7 @@ export default async function MyWorldCupPage() {
           </section>
 
           <ProjectedBracketSection
+            bonusActualOutcomeResult={bonusActualOutcomeResult}
             bracket={projectedBracket}
             initialSaveState={initialSaveState}
             initialSelections={initialSelections}

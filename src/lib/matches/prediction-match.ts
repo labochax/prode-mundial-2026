@@ -24,6 +24,15 @@ export type PredictionMatchTeam = {
   name: string;
 };
 
+export type PredictionMatchAvailability = {
+  canPredict: boolean;
+  ctaHref: "/mi-mundial" | null;
+  ctaLabel: "Ver Mi Mundial" | null;
+  helper: string | null;
+  notice: string | null;
+  status: "available" | "official-teams-pending";
+};
+
 export type PredictionMatchDetail = {
   directHistory: {
     away: number;
@@ -40,6 +49,7 @@ export type PredictionMatchDetail = {
 };
 
 export type PredictionMatch = {
+  availability: PredictionMatchAvailability;
   away: PredictionMatchTeam;
   detail: PredictionMatchDetail;
   groupLabel: string;
@@ -54,6 +64,7 @@ export type PredictionMatch = {
   lockAt: string;
   locked: boolean;
   lockLabel: string;
+  pointsBreakdown: PredictionPointsBreakdown | null;
   status: {
     code: string;
     label: string;
@@ -67,6 +78,15 @@ export type PredictionMatch = {
     home: number;
   };
   timeLabel: string;
+};
+
+export type PredictionPointsBreakdown = {
+  actualScoreLabel: string;
+  points: number;
+  predictionScoreLabel: string;
+  reason: "Marcador exacto" | "No acertaste ganador/empate" | "Resultado correcto";
+  shortLabel: "Exacto +3" | "Fallado +0" | "Resultado +1";
+  tone: "exact" | "miss" | "outcome";
 };
 
 const BUENOS_AIRES_TIME_ZONE = "America/Argentina/Buenos_Aires";
@@ -263,6 +283,38 @@ function getGroupLabel(match: MatchRow) {
   return getMatchStageLabel(match);
 }
 
+function isKnockoutWithoutOfficialTeams(match: MatchWithRelations) {
+  const stage = (match.stage ?? "").toUpperCase();
+
+  if (!stage || stage.includes("GROUP")) {
+    return false;
+  }
+
+  return !match.home_team || !match.away_team;
+}
+
+function getAvailability(match: MatchWithRelations): PredictionMatchAvailability {
+  if (isKnockoutWithoutOfficialTeams(match)) {
+    return {
+      canPredict: false,
+      ctaHref: "/mi-mundial",
+      ctaLabel: "Ver Mi Mundial",
+      helper: "Para proyectar tu llave antes del torneo, usá Mi Mundial.",
+      notice: "Este partido se habilita cuando el cruce esté definido oficialmente.",
+      status: "official-teams-pending",
+    };
+  }
+
+  return {
+    canPredict: true,
+    ctaHref: null,
+    ctaLabel: null,
+    helper: null,
+    notice: null,
+    status: "available",
+  };
+}
+
 function getLockLabel(match: MatchRow, locked: boolean) {
   if (locked) {
     return "Pronóstico cerrado";
@@ -363,16 +415,74 @@ function getScoreLabel(
   return `${homeTeam.code} ${match.home_score} - ${match.away_score} ${awayTeam.code}`;
 }
 
+function getPointsBreakdown(
+  match: MatchRow,
+  prediction: PredictionRow | null,
+  homeTeam: PredictionMatchTeam,
+  awayTeam: PredictionMatchTeam,
+): PredictionPointsBreakdown | null {
+  if (
+    match.status !== "FINISHED" ||
+    !prediction ||
+    typeof prediction.points !== "number" ||
+    typeof match.home_score !== "number" ||
+    typeof match.away_score !== "number"
+  ) {
+    return null;
+  }
+
+  const labelsByPoints = {
+    0: {
+      reason: "No acertaste ganador/empate",
+      shortLabel: "Fallado +0",
+      tone: "miss",
+    },
+    1: {
+      reason: "Resultado correcto",
+      shortLabel: "Resultado +1",
+      tone: "outcome",
+    },
+    3: {
+      reason: "Marcador exacto",
+      shortLabel: "Exacto +3",
+      tone: "exact",
+    },
+  } as const;
+  const labels =
+    labelsByPoints[prediction.points as keyof typeof labelsByPoints] ??
+    labelsByPoints[0];
+
+  return {
+    actualScoreLabel: `${homeTeam.code} ${match.home_score} - ${match.away_score} ${awayTeam.code}`,
+    points: prediction.points,
+    predictionScoreLabel: `${homeTeam.code} ${prediction.predicted_home_score} - ${prediction.predicted_away_score} ${awayTeam.code}`,
+    reason: labels.reason,
+    shortLabel: labels.shortLabel,
+    tone: labels.tone,
+  };
+}
+
 export function mapSupabaseMatchToPredictionMatch(
   match: MatchWithRelations,
   prediction: PredictionRow | null,
 ): PredictionMatch {
   const locked = new Date(match.lock_at).getTime() <= Date.now();
   const tendency = readPercentBlock(match.raw_json, "tendency", defaultTendency);
-  const homeTeam = mapTeam(match.home_team, "Por definir", match.raw_json, "homeTeam");
-  const awayTeam = mapTeam(match.away_team, "Por definir", match.raw_json, "awayTeam");
+  const homeTeam = mapTeam(
+    match.home_team,
+    "Por definir",
+    match.raw_json,
+    "homeTeam",
+  );
+  const awayTeam = mapTeam(
+    match.away_team,
+    "Por definir",
+    match.raw_json,
+    "awayTeam",
+  );
 
   return {
+    availability: getAvailability(match),
     away: awayTeam,
     detail: {
       directHistory: readPercentBlock(
@@ -400,6 +510,7 @@ export function mapSupabaseMatchToPredictionMatch(
     lockAt: match.lock_at,
     locked,
     lockLabel: getLockLabel(match, locked),
+    pointsBreakdown: getPointsBreakdown(match, prediction, homeTeam, awayTeam),
     status: {
       code: match.status,
       label: getStatusLabel(match.status),

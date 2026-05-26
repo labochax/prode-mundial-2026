@@ -13,14 +13,14 @@ const authenticatedNavItems = [
     label: "Predicciones",
   },
   {
-    href: "/posiciones",
-    icon: Trophy,
-    label: "Posiciones",
-  },
-  {
     href: "/mi-mundial",
     icon: Globe2,
     label: "Mi Mundial",
+  },
+  {
+    href: "/posiciones",
+    icon: Trophy,
+    label: "Posiciones",
   },
   {
     href: "/reglas",

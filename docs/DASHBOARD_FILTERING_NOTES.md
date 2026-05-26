@@ -12,8 +12,24 @@ La lista permite filtrar sin volver a consultar la base:
 - `Todos`;
 - grupos disponibles en los datos, por ejemplo `Grupo A`;
 - fases eliminatorias disponibles, como `16avos`, `Octavos`, `Cuartos`, `Semifinales` y `Final`.
+- `3.º Puesto` si el fixture oficial incluye ese partido.
 
 Las opciones se generan desde los partidos cargados. Si un grupo o fase no tiene partidos, no aparece como filtro.
+
+## Eliminatorias Sin Equipos Oficiales
+
+Los fixtures oficiales de eliminatorias pueden llegar desde Football-Data con equipos placeholder mientras todavía no se conocen los clasificados reales.
+
+El dashboard no proyecta equipos del usuario sobre esos fixtures. La regla de producto queda separada:
+
+- `/dashboard` es para pronosticar partidos oficiales jugables;
+- `/mi-mundial` es para proyectar la llave pre-torneo y competir por bonus;
+- un cruce de eliminatorias se habilita automáticamente cuando el fixture oficial tenga `home_team_id` y `away_team_id`;
+- hasta entonces, la tarjeta muestra un estado bloqueado y enlaza a `Mi Mundial`.
+
+Esto evita mezclar equipos proyectados con equipos oficiales y previene que resultados dev/local congelen slots posteriores.
+
+El reset local `Eliminar datos Mundial de prueba` vuelve a limpiar equipos dev asignados a eliminatorias, por lo que esas tarjetas pasan otra vez al estado no disponible. No borra las predicciones del usuario.
 
 ## UI
 
@@ -30,6 +46,12 @@ El filtrado es solo de presentación. No cambia:
 - reglas de bloqueo;
 - scoring.
 
+Las tarjetas finalizadas, tanto de grupos como de eliminatorias, muestran el desglose calculado desde `predictions.points`:
+
+- `Exacto +3`;
+- `Resultado +1`;
+- `Fallado +0`.
+
 ## Fuera de alcance
 
-Este pase no implementa simulador completo, predicción de campeón ni una vista `Mi Mundial`. Ese flujo puede apoyarse en estos filtros más adelante, pero debería tener su propia navegación y modelo de estado.
+Este pase no persiste proyecciones de eliminatorias ni implementa un simulador en el dashboard. `Mi Mundial` sigue siendo la vista dedicada para completar la llave pre-torneo.

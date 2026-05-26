@@ -4,6 +4,16 @@ import { useMemo, useState, useTransition } from "react";
 
 import type { SaveTournamentPredictionActionState } from "@/app/actions/tournament-predictions";
 import { ProdeButton } from "@/components/prode/prode-button";
+import type { ActualTournamentOutcomeResult } from "@/lib/tournament/actual-outcomes";
+import {
+  buildTournamentBonusBreakdown,
+  getBonusSummarySegments,
+  getStageBonusBadgeLabel,
+  getStageTeamBonusStatusLabel,
+  type StageBonusDetails,
+  type TournamentBonusBreakdownResult,
+} from "@/lib/tournament/bonus-breakdown";
+import type { TournamentBonusPrediction } from "@/lib/tournament/bonus-scoring";
 import {
   buildDerivedKnockoutRounds,
   getBracketBonusPreview,
@@ -19,6 +29,7 @@ import { cn } from "@/lib/utils";
 
 type InteractiveKnockoutBracketProps = {
   bracket: ProjectedBracket;
+  bonusActualOutcomeResult: ActualTournamentOutcomeResult;
   initialSaveState: "locked" | "saved" | "unsaved";
   initialSelections: KnockoutSelectionMap;
   isLocked: boolean;
@@ -29,13 +40,22 @@ type InteractiveKnockoutBracketProps = {
   savedAt: string | null;
 };
 
+type TeamBonusBadge = {
+  hit: boolean;
+  label: string;
+  points?: number;
+  variant: "placement" | "stage";
+};
+
 function TeamButton({
   disabled,
   isSelected,
   matchupId,
   onSelect,
+  bonusBadge,
   slot,
 }: {
+  bonusBadge?: TeamBonusBadge;
   disabled?: boolean;
   isSelected: boolean;
   matchupId: string;
@@ -83,6 +103,21 @@ function TeamButton({
       <p className="mt-3 border-t-[2px] border-prode-black/30 pt-2 font-technical text-[0.62rem] font-black uppercase text-muted-foreground">
         {slot.qualificationType}
       </p>
+      {bonusBadge && (
+        <div
+          className={cn(
+            "prode-frame mt-3 inline-flex items-center gap-2 px-2 py-1 font-technical text-[0.62rem] font-black uppercase",
+            bonusBadge.hit
+              ? "bg-prode-yellow text-prode-black"
+              : "bg-prode-surface text-muted-foreground",
+          )}
+        >
+          <span>{bonusBadge.label}</span>
+          {bonusBadge.variant === "placement" && (
+            <span>{bonusBadge.hit ? `+${bonusBadge.points ?? 0}` : "+0"}</span>
+          )}
+        </div>
+      )}
     </button>
   );
 }
@@ -91,12 +126,16 @@ function SelectableMatchCard({
   disabled,
   matchup,
   onSelect,
+  bonusByTeamId,
+  stageBonusLabel,
   selections,
 }: {
+  bonusByTeamId?: Map<string, TeamBonusBadge>;
   disabled?: boolean;
   matchup: DerivedKnockoutMatch;
   onSelect: (matchupId: string, teamId: string) => void;
   selections: KnockoutSelectionMap;
+  stageBonusLabel?: string;
 }) {
   const selectedTeamId = selections[matchup.id];
 
@@ -106,13 +145,21 @@ function SelectableMatchCard({
         <h3 className="font-technical text-xs font-black uppercase">
           {matchup.slotLabel}
         </h3>
-        <span className="prode-frame bg-prode-yellow px-2 py-1 font-technical text-[0.62rem] font-black uppercase">
-          {matchup.roundLabel}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {stageBonusLabel && (
+            <span className="prode-frame bg-prode-black px-2 py-1 font-technical text-[0.62rem] font-black uppercase text-prode-yellow">
+              {stageBonusLabel}
+            </span>
+          )}
+          <span className="prode-frame bg-prode-yellow px-2 py-1 font-technical text-[0.62rem] font-black uppercase">
+            {matchup.roundLabel}
+          </span>
+        </div>
       </header>
 
       <div className="space-y-3">
         <TeamButton
+          bonusBadge={bonusByTeamId?.get(matchup.home.team.id)}
           disabled={disabled}
           isSelected={selectedTeamId === matchup.home.team.id}
           matchupId={matchup.id}
@@ -125,6 +172,7 @@ function SelectableMatchCard({
           <span className="h-[3px] flex-1 bg-prode-black" />
         </div>
         <TeamButton
+          bonusBadge={bonusByTeamId?.get(matchup.away.team.id)}
           disabled={disabled}
           isSelected={selectedTeamId === matchup.away.team.id}
           matchupId={matchup.id}
@@ -136,11 +184,11 @@ function SelectableMatchCard({
   );
 }
 
-function LockedRoundState() {
+function PendingRoundState() {
   return (
     <div className="prode-frame prode-hard-shadow bg-prode-surface p-5">
       <h3 className="font-display text-4xl uppercase leading-none">
-        Fase bloqueada
+        Completá la ronda anterior
       </h3>
       <p className="mt-3 max-w-2xl font-body text-base text-muted-foreground">
         Elegí los ganadores de la ronda anterior para completar esta fase.
@@ -149,19 +197,129 @@ function LockedRoundState() {
   );
 }
 
+function collectRoundTeamIds(matches: DerivedKnockoutMatch[]) {
+  return matches.flatMap((matchup) =>
+    [matchup.home, matchup.away]
+      .filter((slot) => !slot.isPlaceholder)
+      .map((slot) => slot.team.id),
+  );
+}
+
+function buildBonusPredictionFromRounds(
+  rounds: ReturnType<typeof buildDerivedKnockoutRounds>,
+): TournamentBonusPrediction | null {
+  if (
+    !rounds.summary.champion ||
+    !rounds.summary.runnerUp ||
+    !rounds.summary.thirdPlace ||
+    !rounds.summary.fourthPlace
+  ) {
+    return null;
+  }
+
+  return {
+    championTeamId: rounds.summary.champion.team.id,
+    fourthPlaceTeamId: rounds.summary.fourthPlace.team.id,
+    quarterfinalTeamIds: collectRoundTeamIds(rounds.quarterfinals),
+    roundOf16TeamIds: collectRoundTeamIds(rounds.roundOf16),
+    runnerUpTeamId: rounds.summary.runnerUp.team.id,
+    semifinalTeamIds: collectRoundTeamIds(rounds.semifinals),
+    thirdPlaceTeamId: rounds.summary.thirdPlace.team.id,
+  };
+}
+
+function buildPlacementBonusByTeamId(
+  summary: KnockoutSummary,
+  bonusBreakdown: TournamentBonusBreakdownResult | null,
+) {
+  if (bonusBreakdown?.status !== "complete") {
+    return undefined;
+  }
+
+  const entries: Array<[string, TeamBonusBadge]> = [];
+
+  if (summary.champion) {
+    entries.push([
+      summary.champion.team.id,
+      {
+        hit: bonusBreakdown.placements.champion.hit,
+        label: "Campeón",
+        points: bonusBreakdown.placements.champion.possiblePoints,
+        variant: "placement",
+      },
+    ]);
+  }
+
+  if (summary.runnerUp) {
+    entries.push([
+      summary.runnerUp.team.id,
+      {
+        hit: bonusBreakdown.placements.runnerUp.hit,
+        label: "Subcampeón",
+        points: bonusBreakdown.placements.runnerUp.possiblePoints,
+        variant: "placement",
+      },
+    ]);
+  }
+
+  if (summary.thirdPlace) {
+    entries.push([
+      summary.thirdPlace.team.id,
+      {
+        hit: bonusBreakdown.placements.thirdPlace.hit,
+        label: "3.º",
+        points: bonusBreakdown.placements.thirdPlace.possiblePoints,
+        variant: "placement",
+      },
+    ]);
+  }
+
+  if (summary.fourthPlace) {
+    entries.push([
+      summary.fourthPlace.team.id,
+      {
+        hit: bonusBreakdown.placements.fourthPlace.hit,
+        label: "4.º",
+        points: bonusBreakdown.placements.fourthPlace.possiblePoints,
+        variant: "placement",
+      },
+    ]);
+  }
+
+  return new Map(entries);
+}
+
 function RoundSection({
   disabled,
   matches,
   onSelect,
+  stageBonus,
   selections,
   title,
 }: {
   disabled?: boolean;
   matches: DerivedKnockoutMatch[];
   onSelect: (matchupId: string, teamId: string) => void;
+  stageBonus?: StageBonusDetails | null;
   selections: KnockoutSelectionMap;
   title: string;
 }) {
+  const bonusByTeamId = stageBonus
+    ? new Map(
+        stageBonus.items.map((item) => [
+          item.teamId,
+          {
+            hit: item.hit,
+            label: getStageTeamBonusStatusLabel(item.hit),
+            variant: "stage" as const,
+          },
+        ]),
+      )
+    : undefined;
+  const stageBonusLabel = stageBonus
+    ? getStageBonusBadgeLabel(stageBonus.pointsPerHit)
+    : undefined;
+
   return (
     <section className="space-y-4">
       <div className="border-y-[3px] border-prode-black bg-prode-yellow px-4 py-3 shadow-[6px_6px_0_var(--prode-black)]">
@@ -172,16 +330,18 @@ function RoundSection({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-4">
           {matches.map((matchup) => (
             <SelectableMatchCard
+              bonusByTeamId={bonusByTeamId}
               disabled={disabled}
               key={matchup.id}
               matchup={matchup}
               onSelect={onSelect}
+              stageBonusLabel={stageBonusLabel}
               selections={selections}
             />
           ))}
         </div>
       ) : (
-        <LockedRoundState />
+        <PendingRoundState />
       )}
     </section>
   );
@@ -191,12 +351,14 @@ function FinalRoundSection({
   disabled,
   final,
   onSelect,
+  placementBonusByTeamId,
   selections,
   thirdPlace,
 }: {
   disabled?: boolean;
   final: DerivedKnockoutMatch[];
   onSelect: (matchupId: string, teamId: string) => void;
+  placementBonusByTeamId?: Map<string, TeamBonusBadge>;
   selections: KnockoutSelectionMap;
   thirdPlace: DerivedKnockoutMatch[];
 }) {
@@ -212,6 +374,7 @@ function FinalRoundSection({
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {[...final, ...thirdPlace].map((matchup) => (
             <SelectableMatchCard
+              bonusByTeamId={placementBonusByTeamId}
               disabled={disabled}
               key={matchup.id}
               matchup={matchup}
@@ -221,16 +384,18 @@ function FinalRoundSection({
           ))}
         </div>
       ) : (
-        <LockedRoundState />
+        <PendingRoundState />
       )}
     </section>
   );
 }
 
 function SummaryItem({
+  bonus,
   label,
   slot,
 }: {
+  bonus?: TeamBonusBadge;
   label: string;
   slot: ProjectedBracketSlot | null;
 }) {
@@ -242,11 +407,27 @@ function SummaryItem({
       <p className="mt-1 truncate font-technical text-lg font-black uppercase">
         {slot?.team.name ?? "Por definir"}
       </p>
+      {bonus && (
+        <span
+          className={cn(
+            "prode-frame mt-3 inline-flex px-2 py-1 font-technical text-[0.62rem] font-black uppercase",
+            bonus.hit ? "bg-prode-yellow text-prode-black" : "bg-prode-surface",
+          )}
+        >
+          {bonus.label}: {bonus.hit ? `+${bonus.points}` : "+0"}
+        </span>
+      )}
     </div>
   );
 }
 
-function ChampionSummaryItem({ slot }: { slot: ProjectedBracketSlot | null }) {
+function ChampionSummaryItem({
+  bonus,
+  slot,
+}: {
+  bonus?: TeamBonusBadge;
+  slot: ProjectedBracketSlot | null;
+}) {
   return (
     <div className="prode-frame prode-hard-shadow bg-prode-yellow p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -265,6 +446,11 @@ function ChampionSummaryItem({ slot }: { slot: ProjectedBracketSlot | null }) {
       <p className="mt-4 break-words font-display text-5xl uppercase leading-none text-prode-black sm:text-6xl">
         {slot?.team.name ?? "Por definir"}
       </p>
+      {bonus && (
+        <span className="prode-frame mt-4 inline-flex bg-prode-surface px-3 py-2 font-technical text-xs font-black uppercase">
+          Campeón exacto: {bonus.hit ? `+${bonus.points}` : "+0"}
+        </span>
+      )}
     </div>
   );
 }
@@ -275,6 +461,8 @@ function SummaryCard({
   isPending,
   lockedAt,
   onSave,
+  placementBonusByTeamId,
+  bonusBreakdown,
   savedAt,
   saveMessage,
   saveStatus,
@@ -285,12 +473,15 @@ function SummaryCard({
   isPending: boolean;
   lockedAt: string | null;
   onSave: () => void;
+  placementBonusByTeamId?: Map<string, TeamBonusBadge>;
+  bonusBreakdown: TournamentBonusBreakdownResult | null;
   savedAt: string | null;
   saveMessage: string;
   saveStatus: "dirty" | "error" | "locked" | "saved" | "unsaved";
   summary: KnockoutSummary;
 }) {
   const bonus = getBracketBonusPreview();
+  const bonusSummary = getBonusSummarySegments(bonusBreakdown);
   const statusLabel = isLocked
     ? "Predicción bloqueada"
     : saveStatus === "saved"
@@ -312,26 +503,72 @@ function SummaryCard({
           </h3>
         </div>
         <div className="prode-frame bg-prode-yellow px-4 py-3 font-technical text-sm font-black uppercase">
-          Bonus máximo posible: {bonus.maxPossiblePoints} puntos
+          {bonusSummary.total
+            ? `${bonusSummary.total.label}: ${bonusSummary.total.earnedPoints} / ${bonusSummary.total.maxPoints} pts`
+            : `Bonus máximo posible: ${bonus.maxPossiblePoints} puntos`}
         </div>
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-        <ChampionSummaryItem slot={summary.champion} />
+        <ChampionSummaryItem
+          bonus={
+            summary.champion
+              ? placementBonusByTeamId?.get(summary.champion.team.id)
+              : undefined
+          }
+          slot={summary.champion}
+        />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
-          <SummaryItem label="Subcampeón" slot={summary.runnerUp} />
-          <SummaryItem label="3.º" slot={summary.thirdPlace} />
-          <SummaryItem label="4.º" slot={summary.fourthPlace} />
+          <SummaryItem
+            bonus={
+              summary.runnerUp
+                ? placementBonusByTeamId?.get(summary.runnerUp.team.id)
+                : undefined
+            }
+            label="Subcampeón"
+            slot={summary.runnerUp}
+          />
+          <SummaryItem
+            bonus={
+              summary.thirdPlace
+                ? placementBonusByTeamId?.get(summary.thirdPlace.team.id)
+                : undefined
+            }
+            label="3.º"
+            slot={summary.thirdPlace}
+          />
+          <SummaryItem
+            bonus={
+              summary.fourthPlace
+                ? placementBonusByTeamId?.get(summary.fourthPlace.team.id)
+                : undefined
+            }
+            label="4.º"
+            slot={summary.fourthPlace}
+          />
         </div>
       </div>
 
+      {bonusBreakdown?.status === "pending" && (
+        <div className="prode-frame mt-5 bg-[#f7f4df] px-4 py-3 font-technical text-xs font-black uppercase text-muted-foreground">
+          {bonusBreakdown.message}
+        </div>
+      )}
+
       <div className="mt-5 grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-4">
-        {bonus.rules.map((rule) => (
+        {bonusSummary.segments.map((segment) => (
           <div
-            className="border-[2px] border-prode-black/40 bg-[#f7f4df] px-3 py-2 font-technical text-[0.68rem] font-black uppercase text-muted-foreground"
-            key={rule.label}
+            className={cn(
+              "border-[2px] border-prode-black/40 px-3 py-2 font-technical text-[0.68rem] font-black uppercase",
+              bonusSummary.status === "complete" &&
+                segment.earnedPoints !== null &&
+                segment.earnedPoints > 0
+                ? "bg-prode-yellow text-prode-black"
+                : "bg-[#f7f4df] text-muted-foreground",
+            )}
+            key={segment.label}
           >
-            {rule.label}: +{rule.pointsPerHit} / {rule.total} pts
+            {segment.label}: {segment.displayValue}
           </div>
         ))}
       </div>
@@ -386,6 +623,7 @@ function SummaryCard({
 
 export function InteractiveKnockoutBracket({
   bracket,
+  bonusActualOutcomeResult,
   initialSaveState,
   initialSelections,
   isLocked,
@@ -426,6 +664,24 @@ export function InteractiveKnockoutBracket({
   const rounds = useMemo(
     () => buildDerivedKnockoutRounds(bracket.roundOf32, selections),
     [bracket.roundOf32, selections],
+  );
+  const currentBonusPrediction = useMemo(
+    () => buildBonusPredictionFromRounds(rounds),
+    [rounds],
+  );
+  const bonusBreakdown = useMemo(
+    () =>
+      currentBonusPrediction
+        ? buildTournamentBonusBreakdown(
+            currentBonusPrediction,
+            bonusActualOutcomeResult,
+          )
+        : null,
+    [bonusActualOutcomeResult, currentBonusPrediction],
+  );
+  const placementBonusByTeamId = useMemo(
+    () => buildPlacementBonusByTeamId(rounds.summary, bonusBreakdown),
+    [bonusBreakdown, rounds.summary],
   );
   const isInteractionLocked = isLocked || saveState.status === "locked";
   const handleSelect = (matchupId: string, teamId: string) => {
@@ -492,6 +748,11 @@ export function InteractiveKnockoutBracket({
         disabled={isInteractionLocked}
         matches={rounds.roundOf16}
         onSelect={handleSelect}
+        stageBonus={
+          bonusBreakdown?.status === "complete"
+            ? bonusBreakdown.stages.octavos
+            : null
+        }
         selections={selections}
         title="Octavos"
       />
@@ -499,6 +760,11 @@ export function InteractiveKnockoutBracket({
         disabled={isInteractionLocked}
         matches={rounds.quarterfinals}
         onSelect={handleSelect}
+        stageBonus={
+          bonusBreakdown?.status === "complete"
+            ? bonusBreakdown.stages.cuartos
+            : null
+        }
         selections={selections}
         title="Cuartos"
       />
@@ -506,6 +772,11 @@ export function InteractiveKnockoutBracket({
         disabled={isInteractionLocked}
         matches={rounds.semifinals}
         onSelect={handleSelect}
+        stageBonus={
+          bonusBreakdown?.status === "complete"
+            ? bonusBreakdown.stages.semifinales
+            : null
+        }
         selections={selections}
         title="Semifinales"
       />
@@ -513,6 +784,7 @@ export function InteractiveKnockoutBracket({
         disabled={isInteractionLocked}
         final={rounds.final}
         onSelect={handleSelect}
+        placementBonusByTeamId={placementBonusByTeamId}
         selections={selections}
         thirdPlace={rounds.thirdPlace}
       />
@@ -529,6 +801,8 @@ export function InteractiveKnockoutBracket({
         isPending={isPending}
         lockedAt={lockedAt}
         onSave={handleSave}
+        placementBonusByTeamId={placementBonusByTeamId}
+        bonusBreakdown={bonusBreakdown}
         savedAt={saveState.savedAt}
         saveMessage={saveState.message}
         saveStatus={saveState.status}

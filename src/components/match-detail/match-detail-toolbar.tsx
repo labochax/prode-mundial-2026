@@ -44,9 +44,15 @@ export function MatchDetailToolbar({ match }: MatchDetailToolbarProps) {
               )}
             </div>
             <h1 className="mt-3 max-w-full font-display text-4xl uppercase leading-none min-[430px]:text-5xl sm:text-6xl">
-              Ingresar
-              <br className="sm:hidden" />
-              <span className="sm:ml-3">Predicción</span>
+              {match.availability.canPredict ? (
+                <>
+                  Ingresar
+                  <br className="sm:hidden" />
+                  <span className="sm:ml-3">Predicción</span>
+                </>
+              ) : (
+                "Cruce pendiente"
+              )}
             </h1>
           </div>
         </div>

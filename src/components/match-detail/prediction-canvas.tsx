@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check, Save } from "lucide-react";
+import { ArrowRight, Check, CheckCheck, Save, X } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -43,6 +43,12 @@ const initialActionState = {
   message: null,
   status: "idle",
 } as const satisfies SavePredictionActionState;
+
+const pointsToneClassName = {
+  exact: "bg-prode-yellow text-prode-black",
+  miss: "bg-[#ffe2d8] text-red-800",
+  outcome: "bg-prode-surface text-prode-black",
+} as const;
 
 function getDisplayFlag(team: PredictionMatchTeam): StitchFlagAsset | undefined {
   return team.detailFlag ?? team.flag;
@@ -97,6 +103,92 @@ function TeamPredictionBlock({
   );
 }
 
+function MatchDetailPointsPanel({ match }: { match: PredictionMatch }) {
+  const breakdown = match.pointsBreakdown;
+
+  if (!breakdown) {
+    return null;
+  }
+
+  const Icon =
+    breakdown.tone === "exact"
+      ? CheckCheck
+      : breakdown.tone === "outcome"
+        ? Check
+        : X;
+
+  return (
+    <section className="prode-frame prode-hard-shadow bg-[#f7f4df] p-4 sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="font-technical text-xs font-black uppercase text-muted-foreground">
+            Puntos obtenidos
+          </p>
+          <div
+            className={cn(
+              "prode-frame mt-2 inline-flex items-center gap-2 px-4 py-2 font-display text-4xl uppercase leading-none",
+              pointsToneClassName[breakdown.tone],
+            )}
+          >
+            <Icon aria-hidden="true" className="size-6" />
+            +{breakdown.points}
+          </div>
+        </div>
+
+        <div className="grid flex-1 gap-3 sm:max-w-xl sm:grid-cols-2">
+          <div className="prode-frame bg-white px-3 py-2">
+            <p className="font-technical text-[0.68rem] font-black uppercase text-muted-foreground">
+              Tu pronóstico
+            </p>
+            <p className="mt-1 font-display text-2xl uppercase leading-none">
+              {breakdown.predictionScoreLabel}
+            </p>
+          </div>
+          <div className="prode-frame bg-white px-3 py-2">
+            <p className="font-technical text-[0.68rem] font-black uppercase text-muted-foreground">
+              Resultado final
+            </p>
+            <p className="mt-1 font-display text-2xl uppercase leading-none">
+              {breakdown.actualScoreLabel}
+            </p>
+          </div>
+          <div className="prode-frame bg-white px-3 py-2 sm:col-span-2">
+            <p className="font-technical text-[0.68rem] font-black uppercase text-muted-foreground">
+              Motivo
+            </p>
+            <p className="mt-1 font-technical text-xs font-black uppercase">
+              {breakdown.reason}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MatchUnavailablePanel({ match }: { match: PredictionMatch }) {
+  if (match.availability.canPredict) {
+    return null;
+  }
+
+  return (
+    <section className="prode-frame prode-hard-shadow bg-prode-yellow p-4 sm:p-5">
+      <p className="font-technical text-xs font-black uppercase">
+        Este cruce todavía no tiene equipos oficiales asignados.
+      </p>
+      <p className="mt-2 max-w-2xl font-body text-sm leading-6">
+        Para proyectar tu llave antes del torneo, usá Mi Mundial.
+      </p>
+      <Link
+        className="prode-frame prode-pressable mt-4 inline-flex min-h-11 items-center justify-center bg-prode-surface px-4 py-2 font-technical text-xs font-black uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
+        href="/mi-mundial"
+      >
+        Proyectar en Mi Mundial
+      </Link>
+    </section>
+  );
+}
+
 export function PredictionCanvas({
   match,
   nextMatchHref,
@@ -111,6 +203,7 @@ export function PredictionCanvas({
   const [prediction, setPrediction] = useState(match.initialPrediction);
   const [quickPick, setQuickPick] = useState<QuickPickValue | null>(null);
   const [isSaved, setIsSaved] = useState(match.initialState === "saved");
+  const isPredictionDisabled = match.locked || !match.availability.canPredict;
 
   const updateScore = (side: "away" | "home", value: number) => {
     setPrediction((current) => ({ ...current, [side]: value }));
@@ -157,7 +250,7 @@ export function PredictionCanvas({
 
         <div className="relative z-10 flex flex-col items-center justify-between gap-8 md:flex-row md:items-stretch">
           <TeamPredictionBlock
-            disabled={match.locked}
+            disabled={isPredictionDisabled}
             label={match.home.code}
             onScoreChange={(value) => updateScore("home", value)}
             score={prediction.home}
@@ -181,7 +274,7 @@ export function PredictionCanvas({
           </div>
 
           <TeamPredictionBlock
-            disabled={match.locked}
+            disabled={isPredictionDisabled}
             label={match.away.code}
             onScoreChange={(value) => updateScore("away", value)}
             score={prediction.away}
@@ -192,13 +285,17 @@ export function PredictionCanvas({
 
       <QuickPickButtons
         awayTeamName={match.away.name}
-        disabled={match.locked}
+        disabled={isPredictionDisabled}
         homeTeamName={match.home.name}
         onSelect={selectQuickPick}
         selected={quickPick}
       />
 
-      {(match.locked || actionState.message) && (
+      <MatchUnavailablePanel match={match} />
+      <MatchDetailPointsPanel match={match} />
+
+      {((match.locked && match.availability.canPredict) ||
+        actionState.message) && (
         <p
           className={cn(
             "prode-frame bg-prode-surface px-4 py-3 font-technical text-xs font-bold uppercase",
@@ -228,17 +325,21 @@ export function PredictionCanvas({
         <ProdeButton
           aria-label={`Guardar predicción para ${match.home.name} contra ${match.away.name}`}
           className="flex-1 text-base"
-          disabled={isPending || match.locked}
+          disabled={isPending || isPredictionDisabled}
           size="large"
           type="submit"
           variant={isSaved ? "ink" : "primary"}
         >
-          {isSaved ? (
+          {!match.availability.canPredict ? null : isSaved ? (
             <Check aria-hidden="true" className="size-5" />
           ) : (
             <Save aria-hidden="true" className="size-5" />
           )}
-          {isSaved ? "Predicción guardada" : "Guardar predicción"}
+          {!match.availability.canPredict
+            ? "Cruce no habilitado"
+            : isSaved
+              ? "Predicción guardada"
+              : "Guardar predicción"}
         </ProdeButton>
 
         <Link
