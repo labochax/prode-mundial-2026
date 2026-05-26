@@ -28,6 +28,7 @@ const teamAliasEntries = [
   ],
   ["Cape Verde", ["Cabo Verde", "Cape Verde Islands"]],
   ["Cabo Verde", ["Cape Verde", "Cape Verde Islands"]],
+  ["Cape Verde Islands", ["Cape Verde", "Cabo Verde"]],
   ["Congo DR", ["DR Congo", "Democratic Republic of the Congo"]],
   ["DR Congo", ["Congo DR", "Democratic Republic of the Congo"]],
   ["Côte d'Ivoire", ["Ivory Coast", "Cote d'Ivoire"]],

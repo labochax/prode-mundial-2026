@@ -58,6 +58,43 @@ reports/thesportsdb-team-enrichment-report.json
 
 `reports/` esta ignorado por Git. El reporte no incluye API keys.
 
+## Fuente de assets
+
+La API v1 con free key `123` puede devolver datos limitados o irrelevantes para
+selecciones nacionales. Por ejemplo, `searchteams.php?t=Argentina` puede
+responder un club en vez de la seleccion.
+
+Por eso el script usa como estrategia preferida las paginas publicas:
+
+1. lee `https://www.thesportsdb.com/league/4429-fifa-world-cup`;
+2. extrae links `/team/<id>-<slug>`;
+3. matchea esos slugs contra nombres locales y aliases;
+4. abre la pagina publica del equipo;
+5. extrae solo assets principales del equipo.
+
+La API queda como camino opcional/futuro para keys premium o respuestas utiles,
+pero el fallback publico es el camino confiable para la free key.
+
+## Extraccion de assets
+
+El script guarda:
+
+- `badge_url`: imagen con `alt` tipo `team badge`, preferentemente
+  `/team/badge/`;
+- `logo_url`: imagen con `alt` tipo `team logo`, preferentemente
+  `/team/logo/`;
+- `jersey_url`: imagen `/team/equipment/`;
+- `fanart_url`: imagen `/team/fanart/` o `/team/banner/`.
+
+Ignora iconos chicos de partidos proximos:
+
+- URLs terminadas en `/tiny`;
+- `alt="tiny home badge icon"`;
+- `alt="tiny away badge icon"`.
+
+Esto evita guardar escudos de rivales que aparecen en widgets de próximos
+partidos.
+
 ## Estrategia de matching
 
 La logica pura vive en `src/lib/sports/team-name-aliases.ts`.
@@ -82,8 +119,11 @@ Aliases iniciales:
 - `Curacao` / `Curacao` con acento en origen
 - `Cape Verde` / `Cabo Verde`
 
-Si hay mas de un candidato normalizado, el equipo queda como ambiguo y no se
-actualiza automaticamente.
+Los slugs de TheSportsDB se normalizan igual que los nombres locales. Tambien
+se decodifican slugs URL-encoded, por ejemplo `cura%C3%A7ao`.
+
+Si hay mas de un candidato normalizado en el camino API, el equipo queda como
+ambiguo y no se actualiza automaticamente.
 
 ## Uso en UI
 

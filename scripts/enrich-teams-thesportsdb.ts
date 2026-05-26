@@ -7,6 +7,12 @@ import {
   getTeamSearchNames,
   normalizeTeamNameForMatch,
 } from "../src/lib/sports/team-name-aliases";
+import {
+  chooseLeagueTeamLinkForSearchNames,
+  extractMainTeamAssetsFromHtml,
+  extractTheSportsDbLeagueTeamLinks,
+  type TheSportsDbLeagueTeamLink,
+} from "../src/lib/sports/thesportsdb/public-pages";
 import { mapTheSportsDbTeamToAssetCandidate } from "../src/lib/sports/thesportsdb/mappers";
 import type {
   TheSportsDbTeam,
@@ -29,12 +35,18 @@ type TeamRow = {
 };
 
 type MatchedTeamReport = {
+  badge_url: string | null;
   candidateSportsDbId: string;
   candidateTeamName: string;
+  fanart_url: string | null;
   id: string;
+  jersey_url: string | null;
+  logo_url: string | null;
   matchedBy: string;
   name: string;
   searchNames: string[];
+  source: "api" | "league-page";
+  teamPageUrl?: string;
   updatedFields: string[];
 };
 
@@ -73,6 +85,8 @@ type EnrichmentReport = {
 };
 
 const theSportsDbBaseUrl = "https://www.thesportsdb.com/api/v1/json";
+const theSportsDbWorldCupLeagueUrl =
+  "https://www.thesportsdb.com/league/4429-fifa-world-cup";
 
 function loadEnvFile(filePath: string) {
   let contents: string;
@@ -187,6 +201,16 @@ async function fetchTeamCandidates(apiKey: string, teamName: string) {
     .filter((team): team is TheSportsDbTeamAssetCandidate => Boolean(team));
 }
 
+async function fetchText(url: string) {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`TheSportsDB respondió ${response.status} para ${url}.`);
+  }
+
+  return response.text();
+}
+
 function sleep(ms: number) {
   return new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
 }
@@ -201,6 +225,67 @@ function readRequestDelayMs() {
   const value = Number(rawValue);
 
   return Number.isFinite(value) && value >= 0 ? value : 2100;
+}
+
+function hasUsefulAssets(candidate: TheSportsDbTeamAssetCandidate) {
+  return Boolean(
+    candidate.badge_url ||
+      candidate.logo_url ||
+      candidate.jersey_url ||
+      candidate.fanart_url,
+  );
+}
+
+function buildLeaguePageCandidate(
+  link: TheSportsDbLeagueTeamLink,
+  teamPageHtml: string,
+): TheSportsDbTeamAssetCandidate {
+  const assets = extractMainTeamAssetsFromHtml(teamPageHtml);
+
+  return {
+    ...assets,
+    flag_url: null,
+    raw_json: JSON.parse(
+      JSON.stringify({
+        assets,
+        source: "league-page",
+        teamPageUrl: link.url,
+      }),
+    ),
+    sportsdb_id: link.sportsdb_id,
+    team_name: link.slug,
+  };
+}
+
+async function findLeaguePageCandidate(
+  team: TeamRow,
+  searchNames: string[],
+  leagueLinks: readonly TheSportsDbLeagueTeamLink[],
+  requestDelayMs: number,
+) {
+  const link = chooseLeagueTeamLinkForSearchNames(searchNames, leagueLinks);
+
+  if (!link) {
+    return {
+      reason: `No hubo link publico de TheSportsDB para ${getTeamDisplayName(team)}.`,
+      status: "no_match" as const,
+    };
+  }
+
+  if (requestDelayMs > 0) {
+    await sleep(requestDelayMs);
+  }
+
+  const teamPageHtml = await fetchText(link.url);
+  const candidate = buildLeaguePageCandidate(link, teamPageHtml);
+
+  return {
+    candidate,
+    matchedBy: link.slug,
+    source: "league-page" as const,
+    status: "matched" as const,
+    teamPageUrl: link.url,
+  };
 }
 
 async function findBestCandidate(
@@ -242,6 +327,24 @@ async function findBestCandidate(
     reason: `No hubo coincidencias normalizadas para ${getTeamDisplayName(team)}.`,
     status: "no_match" as const,
   };
+}
+
+async function findBestApiCandidate(
+  apiKey: string,
+  team: TeamRow,
+  searchNames: string[],
+  requestDelayMs: number,
+) {
+  const result = await findBestCandidate(apiKey, team, searchNames, requestDelayMs);
+
+  if (result.status === "matched") {
+    return {
+      ...result,
+      source: "api" as const,
+    };
+  }
+
+  return result;
 }
 
 function getUpdatedFields(
@@ -287,6 +390,19 @@ async function main() {
   const serviceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
   const apiKey = process.env.THESPORTSDB_API_KEY?.trim() || "123";
   const requestDelayMs = readRequestDelayMs();
+  let leagueLinks: TheSportsDbLeagueTeamLink[] = [];
+
+  try {
+    const leagueHtml = await fetchText(theSportsDbWorldCupLeagueUrl);
+    leagueLinks = extractTheSportsDbLeagueTeamLinks(leagueHtml);
+  } catch (error) {
+    console.warn(
+      error instanceof Error
+        ? error.message
+        : "No pudimos leer la pagina publica del Mundial en TheSportsDB.",
+    );
+  }
+
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       persistSession: false,
@@ -322,12 +438,22 @@ async function main() {
     const searchNames = buildTeamSearchNames(team);
 
     try {
-      const result = await findBestCandidate(
-        apiKey,
-        team,
-        searchNames,
-        requestDelayMs,
-      );
+      const leagueResult =
+        leagueLinks.length > 0
+          ? await findLeaguePageCandidate(
+              team,
+              searchNames,
+              leagueLinks,
+              requestDelayMs,
+            )
+          : {
+              reason: "No se pudo cargar la pagina publica de la liga.",
+              status: "no_match" as const,
+            };
+      const result =
+        leagueResult.status === "matched" && hasUsefulAssets(leagueResult.candidate)
+          ? leagueResult
+          : await findBestApiCandidate(apiKey, team, searchNames, requestDelayMs);
 
       if (result.status === "no_match") {
         report.unmatchedTeams.push({
@@ -357,12 +483,19 @@ async function main() {
       const updatedFields = getUpdatedFields(team, candidate);
 
       report.matchedTeams.push({
+        badge_url: candidate.badge_url,
         candidateSportsDbId: candidate.sportsdb_id,
         candidateTeamName: candidate.team_name,
+        fanart_url: candidate.fanart_url,
         id: team.id,
+        jersey_url: candidate.jersey_url,
+        logo_url: candidate.logo_url,
         matchedBy: result.matchedBy,
         name,
         searchNames,
+        source: result.source,
+        teamPageUrl:
+          result.source === "league-page" ? result.teamPageUrl : undefined,
         updatedFields,
       });
       report.updatedFieldsCount += updatedFields.length;
