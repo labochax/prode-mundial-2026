@@ -16,7 +16,20 @@ import type {
 import { cn } from "@/lib/utils";
 
 type MatchPredictionCardProps = {
+  hideIndividualSave?: boolean;
+  isDirty?: boolean;
   match: PredictionMatch;
+  onPredictionChange?: (
+    matchId: string,
+    prediction: {
+      away: number;
+      home: number;
+    },
+  ) => void;
+  prediction?: {
+    away: number;
+    home: number;
+  };
   saveAction: (
     previousState: SavePredictionActionState,
     formData: FormData,
@@ -153,7 +166,11 @@ function TeamColumn({ disabled, onScoreChange, score, team }: TeamColumnProps) {
 }
 
 export function MatchPredictionCard({
+  hideIndividualSave,
+  isDirty,
   match,
+  onPredictionChange,
+  prediction: controlledPrediction,
   saveAction,
   stageHeading,
   stageMarker,
@@ -163,12 +180,24 @@ export function MatchPredictionCard({
     saveAction,
     initialActionState,
   );
-  const [prediction, setPrediction] = useState(match.initialPrediction);
+  const [localPrediction, setLocalPrediction] = useState(match.initialPrediction);
   const [isSaved, setIsSaved] = useState(match.initialState === "saved");
   const isPredictionDisabled = match.locked || !match.availability.canPredict;
+  const prediction = controlledPrediction ?? localPrediction;
+  const isBatchMode = Boolean(hideIndividualSave && onPredictionChange);
 
   const updateScore = (side: "away" | "home", value: number) => {
-    setPrediction((current) => ({ ...current, [side]: value }));
+    const nextPrediction = {
+      ...prediction,
+      [side]: value,
+    };
+
+    if (onPredictionChange) {
+      onPredictionChange(match.id, nextPrediction);
+    } else {
+      setLocalPrediction(nextPrediction);
+    }
+
     setIsSaved(false);
   };
 
@@ -249,6 +278,12 @@ export function MatchPredictionCard({
       </div>
 
       <footer className="border-t-[3px] border-prode-black bg-[#f7f4df] p-4">
+        {isBatchMode && isDirty && (
+          <div className="prode-frame mb-4 inline-flex bg-[#ff4b3e] px-3 py-2 font-technical text-[0.68rem] font-black uppercase text-prode-black shadow-[4px_4px_0_var(--prode-black)]">
+            Sin guardar
+          </div>
+        )}
+
         <MatchUnavailableNotice match={match} />
         <MatchPointsBreakdown match={match} />
 
@@ -256,34 +291,38 @@ export function MatchPredictionCard({
           <MatchTendencyStrip match={match} />
 
           <form action={formAction} className="flex shrink-0 items-center gap-3">
-            <input name="match_id" type="hidden" value={match.id} />
-            <input
-              name="predicted_home_score"
-              type="hidden"
-              value={prediction.home}
-            />
-            <input
-              name="predicted_away_score"
-              type="hidden"
-              value={prediction.away}
-            />
-            <button
-              aria-label={
-                isSaved ? "Predicción guardada" : "Guardar predicción rápida"
-              }
-              className={cn(
-                "prode-frame prode-pressable flex size-12 items-center justify-center bg-prode-surface text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper",
-                isSaved && "prode-hard-shadow bg-prode-black text-prode-yellow",
-              )}
-              disabled={isPending || isPredictionDisabled}
-              type="submit"
-            >
-              {isSaved ? (
-                <Check aria-hidden="true" className="size-5" />
-              ) : (
-                <Save aria-hidden="true" className="size-5" />
-              )}
-            </button>
+            {!hideIndividualSave && (
+              <>
+                <input name="match_id" type="hidden" value={match.id} />
+                <input
+                  name="predicted_home_score"
+                  type="hidden"
+                  value={prediction.home}
+                />
+                <input
+                  name="predicted_away_score"
+                  type="hidden"
+                  value={prediction.away}
+                />
+                <button
+                  aria-label={
+                    isSaved ? "Predicción guardada" : "Guardar predicción rápida"
+                  }
+                  className={cn(
+                    "prode-frame prode-pressable flex size-12 items-center justify-center bg-prode-surface text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper",
+                    isSaved && "prode-hard-shadow bg-prode-black text-prode-yellow",
+                  )}
+                  disabled={isPending || isPredictionDisabled}
+                  type="submit"
+                >
+                  {isSaved ? (
+                    <Check aria-hidden="true" className="size-5" />
+                  ) : (
+                    <Save aria-hidden="true" className="size-5" />
+                  )}
+                </button>
+              </>
+            )}
 
             <Link
               className="prode-frame prode-hard-shadow prode-pressable inline-flex min-h-12 items-center justify-center bg-prode-yellow px-4 py-3 font-technical text-xs font-bold uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"

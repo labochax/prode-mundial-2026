@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 
-import { savePredictionAction } from "@/app/actions/predictions";
+import {
+  savePredictionAction,
+  savePredictionsBatchAction,
+} from "@/app/actions/predictions";
 import { DashboardFixtureList } from "@/components/dashboard/dashboard-fixture-list";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { AuthenticatedAppShell } from "@/components/layout/authenticated-app-shell";
@@ -44,6 +47,7 @@ export default async function DashboardPage() {
       {predictionMatches.length > 0 ? (
         <DashboardFixtureList
           items={predictionMatches}
+          saveBatchAction={savePredictionsBatchAction}
           saveAction={savePredictionAction}
         />
       ) : (

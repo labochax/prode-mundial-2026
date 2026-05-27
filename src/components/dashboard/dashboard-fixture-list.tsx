@@ -1,9 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 
-import type { SavePredictionActionState } from "@/app/actions/predictions";
+import type {
+  SavePredictionActionState,
+  SavePredictionsBatchActionState,
+} from "@/app/actions/predictions";
+import { DashboardBatchSaveBar } from "@/components/dashboard/dashboard-batch-save-bar";
 import { MatchPredictionCard } from "@/components/dashboard/match-prediction-card";
+import {
+  buildBatchPredictionPayload,
+  getDirtyPredictionIds,
+  mergeBatchSaveResult,
+  type DashboardPredictionMap,
+  type DashboardPredictionValue,
+} from "@/lib/dashboard/batch-predictions";
 import {
   type DashboardStageDisplay,
   groupDashboardStageItems,
@@ -19,6 +30,9 @@ export type DashboardFixtureListItem = {
 
 type DashboardFixtureListProps = {
   items: DashboardFixtureListItem[];
+  saveBatchAction: (
+    formData: FormData,
+  ) => Promise<SavePredictionsBatchActionState>;
   saveAction: (
     previousState: SavePredictionActionState,
     formData: FormData,
@@ -185,16 +199,102 @@ function itemMatchesFilter(
   return item.stage.key === filter.value;
 }
 
+function buildPredictionMap(items: DashboardFixtureListItem[]) {
+  return Object.fromEntries(
+    items.map((item) => [item.match.id, item.match.initialPrediction]),
+  ) as DashboardPredictionMap;
+}
+
 export function DashboardFixtureList({
   items,
+  saveBatchAction,
   saveAction,
 }: DashboardFixtureListProps) {
   const filters = useMemo(() => getFilterOptions(items), [items]);
+  const initialPredictionMap = useMemo(() => buildPredictionMap(items), [items]);
+  const editableMatchIds = useMemo(
+    () =>
+      new Set(
+        items
+          .filter((item) => !item.match.locked && item.match.availability.canPredict)
+          .map((item) => item.match.id),
+      ),
+    [items],
+  );
+  const [currentPredictions, setCurrentPredictions] =
+    useState<DashboardPredictionMap>(initialPredictionMap);
+  const [savedPredictions, setSavedPredictions] =
+    useState<DashboardPredictionMap>(initialPredictionMap);
+  const [isPending, startTransition] = useTransition();
+  const [batchMessage, setBatchMessage] = useState<string | null>(null);
+  const [batchStatus, setBatchStatus] =
+    useState<SavePredictionsBatchActionState["status"]>("idle");
   const [activeFilterKey, setActiveFilterKey] = useState<string>(allFilter.key);
   const activeFilter =
     filters.find((filter) => filter.key === activeFilterKey) ?? filters[0] ?? allFilter;
   const filteredItems = items.filter((item) => itemMatchesFilter(item, activeFilter));
   const stageSections = groupDashboardStageItems(filteredItems);
+  const dirtyIds = useMemo(
+    () => getDirtyPredictionIds(currentPredictions, savedPredictions),
+    [currentPredictions, savedPredictions],
+  );
+  const dirtyEditableIds = dirtyIds.filter((matchId) =>
+    editableMatchIds.has(matchId),
+  );
+  const handlePredictionChange = (
+    matchId: string,
+    prediction: DashboardPredictionValue,
+  ) => {
+    setCurrentPredictions((current) => ({
+      ...current,
+      [matchId]: prediction,
+    }));
+    setBatchMessage(null);
+    setBatchStatus("idle");
+  };
+  const discardChanges = () => {
+    setCurrentPredictions(savedPredictions);
+    setBatchMessage(null);
+    setBatchStatus("idle");
+  };
+  const saveDirtyPredictions = () => {
+    const payload = buildBatchPredictionPayload({
+      currentPredictions,
+      dirtyIds,
+      editableMatchIds,
+    });
+
+    if (payload.length === 0) {
+      setBatchMessage("No hay cambios editables para guardar.");
+      setBatchStatus("error");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("predictions_json", JSON.stringify(payload));
+
+    startTransition(async () => {
+      const result = await saveBatchAction(formData);
+
+      setBatchMessage(result.message);
+      setBatchStatus(result.status);
+
+      if (result.status === "success" || result.status === "partial") {
+        const merged = mergeBatchSaveResult({
+          currentPredictions,
+          dirtyIds,
+          failedMatchIds: result.failures.map((failure) => failure.matchId),
+          savedPredictions,
+        });
+
+        setSavedPredictions(merged.savedPredictions);
+
+        if (result.status === "success") {
+          setCurrentPredictions(merged.savedPredictions);
+        }
+      }
+    });
+  };
 
   return (
     <>
@@ -259,8 +359,12 @@ export function DashboardFixtureList({
               <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 {section.items.map(({ match, stage }) => (
                   <MatchPredictionCard
+                    hideIndividualSave
+                    isDirty={dirtyIds.includes(match.id)}
                     key={match.id}
                     match={match}
+                    onPredictionChange={handlePredictionChange}
+                    prediction={currentPredictions[match.id]}
                     saveAction={saveAction}
                     stageHeading={stage.heading}
                     stageMarker={stage.marker}
@@ -280,6 +384,16 @@ export function DashboardFixtureList({
           </p>
         </section>
       )}
+
+      <DashboardBatchSaveBar
+        dirtyCount={dirtyEditableIds.length}
+        disabled={dirtyEditableIds.length === 0}
+        isPending={isPending}
+        message={batchMessage}
+        onDiscard={discardChanges}
+        onSave={saveDirtyPredictions}
+        status={batchStatus}
+      />
     </>
   );
 }
