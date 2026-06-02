@@ -49,8 +49,9 @@ La acción:
 - deja que el trigger de `matches` calcule `lock_at` para partidos nuevos y
   recalcule si cambia `kickoff_at`;
 - registra el intento en `sync_runs`;
-- enlaza `stadiums` y `matches.stadium_id` cuando el payload del partido
-  contiene un `venue` real;
+- enlaza `stadiums` y `matches.stadium_id` usando la asignación oficial FIFA
+  por partido; `raw_json.venue` de Football-Data se conserva como señal útil y
+  las discrepancias se reportan sin reemplazar la autoridad FIFA;
 - no modifica predicciones;
 - no ejecuta scoring;
 - no llama TheSportsDB.

@@ -201,7 +201,7 @@ describe("mapSupabaseMatchToPredictionMatch", () => {
     );
 
     expect(mapped.detail.metadata).toMatchObject({
-      city: "Ciudad de México",
+      city: "Ciudad de México, México",
       stadium: "Mexico City Stadium",
     });
   });

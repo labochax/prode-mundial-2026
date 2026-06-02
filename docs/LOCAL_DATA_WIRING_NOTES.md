@@ -22,10 +22,11 @@ manual desde `/admin/sync` sigue siendo útil para cambios de calendario,
 postergaciones, horarios, estados live/resultados y actualizaciones de fases
 eliminatorias.
 
-El snapshot actual no incluye `venue` a nivel partido. La sync futura enlaza
-estadios cuando Football-Data entregue ese campo. Para backfill one-shot sobre
-payloads ya guardados, usar `npm run enrich:stadiums:dry` y luego
-`npm run enrich:stadiums`. Ver `docs/STADIUM_DATA_NOTES.md`.
+El snapshot actual no incluye `venue` a nivel partido. El backfill one-shot
+enlaza estadios con el mapa oficial FIFA `M1-M104`, usa
+`matches.raw_json.venue` como señal adicional cuando exista y reporta cualquier
+discrepancia. Después de restaurar el seed, usar `npm run enrich:stadiums:dry`
+y luego `npm run enrich:stadiums`. Ver `docs/STADIUM_DATA_NOTES.md`.
 
 ## Dashboard
 

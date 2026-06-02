@@ -4,11 +4,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   getMatchVenueNameFromRawJson,
-  mapFootballDataVenueToStadiumCandidate,
+  mapOfficialWorldCupVenueToStadiumCandidate,
   normalizeVenueName,
 } from "@/lib/sports/football-data/stadiums";
 import type { FootballDataMatchCandidate } from "@/lib/sports/football-data/types";
 import type { Database } from "@/lib/supabase/database.types";
+import { resolveOfficialWorldCupMatchVenue } from "@/lib/sports/world-cup-2026/official-venue-map";
 
 type SupabaseAdminClient = SupabaseClient<Database>;
 type StadiumRow = Database["public"]["Tables"]["stadiums"]["Row"];
@@ -18,32 +19,60 @@ export type FootballDataStadiumSyncResult = {
   stadiumsUpserted: number;
 };
 
-function getCandidateVenueName(match: FootballDataMatchCandidate) {
-  return match.venue_name ?? getMatchVenueNameFromRawJson(match.raw_json);
+function getMatchStadiumResolution(match: FootballDataMatchCandidate) {
+  return resolveOfficialWorldCupMatchVenue({
+    footballDataId: match.football_data_id,
+    footballDataVenue: match.venue_name,
+    matchNumber: match.match_number,
+    rawJson: match.raw_json,
+    stage: match.stage,
+  });
 }
 
 export function getStadiumIdForMatchCandidate(
   match: FootballDataMatchCandidate,
   stadiumIdsByVenue: Map<string, string>,
 ) {
-  const venueName = getCandidateVenueName(match);
+  const resolution = getMatchStadiumResolution(match);
 
-  return venueName ? stadiumIdsByVenue.get(normalizeVenueName(venueName)) ?? null : null;
+  return resolution.venue
+    ? stadiumIdsByVenue.get(normalizeVenueName(resolution.venue.fifaName)) ?? null
+    : null;
 }
 
 export async function syncFootballDataMatchStadiums(
   client: SupabaseAdminClient,
   matches: FootballDataMatchCandidate[],
 ): Promise<FootballDataStadiumSyncResult> {
-  const venues = [
-    ...new Set(
+  const venueResolutions = [
+    ...new Map(
       matches
-        .map(getCandidateVenueName)
-        .filter((venueName): venueName is string => Boolean(venueName)),
-    ),
+        .map((match) => ({
+          footballDataVenue:
+            match.venue_name ?? getMatchVenueNameFromRawJson(match.raw_json),
+          resolution: getMatchStadiumResolution(match),
+        }))
+        .filter(
+          (
+            item,
+          ): item is typeof item & {
+            resolution: typeof item.resolution & {
+              fifaMatchNumber: number;
+              source: "football-data-match-venue" | "official-fifa-schedule";
+              venue: NonNullable<typeof item.resolution.venue>;
+            };
+          } =>
+            Boolean(
+              item.resolution.venue &&
+                item.resolution.source &&
+                item.resolution.fifaMatchNumber,
+            ),
+        )
+        .map((item) => [item.resolution.venue.key, item]),
+    ).values(),
   ];
 
-  if (venues.length === 0) {
+  if (venueResolutions.length === 0) {
     return {
       stadiumIdsByVenue: new Map(),
       stadiumsUpserted: 0,
@@ -61,15 +90,16 @@ export async function syncFootballDataMatchStadiums(
   );
   const stadiumIdsByVenue = new Map<string, string>();
   const resolvedStadiumIdsByName = new Map<string, string>();
-  let stadiumsUpserted = 0;
 
-  for (const venueName of venues) {
-    const candidate = mapFootballDataVenueToStadiumCandidate(venueName);
-
-    if (!candidate) {
-      continue;
-    }
-
+  for (const { footballDataVenue, resolution } of venueResolutions) {
+    const candidate = mapOfficialWorldCupVenueToStadiumCandidate(
+      resolution.venue,
+      {
+        fifaMatchNumber: resolution.fifaMatchNumber,
+        footballDataVenue,
+        source: resolution.source,
+      },
+    );
     const candidateKey = normalizeVenueName(candidate.name);
     const existing = stadiumsByName.get(candidateKey);
     let stadiumId = resolvedStadiumIdsByName.get(candidateKey);
@@ -106,14 +136,12 @@ export async function syncFootballDataMatchStadiums(
       });
     }
 
-    stadiumIdsByVenue.set(normalizeVenueName(venueName), stadiumId);
     stadiumIdsByVenue.set(candidateKey, stadiumId);
     resolvedStadiumIdsByName.set(candidateKey, stadiumId);
-    stadiumsUpserted = resolvedStadiumIdsByName.size;
   }
 
   return {
     stadiumIdsByVenue,
-    stadiumsUpserted,
+    stadiumsUpserted: resolvedStadiumIdsByName.size,
   };
 }

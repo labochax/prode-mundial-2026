@@ -127,9 +127,10 @@ Flujo:
    - winner oficial o derivado -> `winner`;
    - payload completo -> `raw_json`;
    - `last_synced_at = now()`.
-5. Si el payload del partido incluye `venue`, resolver el catálogo de sedes
-   oficiales/aliases, upsertar `stadiums` por nombre y enlazar
-   `matches.stadium_id`. Si falta `venue`, conservar cualquier enlace previo.
+5. Resolver la sede con autoridad final FIFA por `match_number`: usar
+   `raw_json.venue` de Football-Data como fuente útil cuando coincide, usar el
+   mapa oficial FIFA como fallback si falta y registrar discrepancias sin
+   bloquear. Upsertar `stadiums` por nombre y enlazar `matches.stadium_id`.
 6. Dejar que el trigger recalcule `lock_at` cuando cambia `kickoff_at`, salvo correccion explicita.
 
 ### Kickoff updates
@@ -244,15 +245,17 @@ detecta cambios. No toca fixtures, resultados, predicciones ni scoring. El repor
 
 ### Backfill local one-shot de estadios Football-Data
 
-El flujo CLI de estadios no llama TheSportsDB. Lee únicamente
-`matches.raw_json.venue`, enlaza sedes reales y conserva estados vacíos cuando
-el snapshot no trae el campo:
+El flujo CLI de estadios no llama TheSportsDB. Contrasta
+`matches.raw_json.venue` con el mapa oficial FIFA `M1-M104`, usa FIFA como
+autoridad final y enlaza sedes reales aunque el snapshot no traiga `venue`:
 
 - `npm run enrich:stadiums:dry`
 - `npm run enrich:stadiums`
 
 El reporte local queda en
 `reports/football-data-stadium-enrichment-report.json`, ignorado por Git.
+Incluye asignaciones por fuente, faltantes estructurales y discrepancias
+Football-Data/FIFA auditables.
 
 ## 4. Opciones De Ejecucion De Sync
 

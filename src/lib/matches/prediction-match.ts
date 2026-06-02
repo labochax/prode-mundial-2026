@@ -536,7 +536,11 @@ export function mapSupabaseMatchToPredictionMatch(
     detail: {
       directHistory: readSourcedPercentBlock(match.raw_json, "direct_history"),
       metadata: {
-        city: match.stadium?.city ?? "Ciudad a confirmar",
+        city: match.stadium
+          ? [match.stadium.city, match.stadium.country]
+              .filter(Boolean)
+              .join(", ") || "Ciudad a confirmar"
+          : "Ciudad a confirmar",
         dateTime: formatDetailDateTime(match.kickoff_at),
         groupPhase: getGroupLabel(match),
         stadium: match.stadium?.name ?? "Estadio a confirmar",
