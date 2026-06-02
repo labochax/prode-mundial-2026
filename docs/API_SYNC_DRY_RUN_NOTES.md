@@ -49,6 +49,8 @@ La acción:
 - deja que el trigger de `matches` calcule `lock_at` para partidos nuevos y
   recalcule si cambia `kickoff_at`;
 - registra el intento en `sync_runs`;
+- enlaza `stadiums` y `matches.stadium_id` cuando el payload del partido
+  contiene un `venue` real;
 - no modifica predicciones;
 - no ejecuta scoring;
 - no llama TheSportsDB.
@@ -73,6 +75,7 @@ La acción:
 - usa el cliente server-only de Football-Data;
 - actualiza partidos existentes por `football_data_id`;
 - guarda `status`, `minute`, marcador, `winner`, `raw_json` y `last_synced_at`;
+- conserva o actualiza el enlace de estadio cuando el payload incluye `venue`;
 - actualiza `kickoff_at` si el proveedor lo corrige;
 - no modifica predicciones directamente;
 - ejecuta `score_match_predictions(match_id)` solo cuando el estado es `FINISHED`;

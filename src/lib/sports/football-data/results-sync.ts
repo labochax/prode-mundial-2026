@@ -3,6 +3,10 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fetchFootballDataResultsSyncCandidates } from "@/lib/sports/football-data/client";
+import {
+  getStadiumIdForMatchCandidate,
+  syncFootballDataMatchStadiums,
+} from "@/lib/sports/football-data/stadium-sync";
 import type {
   FootballDataMatchCandidate,
   FootballDataMatchStatus,
@@ -48,6 +52,7 @@ export type FootballDataResultsSyncResult = {
   scoredPredictions: number;
   stoppedMatchesUpdated: number;
   syncRunId: string;
+  stadiumsUpserted: number;
 };
 
 function toJson(value: unknown): Json {
@@ -145,7 +150,12 @@ async function getExistingMatches(
   );
 }
 
-function getResultUpdateRow(match: FootballDataMatchCandidate) {
+function getResultUpdateRow(
+  match: FootballDataMatchCandidate,
+  stadiumIdsByVenue: Map<string, string>,
+) {
+  const stadiumId = getStadiumIdForMatchCandidate(match, stadiumIdsByVenue);
+
   return {
     away_score: match.away_score,
     home_score: match.home_score,
@@ -154,6 +164,7 @@ function getResultUpdateRow(match: FootballDataMatchCandidate) {
     minute: match.minute,
     raw_json: match.raw_json,
     status: match.status,
+    ...(stadiumId ? { stadium_id: stadiumId } : {}),
     winner: match.winner,
   } satisfies MatchUpdate;
 }
@@ -162,10 +173,11 @@ async function updateResultMatch(
   client: SupabaseAdminClient,
   matchId: string,
   candidate: FootballDataMatchCandidate,
+  stadiumIdsByVenue: Map<string, string>,
 ) {
   const { error } = await client
     .from("matches")
-    .update(getResultUpdateRow(candidate))
+    .update(getResultUpdateRow(candidate, stadiumIdsByVenue))
     .eq("id", matchId);
 
   if (error) {
@@ -186,6 +198,8 @@ async function syncResultsToDatabase(
   let stoppedMatchesUpdated = 0;
   let finishedMatchesScored = 0;
   let scoredPredictions = 0;
+  const { stadiumIdsByVenue, stadiumsUpserted } =
+    await syncFootballDataMatchStadiums(client, candidates.matches);
 
   for (const candidate of candidates.matches) {
     const existingMatch = existingMatches.get(candidate.football_data_id);
@@ -194,7 +208,12 @@ async function syncResultsToDatabase(
       continue;
     }
 
-    await updateResultMatch(client, existingMatch.id, candidate);
+    await updateResultMatch(
+      client,
+      existingMatch.id,
+      candidate,
+      stadiumIdsByVenue,
+    );
     matchesUpdated += 1;
 
     if (liveStatuses.has(candidate.status)) {
@@ -225,6 +244,7 @@ async function syncResultsToDatabase(
     matchesUpdated,
     scoredPredictions,
     stoppedMatchesUpdated,
+    stadiumsUpserted,
   };
 }
 
@@ -245,6 +265,7 @@ export async function syncFootballDataResults(
       matchesUpdated,
       scoredPredictions,
       stoppedMatchesUpdated,
+      stadiumsUpserted,
     } = await syncResultsToDatabase(client, candidates);
     const result = {
       checkedMatches: candidates.matches.length,
@@ -258,6 +279,7 @@ export async function syncFootballDataResults(
       scoredPredictions,
       stoppedMatchesUpdated,
       syncRunId,
+      stadiumsUpserted,
     } satisfies FootballDataResultsSyncResult;
 
     await updateSyncRun(client, syncRunId, {

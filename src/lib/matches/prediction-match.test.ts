@@ -108,4 +108,101 @@ describe("mapSupabaseMatchToPredictionMatch", () => {
     });
     expect(mapped.pointsBreakdown?.shortLabel).toBe("Resultado +1");
   });
+
+  it("does not invent direct history or tendency values when the payload has no source data", () => {
+    const mapped = mapSupabaseMatchToPredictionMatch(matchFixture(), null);
+
+    expect(mapped.detail.directHistory).toBeNull();
+    expect(mapped.tendency).toEqual({
+      distribution: null,
+      status: "hidden-until-lock",
+    });
+  });
+
+  it("shows a truthful unavailable tendency after the match closes without aggregate data", () => {
+    const mapped = mapSupabaseMatchToPredictionMatch(
+      matchFixture({
+        lock_at: "2026-01-01T00:00:00Z",
+      }),
+      null,
+    );
+
+    expect(mapped.tendency).toEqual({
+      distribution: null,
+      status: "unavailable",
+    });
+  });
+
+  it("uses sourced direct history and tendency only after the tendency can be revealed", () => {
+    const rawJson = {
+      direct_history: {
+        away: 2,
+        draw: 1,
+        home: 3,
+        source: "provider-cache",
+      },
+      tendency: {
+        away: 20,
+        draw: 30,
+        home: 50,
+        source: "prediction-aggregate",
+      },
+    };
+    const beforeLock = mapSupabaseMatchToPredictionMatch(
+      matchFixture({
+        raw_json: rawJson,
+      }),
+      null,
+    );
+    const afterLock = mapSupabaseMatchToPredictionMatch(
+      matchFixture({
+        lock_at: "2026-01-01T00:00:00Z",
+        raw_json: rawJson,
+      }),
+      null,
+    );
+
+    expect(beforeLock.detail.directHistory).toMatchObject({
+      away: 2,
+      draw: 1,
+      home: 3,
+    });
+    expect(beforeLock.tendency).toEqual({
+      distribution: null,
+      status: "hidden-until-lock",
+    });
+    expect(afterLock.tendency).toEqual({
+      distribution: {
+        away: 20,
+        draw: 30,
+        home: 50,
+        source: "prediction-aggregate",
+      },
+      status: "available",
+    });
+  });
+
+  it("renders linked stadium metadata when a trusted relation exists", () => {
+    const mapped = mapSupabaseMatchToPredictionMatch(
+      matchFixture({
+        stadium: {
+          city: "Ciudad de México",
+          country: "México",
+          created_at: "2026-01-01T00:00:00Z",
+          id: "stadium-mexico-city",
+          image_url: null,
+          name: "Mexico City Stadium",
+          raw_json: null,
+          updated_at: "2026-01-01T00:00:00Z",
+        },
+        stadium_id: "stadium-mexico-city",
+      }),
+      null,
+    );
+
+    expect(mapped.detail.metadata).toMatchObject({
+      city: "Ciudad de México",
+      stadium: "Mexico City Stadium",
+    });
+  });
 });

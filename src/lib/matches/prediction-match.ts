@@ -44,16 +44,13 @@ export type PredictionMatchAvailability = {
 };
 
 export type PredictionMatchDetail = {
-  directHistory: {
-    away: number;
-    draw: number;
-    home: number;
-  };
+  directHistory: SourcedMatchDistribution | null;
   metadata: {
     city: string;
     dateTime: string;
     groupPhase: string;
     stadium: string;
+    venueStatus: "official-fixture" | "pending";
   };
   timerLabel: string;
 };
@@ -82,11 +79,7 @@ export type PredictionMatch = {
     scoreLabel: string | null;
     tone: "finished" | "live" | "scheduled" | "stopped";
   };
-  tendency: {
-    away: number;
-    draw: number;
-    home: number;
-  };
+  tendency: MatchTendency;
   timeLabel: string;
 };
 
@@ -99,26 +92,29 @@ export type PredictionPointsBreakdown = {
   tone: "exact" | "miss" | "outcome";
 };
 
+export type MatchDistribution = {
+  away: number;
+  draw: number;
+  home: number;
+};
+
+export type SourcedMatchDistribution = MatchDistribution & {
+  source: string;
+};
+
+export type MatchTendency = {
+  distribution: MatchDistribution | null;
+  status: "available" | "hidden-until-lock" | "unavailable";
+};
+
 const BUENOS_AIRES_TIME_ZONE = "America/Argentina/Buenos_Aires";
-
-const defaultTendency = {
-  away: 30,
-  draw: 25,
-  home: 45,
-};
-
-const defaultDirectHistory = {
-  away: 3,
-  draw: 2,
-  home: 4,
-};
 
 function isRecord(value: Json | undefined): value is Record<string, Json | undefined> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function readNumber(value: Json | undefined, fallback: number) {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+function readNumber(value: Json | undefined) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function readString(value: Json | undefined) {
@@ -127,25 +123,62 @@ function readString(value: Json | undefined) {
     : null;
 }
 
-function readPercentBlock(
+function readSourcedPercentBlock(
   rawJson: Json | null,
   key: "direct_history" | "tendency",
-  fallback: { away: number; draw: number; home: number },
-) {
+): SourcedMatchDistribution | null {
   if (!isRecord(rawJson)) {
-    return fallback;
+    return null;
   }
 
   const block = rawJson[key];
 
   if (!isRecord(block)) {
-    return fallback;
+    return null;
+  }
+
+  const away = readNumber(block.away);
+  const draw = readNumber(block.draw);
+  const home = readNumber(block.home);
+  const source = readString(block.source);
+
+  if (
+    away === null ||
+    draw === null ||
+    home === null ||
+    source === null
+  ) {
+    return null;
   }
 
   return {
-    away: readNumber(block.away, fallback.away),
-    draw: readNumber(block.draw, fallback.draw),
-    home: readNumber(block.home, fallback.home),
+    away,
+    draw,
+    home,
+    source,
+  };
+}
+
+function canRevealTendency(match: MatchRow) {
+  return (
+    new Date(match.lock_at).getTime() <= Date.now() ||
+    (match.status !== "SCHEDULED" && match.status !== "TIMED")
+  );
+}
+
+function getTendency(match: MatchRow): MatchTendency {
+  if (!canRevealTendency(match)) {
+    return {
+      distribution: null,
+      status: "hidden-until-lock",
+    };
+  }
+
+  const distribution = readSourcedPercentBlock(match.raw_json, "tendency");
+
+  return {
+    distribution,
+    status: distribution ? "available" : "unavailable",
   };
 }
 
@@ -483,7 +516,7 @@ export function mapSupabaseMatchToPredictionMatch(
   const locked =
     availability.status === "locked-by-time" ||
     availability.status === "started-or-finished";
-  const tendency = readPercentBlock(match.raw_json, "tendency", defaultTendency);
+  const tendency = getTendency(match);
   const homeTeam = mapTeam(
     match.home_team,
     "Por definir",
@@ -501,16 +534,13 @@ export function mapSupabaseMatchToPredictionMatch(
     availability,
     away: awayTeam,
     detail: {
-      directHistory: readPercentBlock(
-        match.raw_json,
-        "direct_history",
-        defaultDirectHistory,
-      ),
+      directHistory: readSourcedPercentBlock(match.raw_json, "direct_history"),
       metadata: {
         city: match.stadium?.city ?? "Ciudad a confirmar",
         dateTime: formatDetailDateTime(match.kickoff_at),
         groupPhase: getGroupLabel(match),
         stadium: match.stadium?.name ?? "Estadio a confirmar",
+        venueStatus: match.stadium ? "official-fixture" : "pending",
       },
       timerLabel: locked ? "Cerrado" : getTimerLabel(match.lock_at),
     },

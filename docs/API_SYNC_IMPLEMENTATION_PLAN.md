@@ -127,7 +127,10 @@ Flujo:
    - winner oficial o derivado -> `winner`;
    - payload completo -> `raw_json`;
    - `last_synced_at = now()`.
-5. Dejar que el trigger recalcule `lock_at` cuando cambia `kickoff_at`, salvo correccion explicita.
+5. Si el payload del partido incluye `venue`, resolver el catálogo de sedes
+   oficiales/aliases, upsertar `stadiums` por nombre y enlazar
+   `matches.stadium_id`. Si falta `venue`, conservar cualquier enlace previo.
+6. Dejar que el trigger recalcule `lock_at` cuando cambia `kickoff_at`, salvo correccion explicita.
 
 ### Kickoff updates
 
@@ -238,6 +241,18 @@ El script lee equipos actuales, busca candidatos en TheSportsDB, matchea por
 normalizacion/aliases y actualiza solo campos de enriquecimiento visual cuando
 detecta cambios. No toca fixtures, resultados, predicciones ni scoring. El reporte local queda en
 `reports/thesportsdb-team-enrichment-report.json`, ignorado por Git.
+
+### Backfill local one-shot de estadios Football-Data
+
+El flujo CLI de estadios no llama TheSportsDB. Lee únicamente
+`matches.raw_json.venue`, enlaza sedes reales y conserva estados vacíos cuando
+el snapshot no trae el campo:
+
+- `npm run enrich:stadiums:dry`
+- `npm run enrich:stadiums`
+
+El reporte local queda en
+`reports/football-data-stadium-enrichment-report.json`, ignorado por Git.
 
 ## 4. Opciones De Ejecucion De Sync
 

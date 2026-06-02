@@ -94,6 +94,7 @@ export type FootballDataMatch = {
   stage?: string | null;
   status?: FootballDataMatchStatus | string | null;
   utcDate: string;
+  venue?: string | null;
 };
 
 export type FootballDataMatchesResponse = {
@@ -141,6 +142,7 @@ export type FootballDataMatchCandidate = {
   raw_json: Json;
   stage: string | null;
   status: FootballDataMatchStatus;
+  venue_name: string | null;
   winner: "AWAY_TEAM" | "DRAW" | "HOME_TEAM" | null;
 };
 

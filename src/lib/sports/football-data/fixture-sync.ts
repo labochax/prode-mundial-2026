@@ -3,6 +3,10 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fetchFootballDataFixtureSyncCandidates } from "@/lib/sports/football-data/client";
+import {
+  getStadiumIdForMatchCandidate,
+  syncFootballDataMatchStadiums,
+} from "@/lib/sports/football-data/stadium-sync";
 import type {
   FootballDataFixtureSyncCandidates,
   FootballDataMatchCandidate,
@@ -30,6 +34,7 @@ export type FootballDataFixtureSyncResult = {
   requestsAvailable: string | null;
   requestsAvailableMinute: string | null;
   syncRunId: string;
+  stadiumsUpserted: number;
   teamsUpserted: number;
 };
 
@@ -173,7 +178,10 @@ function getRelatedTeamIds(matches: FootballDataMatchCandidate[]) {
 function getMatchBaseRow(
   match: FootballDataMatchCandidate,
   teamIds: TeamIdLookup,
+  stadiumIdsByVenue: Map<string, string>,
 ) {
+  const stadiumId = getStadiumIdForMatchCandidate(match, stadiumIdsByVenue);
+
   return {
     away_score: match.away_score,
     away_team_id:
@@ -194,6 +202,7 @@ function getMatchBaseRow(
     raw_json: match.raw_json,
     stage: match.stage,
     status: match.status,
+    ...(stadiumId ? { stadium_id: stadiumId } : {}),
     winner: match.winner,
   };
 }
@@ -226,6 +235,7 @@ async function insertMatches(
   client: SupabaseAdminClient,
   matches: FootballDataMatchCandidate[],
   teamIds: TeamIdLookup,
+  stadiumIdsByVenue: Map<string, string>,
 ) {
   if (matches.length === 0) {
     return 0;
@@ -234,7 +244,7 @@ async function insertMatches(
   const rows = matches.map(
     (match) =>
       ({
-        ...getMatchBaseRow(match, teamIds),
+        ...getMatchBaseRow(match, teamIds, stadiumIdsByVenue),
         // The DB trigger computes lock_at from kickoff_at and settings. The
         // generated Supabase type marks lock_at as required because the column
         // is not nullable, so this explicit null is only a typed bridge to the
@@ -256,11 +266,16 @@ async function updateMatches(
   client: SupabaseAdminClient,
   matches: FootballDataMatchCandidate[],
   teamIds: TeamIdLookup,
+  stadiumIdsByVenue: Map<string, string>,
 ) {
   let updated = 0;
 
   for (const match of matches) {
-    const updateRow = getMatchBaseRow(match, teamIds) satisfies MatchUpdate;
+    const updateRow = getMatchBaseRow(
+      match,
+      teamIds,
+      stadiumIdsByVenue,
+    ) satisfies MatchUpdate;
     const { error } = await client
       .from("matches")
       .update(updateRow)
@@ -285,6 +300,8 @@ async function syncCandidatesToDatabase(
     client,
     getRelatedTeamIds(candidates.matches),
   );
+  const { stadiumIdsByVenue, stadiumsUpserted } =
+    await syncFootballDataMatchStadiums(client, candidates.matches);
   const existingMatchIds = await getExistingMatchIds(
     client,
     candidates.matches.map((match) => match.football_data_id),
@@ -295,12 +312,23 @@ async function syncCandidatesToDatabase(
   const matchesToInsert = candidates.matches.filter(
     (match) => !existingMatchIds.has(match.football_data_id),
   );
-  const matchesInserted = await insertMatches(client, matchesToInsert, teamIds);
-  const matchesUpdated = await updateMatches(client, matchesToUpdate, teamIds);
+  const matchesInserted = await insertMatches(
+    client,
+    matchesToInsert,
+    teamIds,
+    stadiumIdsByVenue,
+  );
+  const matchesUpdated = await updateMatches(
+    client,
+    matchesToUpdate,
+    teamIds,
+    stadiumIdsByVenue,
+  );
 
   return {
     matchesInserted,
     matchesUpdated,
+    stadiumsUpserted,
     teamsUpserted,
   };
 }
@@ -316,7 +344,7 @@ export async function syncFootballDataFixtures(
       competitionCode: "WC",
       season: "2026",
     });
-    const { matchesInserted, matchesUpdated, teamsUpserted } =
+    const { matchesInserted, matchesUpdated, stadiumsUpserted, teamsUpserted } =
       await syncCandidatesToDatabase(client, candidates);
     const result = {
       fetchedMatches: candidates.matches.length,
@@ -330,6 +358,7 @@ export async function syncFootballDataFixtures(
       requestsAvailableMinute:
         candidates.rateLimit.matches.requestsAvailableMinute,
       syncRunId,
+      stadiumsUpserted,
       teamsUpserted,
     } satisfies FootballDataFixtureSyncResult;
 

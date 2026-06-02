@@ -41,11 +41,11 @@ function BarRow({ code, label, tone, value }: BarRowProps) {
 }
 
 export function MatchStatsPanel({ match }: MatchStatsPanelProps) {
-  const { away, draw, home } = match.detail.directHistory;
-  const totalHistory = home + draw + away;
-  const historyHome = (home / totalHistory) * 100;
-  const historyDraw = (draw / totalHistory) * 100;
-  const historyAway = (away / totalHistory) * 100;
+  const directHistory = match.detail.directHistory;
+  const tendency = match.tendency.distribution;
+  const totalHistory = directHistory
+    ? directHistory.home + directHistory.draw + directHistory.away
+    : 0;
   const metadataItems = [
     {
       icon: Building2,
@@ -82,67 +82,98 @@ export function MatchStatsPanel({ match }: MatchStatsPanelProps) {
             <h3 className="font-technical text-xs font-bold uppercase">
               Historial directo
             </h3>
-            <ProdeBadge variant="surface">Local</ProdeBadge>
+            <ProdeBadge variant="surface">
+              {directHistory ? "Fuente real" : "Sin datos"}
+            </ProdeBadge>
           </div>
 
-          <div className="flex h-10 border-[3px] border-prode-black bg-prode-surface">
-            <div
-              className="flex items-center justify-center border-r-[3px] border-prode-black bg-prode-yellow font-technical text-sm font-black"
-              style={{ width: `${historyHome}%` }}
-            >
-              {home}
-            </div>
-            <div
-              className="flex items-center justify-center border-r-[3px] border-prode-black bg-[#e5e3ce] font-technical text-sm font-black"
-              style={{ width: `${historyDraw}%` }}
-            >
-              {draw}
-            </div>
-            <div
-              className="flex items-center justify-center bg-prode-surface font-technical text-sm font-black"
-              style={{ width: `${historyAway}%` }}
-            >
-              {away}
-            </div>
-          </div>
+          {directHistory && totalHistory > 0 ? (
+            <>
+              <div className="flex h-10 border-[3px] border-prode-black bg-prode-surface">
+                <div
+                  className="flex items-center justify-center border-r-[3px] border-prode-black bg-prode-yellow font-technical text-sm font-black"
+                  style={{ width: `${(directHistory.home / totalHistory) * 100}%` }}
+                >
+                  {directHistory.home}
+                </div>
+                <div
+                  className="flex items-center justify-center border-r-[3px] border-prode-black bg-[#e5e3ce] font-technical text-sm font-black"
+                  style={{ width: `${(directHistory.draw / totalHistory) * 100}%` }}
+                >
+                  {directHistory.draw}
+                </div>
+                <div
+                  className="flex items-center justify-center bg-prode-surface font-technical text-sm font-black"
+                  style={{ width: `${(directHistory.away / totalHistory) * 100}%` }}
+                >
+                  {directHistory.away}
+                </div>
+              </div>
 
-          <div className="mt-2 flex justify-between font-technical text-[0.68rem] font-bold uppercase">
-            <span>{match.home.code}</span>
-            <span>Emp</span>
-            <span>{match.away.code}</span>
-          </div>
+              <div className="mt-2 flex justify-between font-technical text-[0.68rem] font-bold uppercase">
+                <span>{match.home.code}</span>
+                <span>Emp</span>
+                <span>{match.away.code}</span>
+              </div>
+            </>
+          ) : (
+            <p className="border-[3px] border-dashed border-prode-black p-3 font-technical text-xs font-bold uppercase text-muted-foreground">
+              Historial directo no disponible.
+            </p>
+          )}
         </section>
 
         <section>
           <h3 className="mb-3 font-technical text-xs font-bold uppercase">
             Tendencia Prode
           </h3>
-          <div className="space-y-3">
-            <BarRow
-              code={match.home.code}
-              label={`Tendencia para ${match.home.name}`}
-              tone="home"
-              value={match.tendency.home}
-            />
-            <BarRow
-              code="EMP"
-              label="Tendencia para empate"
-              tone="draw"
-              value={match.tendency.draw}
-            />
-            <BarRow
-              code={match.away.code}
-              label={`Tendencia para ${match.away.name}`}
-              tone="away"
-              value={match.tendency.away}
-            />
-          </div>
+          {tendency ? (
+            <div className="space-y-3">
+              <BarRow
+                code={match.home.code}
+                label={`Tendencia para ${match.home.name}`}
+                tone="home"
+                value={tendency.home}
+              />
+              <BarRow
+                code="EMP"
+                label="Tendencia para empate"
+                tone="draw"
+                value={tendency.draw}
+              />
+              <BarRow
+                code={match.away.code}
+                label={`Tendencia para ${match.away.name}`}
+                tone="away"
+                value={tendency.away}
+              />
+            </div>
+          ) : (
+            <p className="border-[3px] border-dashed border-prode-black p-3 font-technical text-xs font-bold uppercase text-muted-foreground">
+              {match.tendency.status === "hidden-until-lock"
+                ? "La tendencia se habilita cuando cierre el partido."
+                : "Todavía no hay suficientes pronósticos."}
+            </p>
+          )}
         </section>
 
         <section className="border-t-[3px] border-dashed border-prode-black pt-5">
-          <h3 className="mb-4 font-technical text-xs font-bold uppercase">
-            Datos del partido
-          </h3>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-technical text-xs font-bold uppercase">
+              Datos del partido
+            </h3>
+            <ProdeBadge
+              variant={
+                match.detail.metadata.venueStatus === "official-fixture"
+                  ? "primary"
+                  : "surface"
+              }
+            >
+              {match.detail.metadata.venueStatus === "official-fixture"
+                ? "Fixture oficial"
+                : "Pendiente"}
+            </ProdeBadge>
+          </div>
           <ul className="space-y-4">
             {metadataItems.map(({ icon: Icon, label, value }) => (
               <li className="flex items-start gap-3" key={label}>

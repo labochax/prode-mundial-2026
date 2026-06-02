@@ -7,7 +7,22 @@ type MatchTendencyStripProps = {
 };
 
 export function MatchTendencyStrip({ match }: MatchTendencyStripProps) {
-  const { away, draw, home } = match.tendency;
+  const tendency = match.tendency.distribution;
+
+  if (!tendency) {
+    return (
+      <div className="flex min-w-0 flex-1 items-center gap-2 text-muted-foreground">
+        <TrendingUp aria-hidden="true" className="size-4 shrink-0" />
+        <span className="font-technical text-[0.68rem] font-bold uppercase">
+          {match.tendency.status === "hidden-until-lock"
+            ? "Tendencia disponible al cierre"
+            : "Todavía no hay suficientes pronósticos"}
+        </span>
+      </div>
+    );
+  }
+
+  const { away, draw, home } = tendency;
 
   return (
     <div className="min-w-0 flex-1">

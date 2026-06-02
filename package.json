@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "enrich:stadiums": "tsx scripts/enrich-stadiums-from-football-data.ts",
+    "enrich:stadiums:dry": "tsx scripts/enrich-stadiums-from-football-data.ts --dry-run",
     "enrich:teams:thesportsdb": "tsx scripts/enrich-teams-thesportsdb.ts",
     "enrich:teams:thesportsdb:dry": "tsx scripts/enrich-teams-thesportsdb.ts --dry-run",
     "start": "next start",

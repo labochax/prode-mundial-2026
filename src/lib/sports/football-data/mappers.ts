@@ -165,6 +165,7 @@ export function mapFootballDataMatchToCandidate(
     raw_json: toJson(match),
     stage: normalizeText(match.stage),
     status,
+    venue_name: normalizeText(match.venue),
     winner: getWinner(match, status),
   };
 }

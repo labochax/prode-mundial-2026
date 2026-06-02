@@ -22,6 +22,11 @@ manual desde `/admin/sync` sigue siendo útil para cambios de calendario,
 postergaciones, horarios, estados live/resultados y actualizaciones de fases
 eliminatorias.
 
+El snapshot actual no incluye `venue` a nivel partido. La sync futura enlaza
+estadios cuando Football-Data entregue ese campo. Para backfill one-shot sobre
+payloads ya guardados, usar `npm run enrich:stadiums:dry` y luego
+`npm run enrich:stadiums`. Ver `docs/STADIUM_DATA_NOTES.md`.
+
 ## Dashboard
 
 El panel autenticado ahora:
@@ -72,3 +77,6 @@ No se usa service role para el flujo normal de usuario. La base mantiene el bloq
   local `npm run enrich:teams:thesportsdb`.
 - No hay Supabase remoto ni deploy.
 - El seed local no crea usuarios, perfiles ni predicciones reales.
+- Las stats no inventan historial directo ni porcentajes de tendencia: muestran
+  estados vacíos hasta contar con datos reales y, para tendencia, hasta el
+  cierre del partido.
