@@ -61,7 +61,7 @@ Después del intercambio:
 Redirección:
 
 - perfil faltante o onboarding incompleto -> `/onboarding`
-- onboarding completo -> `/dashboard`
+- onboarding completo -> `/predicciones`
 - error de auth -> `/login?error=auth`
 
 ## Protección de rutas
@@ -70,6 +70,7 @@ Redirección:
 
 - `/admin/*`
 - `/dashboard`
+- `/predicciones/*`
 - `/onboarding`
 - `/partidos/*`
 - `/perfil`

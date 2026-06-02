@@ -65,6 +65,8 @@ export async function syncFootballDataFixturesAction() {
     const result = await syncFootballDataFixtures();
 
     revalidatePath("/dashboard");
+    revalidatePath("/predicciones");
+    revalidatePath("/predicciones/grupos");
     revalidatePath("/admin/sync");
 
     redirectPath = getSyncRedirectPath({

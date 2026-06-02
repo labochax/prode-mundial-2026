@@ -58,7 +58,7 @@ export default async function ProfilePage() {
                 variant: "surface",
               }),
             )}
-            href="/dashboard"
+            href="/predicciones"
           >
             <ArrowLeft aria-hidden="true" className="size-5" />
             Volver al panel

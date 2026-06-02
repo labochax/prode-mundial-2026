@@ -462,3 +462,25 @@ Esto cubre el caso local/dev donde la fecha real todavía está antes del Mundia
 - amarillo fuerte para seleccion activa, estado positivo o accion principal;
 - rojo brutalista para estados criticos que requieren accion o atencion, como `Cambios sin guardar`, `INCOMPLETO` o errores de guardado;
 - amarillo apagado/gris para selecciones bloqueadas en modo lectura, manteniendo el badge `Seleccionado` sin sugerir que el cruce todavia es editable.
+
+### Separacion final entre Predicciones, Mis grupos y Mi Mundial
+
+El flujo visible queda dividido en tres conceptos:
+
+- `/predicciones`: carga y batch save de marcadores para partidos reales;
+- `/predicciones/grupos`: tablas dinamicas de `Mis grupos` y mejores terceros,
+  derivadas de los marcadores guardados de fase de grupos;
+- `/mi-mundial`: llave bonus pre-torneo, enfocada en eliminatorias y guardado.
+
+`/dashboard` permanece como redirect compatible hacia `/predicciones`.
+
+Antes del primer kickoff, `Mi Mundial` usa la proyeccion dinamica como base de
+los `16avos`. Una vez bloqueado, reconstruye la vista desde el snapshot guardado
+en `tournament_predictions.bracket_json`: cambios posteriores en Predicciones
+no recalculan visualmente una llave ya cerrada. Si el usuario no guardo la llave
+antes del cierre, la pantalla muestra un estado bloqueado vacio.
+
+Las tablas largas de grupos y mejores terceros dejaron de vivir dentro de
+`/mi-mundial`. La pantalla ofrece un link compacto a `Ver Mis grupos`. En la
+llave interactiva, `3.º puesto` aparece antes de `Final` para respetar el orden
+natural de resolucion.

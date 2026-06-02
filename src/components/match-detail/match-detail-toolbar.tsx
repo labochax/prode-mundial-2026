@@ -15,7 +15,7 @@ export function MatchDetailToolbar({ match }: MatchDetailToolbarProps) {
         <div className="space-y-3">
           <Link
             className="prode-frame prode-pressable inline-flex min-h-11 items-center gap-2 bg-prode-surface px-3 py-2 font-technical text-sm font-bold uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
-            href="/dashboard"
+            href="/predicciones"
           >
             <ArrowLeft aria-hidden="true" className="size-5 stroke-[3]" />
             Volver

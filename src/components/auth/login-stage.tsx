@@ -123,8 +123,8 @@ export function LoginStage({ initialError }: LoginStageProps) {
                       Selección de Jugador
                     </h1>
                     <p className="max-w-lg text-base leading-7">
-                      Entrá al Prode del grupo, anticipá cada partido y defendé
-                      tus puntos antes del cierre de pronósticos.
+                      Armá tu Prode del Mundial 2026, cargá tus predicciones y
+                      competí con tus grupos.
                     </p>
                   </div>
                 </header>

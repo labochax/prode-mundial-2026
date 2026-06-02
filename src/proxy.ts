@@ -7,6 +7,7 @@ import type { Database } from "@/lib/supabase/database.types";
 const protectedRoutePrefixes = [
   "/admin",
   "/dashboard",
+  "/predicciones",
   "/mi-mundial",
   "/onboarding",
   "/partidos",
@@ -51,7 +52,7 @@ async function getAuthenticatedLandingPath(
     .eq("id", userId)
     .maybeSingle();
 
-  return data?.onboarding_completed ? "/dashboard" : "/onboarding";
+  return data?.onboarding_completed ? "/predicciones" : "/onboarding";
 }
 
 export async function proxy(request: NextRequest) {

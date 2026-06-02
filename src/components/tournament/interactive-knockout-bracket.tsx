@@ -893,20 +893,20 @@ export function InteractiveKnockoutBracket({
       <RoundSection
         disabled={isInteractionLocked}
         isReadOnly={isInteractionLocked}
-        matches={rounds.final}
-        onSelect={handleSelect}
-        placementBonusByTeamId={placementBonusByTeamId}
-        selections={selections}
-        title="FINAL"
-      />
-      <RoundSection
-        disabled={isInteractionLocked}
-        isReadOnly={isInteractionLocked}
         matches={rounds.thirdPlace}
         onSelect={handleSelect}
         placementBonusByTeamId={placementBonusByTeamId}
         selections={selections}
         title="3.º PUESTO"
+      />
+      <RoundSection
+        disabled={isInteractionLocked}
+        isReadOnly={isInteractionLocked}
+        matches={rounds.final}
+        onSelect={handleSelect}
+        placementBonusByTeamId={placementBonusByTeamId}
+        selections={selections}
+        title="FINAL"
       />
       <SummaryCard
         isBracketComplete={

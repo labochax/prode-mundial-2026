@@ -294,6 +294,8 @@ export async function autocompleteDevWorldCupResultsAction() {
 
           revalidatePath("/admin/sync");
           revalidatePath("/dashboard");
+          revalidatePath("/predicciones");
+          revalidatePath("/predicciones/grupos");
           revalidatePath("/mi-mundial");
           revalidatePath("/posiciones");
 
@@ -410,6 +412,8 @@ export async function resetDevWorldCupResultsAction() {
 
     revalidatePath("/admin/sync");
     revalidatePath("/dashboard");
+    revalidatePath("/predicciones");
+    revalidatePath("/predicciones/grupos");
     revalidatePath("/mi-mundial");
     revalidatePath("/posiciones");
 

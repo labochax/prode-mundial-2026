@@ -62,7 +62,7 @@ export async function AuthenticatedAppShell({
       <GridTexture className="fixed opacity-50" />
 
       <header className="prode-frame fixed inset-x-3 top-3 z-40 flex min-h-16 items-center justify-between gap-3 bg-prode-paper px-3 py-2 shadow-[4px_4px_0_var(--prode-black)] lg:hidden">
-        <Link aria-label="Ir al panel" href="/dashboard">
+        <Link aria-label="Ir a predicciones" href="/predicciones">
           <ProdeCompactLogo priority />
         </Link>
         <PlayerIdentityBlock
@@ -76,7 +76,7 @@ export async function AuthenticatedAppShell({
         <Link
           aria-label="Ir a predicciones"
           className="prode-frame prode-hard-shadow prode-pressable flex min-h-24 items-center justify-center bg-prode-surface p-3 outline-none hover:bg-[#fff7b5] focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
-          href="/dashboard"
+          href="/predicciones"
         >
           <ProdeCompactLogo imageClassName="w-32 sm:w-32" priority />
         </Link>

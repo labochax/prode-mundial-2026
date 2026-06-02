@@ -24,7 +24,7 @@
 ## Comportamiento
 
 - `/onboarding` carga o crea el perfil del usuario autenticado, precarga campos existentes y al guardar marca `onboarding_completed = true`.
-- Después de completar onboarding, redirige a `/dashboard`.
+- Después de completar onboarding, redirige a `/predicciones`.
 - `/perfil` carga el mismo perfil, precarga los campos y guarda cambios sin redirigir.
 - `/perfil` muestra `Cambios guardados` cuando la acción termina correctamente.
 

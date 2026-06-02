@@ -42,8 +42,9 @@ export function getMatchEditability(
   if (!match.home_team_id || !match.away_team_id) {
     return {
       canEdit: false,
-      helper: "Para proyectar tu llave antes del torneo, usá Mi Mundial.",
-      notice: "Este partido se habilita cuando el cruce esté definido oficialmente.",
+      helper: "Mientras tanto, podés armar tu llave bonus en Mi Mundial.",
+      notice:
+        "Este partido se habilita cuando FIFA confirme los equipos clasificados.",
       reason: "missing_teams",
     };
   }

@@ -8,6 +8,7 @@ import {
 import { rankThirdPlacedTeams } from "@/lib/tournament/rank-third-placed";
 import {
   buildTournamentPredictionPayload,
+  getProjectedBracketFromSavedTournamentPrediction,
   getSelectionsFromSavedTournamentPrediction,
 } from "@/lib/tournament/tournament-prediction-payload";
 import type {
@@ -168,6 +169,31 @@ describe("tournament prediction payload helpers", () => {
     expect(
       getSelectionsFromSavedTournamentPrediction(result.payload.bracket_json),
     ).toEqual(selections);
+  });
+
+  it("reconstructs the locked bracket from the persisted snapshot", () => {
+    const { bracket, selections } = completeSelections();
+    const result = buildTournamentPredictionPayload(bracket, selections);
+
+    expect(result.status).toBe("success");
+
+    if (result.status !== "success") {
+      return;
+    }
+
+    const savedBracket = getProjectedBracketFromSavedTournamentPrediction(
+      result.payload.bracket_json,
+    );
+
+    expect(savedBracket?.status).toBe("complete");
+    expect(savedBracket?.roundOf32).toHaveLength(16);
+    expect(savedBracket?.roundOf32[0]?.home.team.id).toBe(
+      result.payload.bracket_json.projectedRoundOf32[0]?.home.team.id,
+    );
+  });
+
+  it("returns null when the persisted bracket snapshot is missing", () => {
+    expect(getProjectedBracketFromSavedTournamentPrediction(null)).toBeNull();
   });
 
   it("does not mutate the input bracket or selections", () => {

@@ -48,7 +48,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
           </h1>
           <Link
             className="prode-frame prode-hard-shadow prode-pressable mt-6 inline-flex min-h-12 items-center justify-center bg-prode-yellow px-4 py-3 font-technical text-sm font-bold uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
-            href="/dashboard"
+            href="/predicciones"
           >
             Volver al panel
           </Link>
@@ -76,7 +76,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
           <PredictionCanvas
             match={match}
             nextMatchHref={
-              nextMatch ? `/partidos/${nextMatch.id}` : "/dashboard"
+              nextMatch ? `/partidos/${nextMatch.id}` : "/predicciones"
             }
             nextMatchLabel={
               nextMatch ? "Siguiente partido" : "Volver al panel"

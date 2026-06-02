@@ -129,6 +129,8 @@ export async function finalizeAndScoreMatchAction(formData: FormData) {
 
   revalidatePath("/posiciones");
   revalidatePath("/dashboard");
+  revalidatePath("/predicciones");
+  revalidatePath("/predicciones/grupos");
   revalidatePath(`/partidos/${matchId}`);
   revalidatePath("/admin/sync");
 

@@ -64,27 +64,38 @@ export default function RulesPage() {
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <RulesCard eyebrow="Bloqueo" title="Cada partido cierra solo">
+        <RulesCard eyebrow="Predicciones" title="Predicciones por partido">
           <p>
-            Las predicciones se bloquean por partido, no de manera global. El
-            cierre actual es 10 minutos antes del inicio de cada partido.
+            Jugás sobre partidos reales del fixture oficial. Cargás el marcador
+            por goles. Si acertás el resultado exacto sumás 3 puntos; si acertás
+            ganador o empate sumás 1 punto.
           </p>
         </RulesCard>
 
-        <RulesCard eyebrow="Edición" title="Cambios hasta el cierre">
+        <RulesCard eyebrow="Bloqueo" title="Cierre por partido">
           <p>
-            Podés editar tu pronóstico todas las veces que quieras hasta que ese
-            partido quede bloqueado.
+            Cada partido se puede editar hasta su cierre. Después queda
+            bloqueado y el pronóstico pasa a ser visible cuando corresponda. El
+            cierre actual es 10 minutos antes del inicio.
           </p>
         </RulesCard>
 
-        <RulesCard eyebrow="Visibilidad" title="Pronósticos visibles al cerrar">
+        <RulesCard eyebrow="Eliminatorias" title="Eliminatorias reales">
           <p>
-            Cuando un partido queda bloqueado, las predicciones de los demás
-            jugadores para ese partido pasan a estar visibles.
+            Las predicciones por goles de eliminatorias se habilitan cuando los
+            cruces reales estén definidos.
           </p>
         </RulesCard>
       </section>
+
+      <RulesCard eyebrow="Mis grupos" title="Tus tablas se actualizan solas">
+        <p>
+          Mis grupos se calcula automáticamente con tus predicciones de fase de
+          grupos. Sirve para ver cómo quedarían las tablas, los clasificados y
+          los mejores terceros según tus marcadores. No suma puntos por sí
+          mismo.
+        </p>
+      </RulesCard>
 
       <section className="prode-frame prode-hard-shadow bg-prode-yellow p-5 text-prode-black sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[auto_1fr] lg:items-start">
@@ -97,9 +108,10 @@ export default function RulesPage() {
               Armá tu Mundial antes de que empiece
             </h2>
             <p className="mt-3 max-w-5xl leading-7">
-              En Mi Mundial proyectás tus grupos, mejores terceros y cruces de
-              eliminación según tus propios pronósticos. Después completás la
-              llave hasta definir campeón, subcampeón, tercer y cuarto puesto.
+              Antes del inicio del Mundial podés guardar tu llave bonus. Mi
+              Mundial usa Mis grupos como base inicial, pero una vez guardado y
+              bloqueado queda fijo: no cambia por modificaciones posteriores en
+              Predicciones.
             </p>
           </div>
         </div>
@@ -119,9 +131,10 @@ export default function RulesPage() {
 
         <RulesCard eyebrow="Proyección" title="La llave se recalcula">
           <p>
-            Antes del cierre pre-torneo, podés cambiar tus pronósticos y ajustar
-            la llave. Si modificás grupos o una ronda anterior, las fases
-            siguientes pueden actualizarse para mantener la proyección coherente.
+            Antes del cierre de Mi Mundial, si cambiás tus predicciones de fase
+            de grupos, se recalculan Mis grupos y la base de la llave
+            proyectada. Para que esos cambios cuenten en el bonus, tenés que
+            volver a guardar Mi Mundial antes del cierre.
           </p>
         </RulesCard>
 

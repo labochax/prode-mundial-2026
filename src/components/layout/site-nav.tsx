@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 const siteNavItems = [
   { href: "/login", label: "Ingreso" },
   { href: "/onboarding", label: "Bienvenida" },
-  { href: "/dashboard", label: "Panel" },
+  { href: "/predicciones", label: "Predicciones" },
   { href: "/posiciones", label: "Posiciones" },
   { href: "/perfil", label: "Perfil" },
 ] as const;

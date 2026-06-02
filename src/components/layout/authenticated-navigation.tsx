@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const authenticatedNavItems = [
   {
-    href: "/dashboard",
+    href: "/predicciones",
     icon: ClipboardPenLine,
     label: "Predicciones",
   },
@@ -56,7 +56,9 @@ export function AuthenticatedNavigation({
       {authenticatedNavItems.map(({ href, icon: Icon, label }) => {
         const isActive =
           pathname === href ||
-          (href === "/dashboard" && pathname.startsWith("/partidos/"));
+          (href === "/predicciones" &&
+            (pathname.startsWith("/predicciones/") ||
+              pathname.startsWith("/partidos/")));
 
         return (
           <Link

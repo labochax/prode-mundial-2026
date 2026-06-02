@@ -12,7 +12,7 @@ APIs externas salvo que se prueben manualmente los botones de sync local.
 
 ## Auth Y Perfil
 
-1. Entrar sin sesion a `/dashboard` y confirmar redirect a `/login`.
+1. Entrar sin sesion a `/predicciones` y confirmar redirect a `/login`.
 2. Iniciar sesion.
 3. Completar `/onboarding`.
 4. Editar `/perfil` con Club, Colegio, Pais, Provincia, Ciudad y hasta 3
@@ -22,20 +22,37 @@ APIs externas salvo que se prueben manualmente los botones de sync local.
 
 ## Predicciones Partido A Partido
 
-1. Abrir `/dashboard`.
-2. Guardar una prediccion de fase de grupos.
-3. Entrar por `Ver detalles`.
-4. Confirmar que `/partidos/[matchId]` precarga la prediccion.
-5. Editar desde detalle y volver al dashboard.
-6. Confirmar que la tarjeta muestra el marcador actualizado.
-7. Confirmar que cruces de eliminatorias sin equipos oficiales estan bloqueados
+1. Abrir `/dashboard` y confirmar redirect compatible a `/predicciones`.
+2. Confirmar titulo `Predicciones por partido` y tabs `Partidos` / `Mis grupos`.
+3. Tocar un escudo local, un escudo visitante y `EMP` en tarjetas editables;
+   confirmar marcador rapido y badge `SIN GUARDAR`.
+4. Cambiar resultados desde filtros distintos y confirmar que la barra inferior
+   conserva el total de cambios.
+5. Intentar salir con cambios pendientes; cancelar y confirmar que la pagina se
+   mantiene. Guardar el lote y confirmar persistencia luego de refresh.
+6. Entrar por `Ver detalles`.
+7. Confirmar que `/partidos/[matchId]` precarga la prediccion.
+8. Editar desde detalle y volver a `/predicciones`.
+9. Confirmar que la tarjeta muestra el marcador actualizado.
+10. Confirmar que cruces de eliminatorias sin equipos oficiales estan bloqueados
    y enlazan a `/mi-mundial`.
+11. Confirmar que esos cruces no admiten quick pick desde escudos.
+
+## Mis Grupos
+
+1. Abrir `/predicciones/grupos`.
+2. Confirmar tablas de grupos y mejores terceros derivados de predicciones
+   guardadas.
+3. Cambiar y guardar un marcador de grupo desde `/predicciones`.
+4. Volver a `/predicciones/grupos` y confirmar recalculo.
+5. En mobile, confirmar que la tabla conserva PJ/G/E/P/GF/GC/DG/PTS y que los
+   nombres largos no rompen el layout.
 
 ## Mi Mundial
 
 1. Cargar suficientes predicciones de grupos para proyectar `16avos`.
 2. Abrir `/mi-mundial`.
-3. Confirmar tablas de grupos, mejores terceros y llave proyectada.
+3. Confirmar llave bonus proyectada y link compacto `Ver Mis grupos`.
 4. Completar ganadores de `16avos`, `Octavos`, `Cuartos`, `Semifinales`,
    Final y `3.º puesto`.
 5. Guardar con `Guardar Mi Mundial`.
@@ -50,7 +67,7 @@ APIs externas salvo que se prueben manualmente los botones de sync local.
    productivo.`
 3. Usar `Eliminar datos Mundial de prueba`.
 4. Confirmar mensaje no vacio y que se conservan predicciones/llave guardada.
-5. Abrir `/dashboard`: grupos editables, eliminatorias sin equipos oficiales
+5. Abrir `/predicciones`: grupos editables, eliminatorias sin equipos oficiales
    bloqueadas.
 6. Abrir `/mi-mundial`: editable si todavia no paso el primer kickoff real.
 7. Usar `Autocompletar Mundial de prueba`.
@@ -71,9 +88,9 @@ APIs externas salvo que se prueben manualmente los botones de sync local.
 
 ## Locks Y Estados Finalizados
 
-1. Con partidos `TIMED`, confirmar dashboard/detalle editables antes de
+1. Con partidos `TIMED`, confirmar predicciones/detalle editables antes de
    `lock_at`.
-2. Con partidos `FINISHED` por autocomplete, confirmar que dashboard/detalle no
+2. Con partidos `FINISHED` por autocomplete, confirmar que predicciones/detalle no
    permiten editar.
 3. Confirmar desglose `Exacto +3`, `Resultado +1` o `Fallado +0` en partidos
    finalizados con prediccion puntuada.

@@ -2,7 +2,8 @@
 
 ## Comportamiento
 
-`/dashboard` permite cargar varios pronosticos y guardarlos en una sola accion.
+`/predicciones` permite cargar varios pronosticos y guardarlos en una sola
+accion. `/dashboard` queda como redirect compatible hacia esa ruta.
 Cada tarjeta mantiene sus controles de marcador, pero el estado lo administra la
 lista completa de fixtures.
 
@@ -14,6 +15,27 @@ Cuando hay cambios pendientes:
 - `Descartar` vuelve a los ultimos valores guardados.
 
 Los cambios pendientes se conservan al cambiar filtros de grupo o fase.
+
+Si el usuario intenta salir de `/predicciones` con cambios pendientes:
+
+- refresh/cierre usa el aviso nativo de `beforeunload`;
+- navegacion interna muestra `Tenés cambios sin guardar. ¿Querés salir sin guardar?`;
+- links con modificadores, descargas, `target="_blank"` y anchors internos no
+  disparan el aviso.
+
+## Carga Rapida
+
+En partidos editables, tocar el escudo local o visitante usa el mismo helper
+`generateQuickPickScore` que el detalle del partido y carga un marcador
+razonable a favor de ese equipo. El control central `EMP` carga un empate.
+
+La carga rapida:
+
+- actualiza los steppers inmediatamente;
+- marca la tarjeta como `SIN GUARDAR`;
+- suma el partido a la barra de batch save;
+- no guarda automaticamente;
+- queda desactivada si el partido ya no admite predicciones.
 
 ## Guardado
 

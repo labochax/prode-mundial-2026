@@ -203,6 +203,8 @@ async function saveCurrentProfile(
   revalidatePath("/onboarding");
   revalidatePath("/perfil");
   revalidatePath("/dashboard");
+  revalidatePath("/predicciones");
+  revalidatePath("/predicciones/grupos");
 
   return {
     message: options.completeOnboarding ? "Jugador creado." : "Cambios guardados",
@@ -219,7 +221,7 @@ export async function completeOnboardingProfileAction(
   });
 
   if (state.status === "success") {
-    redirect("/dashboard");
+    redirect("/predicciones");
   }
 
   return state;

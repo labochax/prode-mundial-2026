@@ -13,6 +13,10 @@ import type {
   PredictionMatch,
   PredictionMatchTeam,
 } from "@/lib/matches/prediction-match";
+import {
+  generateQuickPickScore,
+  type QuickPickOutcome,
+} from "@/lib/scoring/quick-picks";
 import { cn } from "@/lib/utils";
 
 type MatchPredictionCardProps = {
@@ -40,6 +44,7 @@ type MatchPredictionCardProps = {
 
 type TeamColumnProps = {
   disabled?: boolean;
+  onQuickPick?: () => void;
   score: number;
   team: PredictionMatchTeam;
   onScoreChange: (value: number) => void;
@@ -123,33 +128,54 @@ function MatchUnavailableNotice({ match }: { match: PredictionMatch }) {
   );
 }
 
-function TeamColumn({ disabled, onScoreChange, score, team }: TeamColumnProps) {
+function TeamColumn({
+  disabled,
+  onQuickPick,
+  onScoreChange,
+  score,
+  team,
+}: TeamColumnProps) {
+  const crest = (
+    <div className="prode-frame flex size-16 items-center justify-center overflow-hidden bg-prode-surface sm:size-20">
+      {team.badgeUrl ? (
+        <img
+          alt={`Escudo de ${team.name}`}
+          className="size-full object-contain p-1"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          src={team.badgeUrl}
+        />
+      ) : team.flag ? (
+        <Image
+          alt={team.flag.alt}
+          className="size-full object-cover"
+          height={team.flag.height}
+          sizes="(max-width: 640px) 4rem, 5rem"
+          src={team.flag.src}
+          width={team.flag.width}
+        />
+      ) : (
+        <span className="font-technical text-xl font-black uppercase">
+          {team.code}
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center gap-3">
-      <div className="prode-frame flex size-16 items-center justify-center overflow-hidden bg-prode-surface sm:size-20">
-        {team.badgeUrl ? (
-          <img
-            alt={`Escudo de ${team.name}`}
-            className="size-full object-contain p-1"
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            src={team.badgeUrl}
-          />
-        ) : team.flag ? (
-          <Image
-            alt={team.flag.alt}
-            className="size-full object-cover"
-            height={team.flag.height}
-            sizes="(max-width: 640px) 4rem, 5rem"
-            src={team.flag.src}
-            width={team.flag.width}
-          />
-        ) : (
-          <span className="font-technical text-xl font-black uppercase">
-            {team.code}
-          </span>
-        )}
-      </div>
+      {onQuickPick && !disabled ? (
+        <button
+          aria-label={`Elegir ganador: ${team.name}`}
+          className="prode-pressable outline-none transition hover:-translate-y-1 focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
+          onClick={onQuickPick}
+          type="button"
+        >
+          {crest}
+        </button>
+      ) : (
+        crest
+      )}
 
       <h2 className="min-h-10 max-w-28 text-center font-editorial text-lg font-bold leading-tight text-prode-black">
         {team.name}
@@ -191,6 +217,17 @@ export function MatchPredictionCard({
       ...prediction,
       [side]: value,
     };
+
+    if (onPredictionChange) {
+      onPredictionChange(match.id, nextPrediction);
+    } else {
+      setLocalPrediction(nextPrediction);
+    }
+
+    setIsSaved(false);
+  };
+  const applyQuickPick = (outcome: QuickPickOutcome) => {
+    const nextPrediction = generateQuickPickScore(outcome);
 
     if (onPredictionChange) {
       onPredictionChange(match.id, nextPrediction);
@@ -257,19 +294,32 @@ export function MatchPredictionCard({
         <div className="flex items-start justify-between gap-3 sm:gap-5">
           <TeamColumn
             disabled={isPredictionDisabled}
+            onQuickPick={() => applyQuickPick("home")}
             onScoreChange={(value) => updateScore("home", value)}
             score={prediction.home}
             team={match.home}
           />
 
           <div className="flex min-h-44 shrink-0 items-center pt-10">
-            <span className="font-display text-3xl uppercase text-muted-foreground">
-              VS
-            </span>
+            {isPredictionDisabled ? (
+              <span className="font-display text-3xl uppercase text-muted-foreground">
+                VS
+              </span>
+            ) : (
+              <button
+                aria-label="Elegir empate"
+                className="prode-frame prode-pressable bg-[#f7f4df] px-2 py-2 font-technical text-[0.62rem] font-black uppercase outline-none hover:bg-prode-yellow focus-visible:ring-[3px] focus-visible:ring-prode-black"
+                onClick={() => applyQuickPick("draw")}
+                type="button"
+              >
+                EMP
+              </button>
+            )}
           </div>
 
           <TeamColumn
             disabled={isPredictionDisabled}
+            onQuickPick={() => applyQuickPick("away")}
             onScoreChange={(value) => updateScore("away", value)}
             score={prediction.away}
             team={match.away}

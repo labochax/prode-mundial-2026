@@ -243,6 +243,8 @@ export async function savePredictionAction(
 
         if (!retryError) {
           revalidatePath("/dashboard");
+          revalidatePath("/predicciones");
+          revalidatePath("/predicciones/grupos");
           revalidatePath("/mi-mundial");
           revalidatePath(`/partidos/${parsed.data.match_id}`);
 
@@ -263,6 +265,8 @@ export async function savePredictionAction(
     }
 
     revalidatePath("/dashboard");
+    revalidatePath("/predicciones");
+    revalidatePath("/predicciones/grupos");
     revalidatePath("/mi-mundial");
     revalidatePath(`/partidos/${parsed.data.match_id}`);
 
@@ -466,6 +470,8 @@ export async function savePredictionsBatchAction(
 
     if (savedMatchIds.length > 0) {
       revalidatePath("/dashboard");
+      revalidatePath("/predicciones");
+      revalidatePath("/predicciones/grupos");
       revalidatePath("/mi-mundial");
 
       for (const matchId of savedMatchIds) {

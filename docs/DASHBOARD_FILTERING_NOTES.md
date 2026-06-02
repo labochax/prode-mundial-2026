@@ -1,8 +1,10 @@
-# Filtros del dashboard
+# Filtros de predicciones
 
 ## Comportamiento
 
-`/dashboard` carga partidos reales desde Supabase local y conserva la fuente activa de fixtures:
+`/predicciones` carga partidos reales desde Supabase local y conserva la fuente
+activa de fixtures. `/dashboard` redirige a `/predicciones` para mantener
+compatibilidad con links anteriores.
 
 - si existen fixtures oficiales de Football-Data, usa esos partidos;
 - si no existen, usa datos seed/dev como fallback local.
@@ -20,9 +22,11 @@ Las opciones se generan desde los partidos cargados. Si un grupo o fase no tiene
 
 Los fixtures oficiales de eliminatorias pueden llegar desde Football-Data con equipos placeholder mientras todavía no se conocen los clasificados reales.
 
-El dashboard no proyecta equipos del usuario sobre esos fixtures. La regla de producto queda separada:
+La lista no proyecta equipos del usuario sobre esos fixtures. La regla de producto queda separada:
 
-- `/dashboard` es para pronosticar partidos oficiales jugables;
+- `/predicciones` es para pronosticar partidos oficiales jugables;
+- `/predicciones/grupos` muestra `Mis grupos`, una proyeccion dinamica derivada
+  de los marcadores guardados de fase de grupos;
 - `/mi-mundial` es para proyectar la llave pre-torneo y competir por bonus;
 - un cruce de eliminatorias se habilita automáticamente cuando el fixture oficial tenga `home_team_id` y `away_team_id`;
 - hasta entonces, la tarjeta muestra un estado bloqueado y enlaza a `Mi Mundial`.
@@ -43,7 +47,10 @@ Si el partido está en vivo, finalizado o en estado especial, el score stepper y
 
 ## UI
 
-El filtro vive debajo del encabezado `Próximos Partidos`, con una barra horizontal brutalista. En mobile puede desplazarse horizontalmente.
+El filtro vive debajo del encabezado `Predicciones por partido`, con una barra
+horizontal brutalista. En mobile puede desplazarse horizontalmente. Las tabs
+secundarias `Partidos` y `Mis grupos` separan carga operativa de resultados y
+proyeccion dinamica.
 
 Los separadores por fase se mantienen después de filtrar. Si un filtro no devuelve partidos, la pantalla muestra `No hay partidos para este filtro.`
 
@@ -56,7 +63,7 @@ El filtrado es solo de presentación. No cambia:
 - reglas de bloqueo;
 - scoring.
 
-El dashboard no usa datos mock ni helpers locales de fixtures fake. La fuente de
+La lista no usa datos mock ni helpers locales de fixtures fake. La fuente de
 datos es Supabase: fixtures oficiales cuando existen, seed/dev solo como fallback
 si todavia no hay fixtures oficiales.
 
@@ -68,4 +75,6 @@ Las tarjetas finalizadas, tanto de grupos como de eliminatorias, muestran el des
 
 ## Fuera de alcance
 
-Este pase no persiste proyecciones de eliminatorias ni implementa un simulador en el dashboard. `Mi Mundial` sigue siendo la vista dedicada para completar la llave pre-torneo.
+Este pase no persiste proyecciones de eliminatorias dentro de `Predicciones`.
+`Mi Mundial` sigue siendo la vista dedicada para completar y guardar la llave
+bonus pre-torneo.

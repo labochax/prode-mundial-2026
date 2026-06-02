@@ -47,7 +47,7 @@ async function getProfileByUserId(client: SupabaseDatabaseClient, userId: string
 }
 
 export function getProfileRedirectPath(profile: Pick<Profile, "onboarding_completed"> | null) {
-  return profile?.onboarding_completed ? "/dashboard" : "/onboarding";
+  return profile?.onboarding_completed ? "/predicciones" : "/onboarding";
 }
 
 export async function ensureCurrentProfile(client: SupabaseDatabaseClient) {

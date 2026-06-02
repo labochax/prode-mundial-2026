@@ -18,7 +18,7 @@ export default async function OnboardingPage() {
   }
 
   if (profileState.profile.onboarding_completed) {
-    redirect("/dashboard");
+    redirect("/predicciones");
   }
 
   const initialValues = getProfileFormValues(profileState.profile);

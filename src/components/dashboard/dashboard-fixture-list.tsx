@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 import type {
   SavePredictionActionState,
@@ -20,6 +20,7 @@ import {
   groupDashboardStageItems,
 } from "@/lib/matches/dashboard-stage";
 import type { PredictionMatch } from "@/lib/matches/prediction-match";
+import { shouldConfirmUnsavedNavigation } from "@/lib/dashboard/unsaved-navigation";
 import { cn } from "@/lib/utils";
 
 export type DashboardFixtureListItem = {
@@ -241,6 +242,53 @@ export function DashboardFixtureList({
   const dirtyEditableIds = dirtyIds.filter((matchId) =>
     editableMatchIds.has(matchId),
   );
+  const hasDirtyChanges = dirtyEditableIds.length > 0;
+
+  useEffect(() => {
+    if (!hasDirtyChanges) {
+      return;
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = true;
+    };
+    const handleClick = (event: MouseEvent) => {
+      const anchor =
+        event.target instanceof Element ? event.target.closest("a") : null;
+
+      if (
+        !anchor ||
+        !shouldConfirmUnsavedNavigation({
+          altKey: event.altKey,
+          button: event.button,
+          ctrlKey: event.ctrlKey,
+          currentHref: window.location.href,
+          dirty: true,
+          download: anchor.hasAttribute("download"),
+          href: anchor.href,
+          metaKey: event.metaKey,
+          shiftKey: event.shiftKey,
+          target: anchor.target,
+        })
+      ) {
+        return;
+      }
+
+      if (!window.confirm("Tenés cambios sin guardar. ¿Querés salir sin guardar?")) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleClick, true);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleClick, true);
+    };
+  }, [hasDirtyChanges]);
   const handlePredictionChange = (
     matchId: string,
     prediction: DashboardPredictionValue,
