@@ -11,10 +11,26 @@ Cuando hay cambios pendientes:
 
 - la tarjeta muestra `SIN GUARDAR`;
 - aparece una barra inferior fija con el total de cambios;
-- `Guardar cambios` envia todos los cambios editables en lote;
+- `Guardar predicciones` envia todos los cambios editables en lote;
 - `Descartar` vuelve a los ultimos valores guardados.
 
 Los cambios pendientes se conservan al cambiar filtros de grupo o fase.
+
+Un marcador visible `0-0` es un pronostico valido. La UI distingue entre:
+
+- una fila guardada en `predictions` con resultado `0-0`;
+- un partido que solo muestra el valor visual default y todavia no tiene fila.
+
+Al hacer clic en `Guardar predicciones`, el lote incluye tanto los cambios
+manuales como los defaults `0-0` faltantes de partidos editables. No hay
+autosave al cargar la pagina. Partidos bloqueados, iniciados, finalizados, sin
+equipos oficiales o no editables quedan excluidos.
+
+La barra muestra:
+
+- `X cambios sin guardar` cuando solo hay cambios manuales;
+- `Y predicciones pendientes` cuando solo faltan filas default `0-0`;
+- `X cambios + Y pendientes 0-0` cuando existen ambos casos.
 
 Si el usuario intenta salir de `/predicciones` con cambios pendientes:
 
@@ -56,6 +72,10 @@ El guardado usa el mismo criterio que el guardado individual:
 - `insert` o `update` bajo RLS normal.
 
 No usa `upsert` masivo ni service role.
+
+`Mis grupos` y `Mi Mundial` consideran completo un partido cuando existe su
+fila de prediccion, incluso si el marcador guardado es `0-0`. Un partido sin
+fila sigue siendo incompleto.
 
 ## Estados parciales
 

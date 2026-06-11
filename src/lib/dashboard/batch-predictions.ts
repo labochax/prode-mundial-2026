@@ -30,20 +30,43 @@ export function getDirtyPredictionIds(
     .sort((left, right) => left.localeCompare(right));
 }
 
+export function getMissingDefaultPredictionIds({
+  currentPredictions,
+  editableMatchIds,
+  savedPredictionIds,
+}: {
+  currentPredictions: DashboardPredictionMap;
+  editableMatchIds: ReadonlySet<string>;
+  savedPredictionIds: ReadonlySet<string>;
+}) {
+  return Object.entries(currentPredictions)
+    .filter(
+      ([matchId, prediction]) =>
+        editableMatchIds.has(matchId) &&
+        !savedPredictionIds.has(matchId) &&
+        prediction.home === 0 &&
+        prediction.away === 0,
+    )
+    .map(([matchId]) => matchId)
+    .sort((left, right) => left.localeCompare(right));
+}
+
 export function buildBatchPredictionPayload({
   currentPredictions,
   dirtyIds,
   editableMatchIds,
+  missingDefaultIds = [],
 }: {
   currentPredictions: DashboardPredictionMap;
   dirtyIds: string[];
   editableMatchIds: ReadonlySet<string>;
+  missingDefaultIds?: string[];
 }) {
-  const editableDirtyIds = dirtyIds.filter((matchId) =>
-    editableMatchIds.has(matchId),
-  );
+  const editablePendingIds = [...new Set([...dirtyIds, ...missingDefaultIds])]
+    .filter((matchId) => editableMatchIds.has(matchId))
+    .sort((left, right) => left.localeCompare(right));
 
-  return editableDirtyIds
+  return editablePendingIds
     .map((matchId) => ({
       matchId,
       prediction: currentPredictions[matchId],

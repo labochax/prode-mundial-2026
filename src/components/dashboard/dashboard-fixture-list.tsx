@@ -11,6 +11,7 @@ import { MatchPredictionCard } from "@/components/dashboard/match-prediction-car
 import {
   buildBatchPredictionPayload,
   getDirtyPredictionIds,
+  getMissingDefaultPredictionIds,
   mergeBatchSaveResult,
   type DashboardPredictionMap,
   type DashboardPredictionValue,
@@ -206,6 +207,14 @@ function buildPredictionMap(items: DashboardFixtureListItem[]) {
   ) as DashboardPredictionMap;
 }
 
+function buildSavedPredictionIds(items: DashboardFixtureListItem[]) {
+  return new Set(
+    items
+      .filter((item) => item.match.initialState === "saved")
+      .map((item) => item.match.id),
+  );
+}
+
 export function DashboardFixtureList({
   items,
   saveBatchAction,
@@ -213,6 +222,10 @@ export function DashboardFixtureList({
 }: DashboardFixtureListProps) {
   const filters = useMemo(() => getFilterOptions(items), [items]);
   const initialPredictionMap = useMemo(() => buildPredictionMap(items), [items]);
+  const initialSavedPredictionIds = useMemo(
+    () => buildSavedPredictionIds(items),
+    [items],
+  );
   const editableMatchIds = useMemo(
     () =>
       new Set(
@@ -226,6 +239,9 @@ export function DashboardFixtureList({
     useState<DashboardPredictionMap>(initialPredictionMap);
   const [savedPredictions, setSavedPredictions] =
     useState<DashboardPredictionMap>(initialPredictionMap);
+  const [savedPredictionIds, setSavedPredictionIds] = useState(
+    initialSavedPredictionIds,
+  );
   const [isPending, startTransition] = useTransition();
   const [batchMessage, setBatchMessage] = useState<string | null>(null);
   const [batchStatus, setBatchStatus] =
@@ -241,6 +257,22 @@ export function DashboardFixtureList({
   );
   const dirtyEditableIds = dirtyIds.filter((matchId) =>
     editableMatchIds.has(matchId),
+  );
+  const missingDefaultIds = useMemo(
+    () =>
+      getMissingDefaultPredictionIds({
+        currentPredictions,
+        editableMatchIds,
+        savedPredictionIds,
+      }),
+    [currentPredictions, editableMatchIds, savedPredictionIds],
+  );
+  const pendingSaveIds = useMemo(
+    () =>
+      [...new Set([...dirtyEditableIds, ...missingDefaultIds])].sort((left, right) =>
+        left.localeCompare(right),
+      ),
+    [dirtyEditableIds, missingDefaultIds],
   );
   const hasDirtyChanges = dirtyEditableIds.length > 0;
 
@@ -305,15 +337,16 @@ export function DashboardFixtureList({
     setBatchMessage(null);
     setBatchStatus("idle");
   };
-  const saveDirtyPredictions = () => {
+  const savePendingPredictions = () => {
     const payload = buildBatchPredictionPayload({
       currentPredictions,
       dirtyIds,
       editableMatchIds,
+      missingDefaultIds,
     });
 
     if (payload.length === 0) {
-      setBatchMessage("No hay cambios editables para guardar.");
+      setBatchMessage("No hay predicciones editables para guardar.");
       setBatchStatus("error");
       return;
     }
@@ -330,12 +363,21 @@ export function DashboardFixtureList({
       if (result.status === "success" || result.status === "partial") {
         const merged = mergeBatchSaveResult({
           currentPredictions,
-          dirtyIds,
+          dirtyIds: pendingSaveIds,
           failedMatchIds: result.failures.map((failure) => failure.matchId),
           savedPredictions,
         });
 
         setSavedPredictions(merged.savedPredictions);
+        setSavedPredictionIds((current) => {
+          const next = new Set(current);
+
+          for (const matchId of result.savedMatchIds) {
+            next.add(matchId);
+          }
+
+          return next;
+        });
 
         if (result.status === "success") {
           setCurrentPredictions(merged.savedPredictions);
@@ -435,11 +477,12 @@ export function DashboardFixtureList({
 
       <DashboardBatchSaveBar
         dirtyCount={dirtyEditableIds.length}
-        disabled={dirtyEditableIds.length === 0}
+        disabled={pendingSaveIds.length === 0}
         isPending={isPending}
         message={batchMessage}
+        missingDefaultCount={missingDefaultIds.length}
         onDiscard={discardChanges}
-        onSave={saveDirtyPredictions}
+        onSave={savePendingPredictions}
         status={batchStatus}
       />
     </>

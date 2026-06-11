@@ -63,6 +63,23 @@ function standing(
 }
 
 describe("simulateGroupTables", () => {
+  it("treats a saved 0-0 prediction as complete", () => {
+    const a = team("a", "A");
+    const b = team("b", "B");
+    const [group] = simulateGroupTables([
+      match("a1", "GROUP_A", a, b, { away: 0, home: 0 }),
+    ]);
+
+    expect(group.isComplete).toBe(true);
+    expect(group.predictionsCompleted).toBe(1);
+    expect(group.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ draws: 1, played: 1, points: 1 }),
+        expect.objectContaining({ draws: 1, played: 1, points: 1 }),
+      ]),
+    );
+  });
+
   it("calculates wins, draws, goals, goal difference and points from predictions", () => {
     const argentina = team("arg", "Argentina");
     const mexico = team("mex", "México");

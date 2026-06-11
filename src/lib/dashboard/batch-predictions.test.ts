@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildBatchPredictionPayload,
   getDirtyPredictionIds,
+  getMissingDefaultPredictionIds,
   mergeBatchSaveResult,
   type DashboardPredictionMap,
 } from "./batch-predictions";
@@ -64,6 +65,58 @@ describe("buildBatchPredictionPayload", () => {
         predicted_home_score: 1,
       },
     ]);
+  });
+
+  it("serializes dirty predictions and missing editable 0-0 defaults together", () => {
+    expect(
+      buildBatchPredictionPayload({
+        currentPredictions: {
+          "match-1": {
+            away: 0,
+            home: 0,
+          },
+          "match-2": {
+            away: 0,
+            home: 2,
+          },
+        },
+        dirtyIds: ["match-2"],
+        editableMatchIds: new Set(["match-1", "match-2"]),
+        missingDefaultIds: ["match-1"],
+      }),
+    ).toEqual([
+      {
+        match_id: "match-1",
+        predicted_away_score: 0,
+        predicted_home_score: 0,
+      },
+      {
+        match_id: "match-2",
+        predicted_away_score: 0,
+        predicted_home_score: 2,
+      },
+    ]);
+  });
+});
+
+describe("getMissingDefaultPredictionIds", () => {
+  it("returns editable 0-0 matches without an existing prediction row", () => {
+    expect(
+      getMissingDefaultPredictionIds({
+        currentPredictions: {
+          "missing-editable": { away: 0, home: 0 },
+          "missing-locked": { away: 0, home: 0 },
+          "missing-non-default": { away: 0, home: 1 },
+          "saved-zero": { away: 0, home: 0 },
+        },
+        editableMatchIds: new Set([
+          "missing-editable",
+          "missing-non-default",
+          "saved-zero",
+        ]),
+        savedPredictionIds: new Set(["saved-zero"]),
+      }),
+    ).toEqual(["missing-editable"]);
   });
 });
 
