@@ -3,7 +3,10 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fetchFootballDataResultsSyncCandidates } from "@/lib/sports/football-data/client";
-import { getFootballDataResultUpdateDecision } from "@/lib/sports/football-data/result-update-decision";
+import {
+  applyFootballDataResultUpdateDecision,
+  getFootballDataResultUpdateDecision,
+} from "@/lib/sports/football-data/result-update-decision";
 import {
   getStadiumIdForMatchCandidate,
   syncFootballDataMatchStadiums,
@@ -224,39 +227,43 @@ async function syncResultsToDatabase(
       existingMatch,
       candidate,
     );
-    staleResultsSkipped += decision.staleResultsSkipped;
+    const operationResult = await applyFootballDataResultUpdateDecision(
+      decision,
+      {
+        applyUpdate: () =>
+          updateResultMatch(
+            client,
+            existingMatch.id,
+            candidate,
+            stadiumIdsByVenue,
+          ),
+        scorePredictions: async () => {
+          const { data, error } = await client.rpc("score_match_predictions", {
+            target_match_id: existingMatch.id,
+          });
 
-    if (!decision.shouldApplyUpdate) {
-      continue;
-    }
+          if (error) {
+            throw error;
+          }
 
-    await updateResultMatch(
-      client,
-      existingMatch.id,
-      candidate,
-      stadiumIdsByVenue,
+          return data ?? 0;
+        },
+      },
     );
-    matchesUpdated += 1;
 
-    if (liveStatuses.has(candidate.status)) {
-      liveMatchesUpdated += 1;
-    }
+    matchesUpdated += operationResult.matchesUpdated;
+    finishedMatchesScored += operationResult.finishedMatchesScored;
+    scoredPredictions += operationResult.scoredPredictions;
+    staleResultsSkipped += operationResult.staleResultsSkipped;
 
-    if (stoppedStatuses.has(candidate.status)) {
-      stoppedMatchesUpdated += 1;
-    }
-
-    if (decision.shouldScorePredictions) {
-      const { data, error } = await client.rpc("score_match_predictions", {
-        target_match_id: existingMatch.id,
-      });
-
-      if (error) {
-        throw error;
+    if (operationResult.matchesUpdated === 1) {
+      if (liveStatuses.has(candidate.status)) {
+        liveMatchesUpdated += 1;
       }
 
-      finishedMatchesScored += 1;
-      scoredPredictions += data ?? 0;
+      if (stoppedStatuses.has(candidate.status)) {
+        stoppedMatchesUpdated += 1;
+      }
     }
   }
 

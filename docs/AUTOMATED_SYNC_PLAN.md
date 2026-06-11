@@ -44,9 +44,13 @@ llama a Football-Data.
 
 - Cuando un partido aparece `FINISHED`, puntuar inmediatamente con `score_match_predictions(match_id)`.
 - Reconsultar cada 15 minutos durante 2 horas por correcciones del proveedor.
-- Si el resultado local ya está `FINISHED` con ambos marcadores y Football-Data
-  devuelve un estado anterior o scores incompletos, omitir completamente ese
-  update y registrarlo en `staleResultsSkipped`.
+- Si el resultado local ya está `FINISHED`, incluso si quedó parcialmente
+  corrupto con scores nulos, Football-Data solo puede reemplazarlo con otro
+  `FINISHED` que tenga ambos marcadores.
+- Un match local con ambos marcadores completos también queda protegido frente
+  a respuestas incompletas aunque su status local sea inconsistente.
+- En ambos casos se omite completamente el update stale y se registra en
+  `staleResultsSkipped`.
 - Si Football-Data luego devuelve un `FINISHED` completo, aplicar el resultado
   oficial y volver a ejecutar el scoring idempotente para aceptar correcciones.
 - Luego bajar a frecuencia diaria.

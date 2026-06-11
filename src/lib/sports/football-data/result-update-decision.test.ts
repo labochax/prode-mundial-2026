@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { getFootballDataResultUpdateDecision } from "@/lib/sports/football-data/result-update-decision";
+import {
+  applyFootballDataResultUpdateDecision,
+  getFootballDataResultUpdateDecision,
+} from "@/lib/sports/football-data/result-update-decision";
 
 function existing(
   status: string,
@@ -47,6 +50,48 @@ describe("getFootballDataResultUpdateDecision", () => {
       });
     },
   );
+
+  it.each(["TIMED", "SCHEDULED"] as const)(
+    "protects a finished match with null local scores from stale %s data",
+    (status) => {
+      expect(
+        getFootballDataResultUpdateDecision(
+          existing("FINISHED", null, null),
+          candidate(status, null, null),
+        ),
+      ).toMatchObject({
+        shouldApplyUpdate: false,
+        shouldScorePredictions: false,
+        staleResultsSkipped: 1,
+      });
+    },
+  );
+
+  it("allows a complete finished result over a finished match with null local scores", () => {
+    expect(
+      getFootballDataResultUpdateDecision(
+        existing("FINISHED", null, null),
+        candidate("FINISHED", 1, 0),
+      ),
+    ).toMatchObject({
+      shouldApplyUpdate: true,
+      shouldScorePredictions: true,
+      staleResultsSkipped: 0,
+    });
+  });
+
+  it("protects complete local scores even when local status is not finished", () => {
+    expect(
+      getFootballDataResultUpdateDecision(
+        existing("TIMED", 2, 1),
+        candidate("TIMED", null, null),
+      ),
+    ).toMatchObject({
+      shouldApplyUpdate: false,
+      shouldScorePredictions: false,
+      staleResultsSkipped: 1,
+    });
+  });
 
   it("allows a complete official finished result to correct a local final and rescore", () => {
     expect(
@@ -114,5 +159,61 @@ describe("getFootballDataResultUpdateDecision", () => {
       shouldScorePredictions: false,
       staleResultsSkipped: 1,
     });
+  });
+
+  it("does not update, count, or score a skipped stale result", async () => {
+    let updateCalls = 0;
+    let scoringCalls = 0;
+    const decision = getFootballDataResultUpdateDecision(
+      existing("FINISHED", null, null),
+      candidate("TIMED", null, null),
+    );
+
+    const result = await applyFootballDataResultUpdateDecision(decision, {
+      applyUpdate: async () => {
+        updateCalls += 1;
+      },
+      scorePredictions: async () => {
+        scoringCalls += 1;
+        return 4;
+      },
+    });
+
+    expect(result).toEqual({
+      finishedMatchesScored: 0,
+      matchesUpdated: 0,
+      scoredPredictions: 0,
+      staleResultsSkipped: 1,
+    });
+    expect(updateCalls).toBe(0);
+    expect(scoringCalls).toBe(0);
+  });
+
+  it("updates and scores a complete finished provider result", async () => {
+    let updateCalls = 0;
+    let scoringCalls = 0;
+    const decision = getFootballDataResultUpdateDecision(
+      existing("TIMED", null, null),
+      candidate("FINISHED", 2, 0),
+    );
+
+    const result = await applyFootballDataResultUpdateDecision(decision, {
+      applyUpdate: async () => {
+        updateCalls += 1;
+      },
+      scorePredictions: async () => {
+        scoringCalls += 1;
+        return 4;
+      },
+    });
+
+    expect(result).toEqual({
+      finishedMatchesScored: 1,
+      matchesUpdated: 1,
+      scoredPredictions: 4,
+      staleResultsSkipped: 0,
+    });
+    expect(updateCalls).toBe(1);
+    expect(scoringCalls).toBe(1);
   });
 });
