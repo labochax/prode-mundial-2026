@@ -78,9 +78,11 @@ export async function syncFootballDataResultsAction() {
       results_reset: result.rateLimitReset ?? "",
       results_run: result.syncRunId,
       results_scored: String(result.scoredPredictions),
+      results_stale: String(result.staleResultsSkipped),
       results_stopped: String(result.stoppedMatchesUpdated),
       results_text:
         `Actualizados: ${result.matchesUpdated}. ` +
+        `Resultados desactualizados protegidos: ${result.staleResultsSkipped}. ` +
         "Predicciones directas modificadas: 0.",
     });
   } catch (error) {

@@ -165,6 +165,20 @@ Cuando una sync marque un match como `FINISHED` con scores no nulos:
 
 `score_match_predictions` es idempotente, asi que reejecutar el resultado oficial es seguro.
 
+### Protección monotónica de resultados
+
+- Un partido local `FINISHED` con ambos scores no puede ser degradado por una
+  respuesta Football-Data que no sea también `FINISHED` con ambos scores.
+- Ante ese dato stale/incompleto se omite todo el update del match: no cambia
+  status, scores, winner, kickoff, estadio, `raw_json` ni `last_synced_at`, y no
+  se ejecuta scoring.
+- Un `FINISHED` completo posterior del proveedor sí se aplica y vuelve a
+  ejecutar `score_match_predictions` para admitir correcciones oficiales.
+- También se protege un estado live local frente a `TIMED`/`SCHEDULED` sin
+  scores.
+- El contador `staleResultsSkipped` queda disponible en el resultado del sync,
+  en la respuesta cron, en el resumen manual y en `sync_runs.summary`.
+
 ### Fallos e idempotencia
 
 - Todos los upserts deben usar claves de proveedor (`football_data_id`) y no nombres.

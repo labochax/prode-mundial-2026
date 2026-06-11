@@ -44,6 +44,11 @@ llama a Football-Data.
 
 - Cuando un partido aparece `FINISHED`, puntuar inmediatamente con `score_match_predictions(match_id)`.
 - Reconsultar cada 15 minutos durante 2 horas por correcciones del proveedor.
+- Si el resultado local ya está `FINISHED` con ambos marcadores y Football-Data
+  devuelve un estado anterior o scores incompletos, omitir completamente ese
+  update y registrarlo en `staleResultsSkipped`.
+- Si Football-Data luego devuelve un `FINISHED` completo, aplicar el resultado
+  oficial y volver a ejecutar el scoring idempotente para aceptar correcciones.
 - Luego bajar a frecuencia diaria.
 
 ## Rate Limits
@@ -110,6 +115,8 @@ configuración de Vercel Cron.
 
 - Cada sync devuelve headers seguros de rate limit cuando Football-Data los
   entrega.
+- El resumen de resultados incluye `staleResultsSkipped`; el mismo contador
+  queda en la respuesta cron y en `sync_runs.summary`.
 - Si después de fixtures queda cuota por minuto muy baja, el orquestador omite
   resultados para evitar una llamada que probablemente termine en `429`.
 - Las respuestas JSON no incluyen secretos.
@@ -127,6 +134,9 @@ configuración de Vercel Cron.
 
 - La sync nunca modifica predicciones.
 - Los puntos oficiales solo se calculan con `status = 'FINISHED'`.
+- La sync de resultados es monotónica: no degrada un resultado local finalizado
+  con scores por una respuesta stale/incompleta, ni un estado live por
+  `TIMED`/`SCHEDULED` sin scores.
 - Estados en vivo muestran información parcial/provisional.
 - `AWARDED`, `SUSPENDED`, `POSTPONED` y `CANCELLED` se guardan para visibilidad, pero no puntúan automáticamente en el MVP.
 

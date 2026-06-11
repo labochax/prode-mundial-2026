@@ -75,6 +75,7 @@ export default async function AdminSyncPage({
   const resultsFinished = getSearchValue(resolvedSearchParams, "results_finished");
   const resultsStopped = getSearchValue(resolvedSearchParams, "results_stopped");
   const resultsScored = getSearchValue(resolvedSearchParams, "results_scored");
+  const resultsStale = getSearchValue(resolvedSearchParams, "results_stale");
   const resultsText = getSearchValue(resolvedSearchParams, "results_text");
   const resultsReset = getSearchValue(resolvedSearchParams, "results_reset");
   const tournamentBonusState = getSearchValue(resolvedSearchParams, "mundial_estado");
@@ -363,8 +364,10 @@ export default async function AdminSyncPage({
             <p className="mt-3 max-w-3xl font-body text-base">
               Actualiza estados, minutos y marcadores desde Football-Data. Los
               puntos oficiales solo se recalculan cuando un partido queda
-              finalizado. En producción, este flujo quedará a cargo de la ruta
-              cron protegida con CRON_SECRET.
+              finalizado. Los resultados locales finalizados quedan protegidos
+              frente a respuestas desactualizadas o incompletas del proveedor.
+              En producción, este flujo quedará a cargo de la ruta cron
+              protegida con CRON_SECRET.
             </p>
           </div>
 
@@ -398,6 +401,8 @@ export default async function AdminSyncPage({
                     resultsLive ?? "0"
                   }. Finalizados puntuados: ${resultsFinished ?? "0"}. Estados especiales: ${
                     resultsStopped ?? "0"
+                  }. Resultados desactualizados protegidos: ${
+                    resultsStale ?? "0"
                   }. Puntos recalculados: ${resultsScored ?? "0"}. ${
                     resultsText ?? "Predicciones directas modificadas: 0."
                   } ${

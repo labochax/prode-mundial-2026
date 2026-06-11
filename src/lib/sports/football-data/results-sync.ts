@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fetchFootballDataResultsSyncCandidates } from "@/lib/sports/football-data/client";
+import { getFootballDataResultUpdateDecision } from "@/lib/sports/football-data/result-update-decision";
 import {
   getStadiumIdForMatchCandidate,
   syncFootballDataMatchStadiums,
@@ -23,7 +24,14 @@ type FootballDataResultsSyncTrigger = "cron" | "manual";
 
 type ExistingMatch = Pick<
   Database["public"]["Tables"]["matches"]["Row"],
-  "football_data_id" | "id"
+  | "away_score"
+  | "football_data_id"
+  | "home_score"
+  | "id"
+  | "last_synced_at"
+  | "raw_json"
+  | "status"
+  | "winner"
 >;
 
 const liveStatuses = new Set<FootballDataMatchStatus>([
@@ -50,6 +58,7 @@ export type FootballDataResultsSyncResult = {
   requestsAvailable: string | null;
   requestsAvailableMinute: string | null;
   scoredPredictions: number;
+  staleResultsSkipped: number;
   stoppedMatchesUpdated: number;
   syncRunId: string;
   stadiumsUpserted: number;
@@ -136,7 +145,9 @@ async function getExistingMatches(
 
   const { data, error } = await client
     .from("matches")
-    .select("id, football_data_id")
+    .select(
+      "id, football_data_id, status, home_score, away_score, winner, last_synced_at, raw_json",
+    )
     .in("football_data_id", uniqueIds);
 
   if (error) {
@@ -198,6 +209,7 @@ async function syncResultsToDatabase(
   let stoppedMatchesUpdated = 0;
   let finishedMatchesScored = 0;
   let scoredPredictions = 0;
+  let staleResultsSkipped = 0;
   const { stadiumIdsByVenue, stadiumsUpserted } =
     await syncFootballDataMatchStadiums(client, candidates.matches);
 
@@ -205,6 +217,16 @@ async function syncResultsToDatabase(
     const existingMatch = existingMatches.get(candidate.football_data_id);
 
     if (!existingMatch) {
+      continue;
+    }
+
+    const decision = getFootballDataResultUpdateDecision(
+      existingMatch,
+      candidate,
+    );
+    staleResultsSkipped += decision.staleResultsSkipped;
+
+    if (!decision.shouldApplyUpdate) {
       continue;
     }
 
@@ -224,7 +246,7 @@ async function syncResultsToDatabase(
       stoppedMatchesUpdated += 1;
     }
 
-    if (candidate.status === "FINISHED") {
+    if (decision.shouldScorePredictions) {
       const { data, error } = await client.rpc("score_match_predictions", {
         target_match_id: existingMatch.id,
       });
@@ -243,6 +265,7 @@ async function syncResultsToDatabase(
     liveMatchesUpdated,
     matchesUpdated,
     scoredPredictions,
+    staleResultsSkipped,
     stoppedMatchesUpdated,
     stadiumsUpserted,
   };
@@ -264,6 +287,7 @@ export async function syncFootballDataResults(
       liveMatchesUpdated,
       matchesUpdated,
       scoredPredictions,
+      staleResultsSkipped,
       stoppedMatchesUpdated,
       stadiumsUpserted,
     } = await syncResultsToDatabase(client, candidates);
@@ -277,6 +301,7 @@ export async function syncFootballDataResults(
       requestsAvailable: candidates.rateLimit.requestsAvailable,
       requestsAvailableMinute: candidates.rateLimit.requestsAvailableMinute,
       scoredPredictions,
+      staleResultsSkipped,
       stoppedMatchesUpdated,
       syncRunId,
       stadiumsUpserted,
