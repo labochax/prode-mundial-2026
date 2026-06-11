@@ -38,6 +38,20 @@ APIs externas salvo que se prueben manualmente los botones de sync local.
    y enlazan a `/mi-mundial`.
 11. Confirmar que esos cruces no admiten quick pick desde escudos.
 
+## Stats De Partido
+
+1. Abrir un partido futuro sin cerrar y confirmar que `Datos del partido`
+   aparece primero.
+2. Confirmar que no existe `Historial directo` ni un placeholder `Sin datos`.
+3. Antes del cierre, confirmar que `Tendencia Prode` no revela porcentajes ni
+   marcadores elegidos.
+4. Abrir un partido cerrado con al menos 3 predicciones visibles y confirmar
+   porcentajes, total y top 3 de marcadores.
+5. Confirmar que una prediccion guardada `0-0` cuenta como empate y como
+   marcador exacto elegido.
+6. Con menos de 3 predicciones visibles, confirmar el estado de datos
+   insuficientes.
+
 ## Mis Grupos
 
 1. Abrir `/predicciones/grupos`.

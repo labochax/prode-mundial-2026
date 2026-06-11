@@ -48,6 +48,11 @@ El panel autenticado ahora:
 
 - busca el partido por UUID real de Supabase;
 - carga la predicción existente del usuario en el pool activo;
+- muestra datos oficiales del fixture primero;
+- después de `lock_at`, agrega las predicciones visibles del pool para mostrar
+  `Tendencia Prode` y los tres marcadores exactos más elegidos;
+- antes del cierre, oculta distribución y marcadores para no condicionar
+  pronósticos;
 - calcula el siguiente partido por `kickoff_at` dentro de la fuente activa:
   fixtures oficiales si existen, seed local si no existen;
 - guarda cambios de predicción mediante Server Action;
@@ -78,6 +83,9 @@ No se usa service role para el flujo normal de usuario. La base mantiene el bloq
   local `npm run enrich:teams:thesportsdb`.
 - No hay Supabase remoto ni deploy.
 - El seed local no crea usuarios, perfiles ni predicciones reales.
-- Las stats no inventan historial directo ni porcentajes de tendencia: muestran
-  estados vacíos hasta contar con datos reales y, para tendencia, hasta el
-  cierre del partido.
+- El detalle no muestra historial directo porque no existe una fuente real
+  mantenida para todos los cruces. `Tendencia Prode` se calcula desde filas
+  reales de `public.predictions`.
+- La tendencia requiere al menos 3 predicciones visibles. Antes de `lock_at`,
+  RLS solo permite leer la fila propia, por lo que el panel oculta distribución,
+  marcadores y conteos parciales.

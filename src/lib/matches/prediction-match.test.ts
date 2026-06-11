@@ -109,10 +109,9 @@ describe("mapSupabaseMatchToPredictionMatch", () => {
     expect(mapped.pointsBreakdown?.shortLabel).toBe("Resultado +1");
   });
 
-  it("does not invent direct history or tendency values when the payload has no source data", () => {
+  it("does not invent tendency values when the payload has no source data", () => {
     const mapped = mapSupabaseMatchToPredictionMatch(matchFixture(), null);
 
-    expect(mapped.detail.directHistory).toBeNull();
     expect(mapped.tendency).toEqual({
       distribution: null,
       status: "hidden-until-lock",
@@ -133,14 +132,8 @@ describe("mapSupabaseMatchToPredictionMatch", () => {
     });
   });
 
-  it("uses sourced direct history and tendency only after the tendency can be revealed", () => {
+  it("uses sourced tendency only after it can be revealed", () => {
     const rawJson = {
-      direct_history: {
-        away: 2,
-        draw: 1,
-        home: 3,
-        source: "provider-cache",
-      },
       tendency: {
         away: 20,
         draw: 30,
@@ -162,11 +155,6 @@ describe("mapSupabaseMatchToPredictionMatch", () => {
       null,
     );
 
-    expect(beforeLock.detail.directHistory).toMatchObject({
-      away: 2,
-      draw: 1,
-      home: 3,
-    });
     expect(beforeLock.tendency).toEqual({
       distribution: null,
       status: "hidden-until-lock",

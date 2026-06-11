@@ -44,7 +44,6 @@ export type PredictionMatchAvailability = {
 };
 
 export type PredictionMatchDetail = {
-  directHistory: SourcedMatchDistribution | null;
   metadata: {
     city: string;
     dateTime: string;
@@ -125,7 +124,7 @@ function readString(value: Json | undefined) {
 
 function readSourcedPercentBlock(
   rawJson: Json | null,
-  key: "direct_history" | "tendency",
+  key: "tendency",
 ): SourcedMatchDistribution | null {
   if (!isRecord(rawJson)) {
     return null;
@@ -534,7 +533,6 @@ export function mapSupabaseMatchToPredictionMatch(
     availability,
     away: awayTeam,
     detail: {
-      directHistory: readSourcedPercentBlock(match.raw_json, "direct_history"),
       metadata: {
         city: match.stadium
           ? [match.stadium.city, match.stadium.country]

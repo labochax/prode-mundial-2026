@@ -1,10 +1,12 @@
 import { Building2, CalendarClock, Flag, MapPin, TrendingUp } from "lucide-react";
 
 import { ProdeBadge } from "@/components/prode/prode-badge";
+import type { MatchPredictionStats } from "@/lib/matches/match-prediction-stats";
 import type { PredictionMatch } from "@/lib/matches/prediction-match";
 
 type MatchStatsPanelProps = {
   match: PredictionMatch;
+  stats: MatchPredictionStats;
 };
 
 type BarRowProps = {
@@ -40,12 +42,15 @@ function BarRow({ code, label, tone, value }: BarRowProps) {
   );
 }
 
-export function MatchStatsPanel({ match }: MatchStatsPanelProps) {
-  const directHistory = match.detail.directHistory;
-  const tendency = match.tendency.distribution;
-  const totalHistory = directHistory
-    ? directHistory.home + directHistory.draw + directHistory.away
-    : 0;
+function PredictionCount({ total }: { total: number }) {
+  return (
+    <p className="mt-3 font-technical text-[0.68rem] font-bold uppercase text-muted-foreground">
+      Basado en {total} {total === 1 ? "pronóstico" : "pronósticos"}.
+    </p>
+  );
+}
+
+export function MatchStatsPanel({ match, stats }: MatchStatsPanelProps) {
   const metadataItems = [
     {
       icon: Building2,
@@ -78,86 +83,6 @@ export function MatchStatsPanel({ match }: MatchStatsPanelProps) {
 
       <div className="space-y-8">
         <section>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="font-technical text-xs font-bold uppercase">
-              Historial directo
-            </h3>
-            <ProdeBadge variant="surface">
-              {directHistory ? "Fuente real" : "Sin datos"}
-            </ProdeBadge>
-          </div>
-
-          {directHistory && totalHistory > 0 ? (
-            <>
-              <div className="flex h-10 border-[3px] border-prode-black bg-prode-surface">
-                <div
-                  className="flex items-center justify-center border-r-[3px] border-prode-black bg-prode-yellow font-technical text-sm font-black"
-                  style={{ width: `${(directHistory.home / totalHistory) * 100}%` }}
-                >
-                  {directHistory.home}
-                </div>
-                <div
-                  className="flex items-center justify-center border-r-[3px] border-prode-black bg-[#e5e3ce] font-technical text-sm font-black"
-                  style={{ width: `${(directHistory.draw / totalHistory) * 100}%` }}
-                >
-                  {directHistory.draw}
-                </div>
-                <div
-                  className="flex items-center justify-center bg-prode-surface font-technical text-sm font-black"
-                  style={{ width: `${(directHistory.away / totalHistory) * 100}%` }}
-                >
-                  {directHistory.away}
-                </div>
-              </div>
-
-              <div className="mt-2 flex justify-between font-technical text-[0.68rem] font-bold uppercase">
-                <span>{match.home.code}</span>
-                <span>Emp</span>
-                <span>{match.away.code}</span>
-              </div>
-            </>
-          ) : (
-            <p className="border-[3px] border-dashed border-prode-black p-3 font-technical text-xs font-bold uppercase text-muted-foreground">
-              Historial directo no disponible.
-            </p>
-          )}
-        </section>
-
-        <section>
-          <h3 className="mb-3 font-technical text-xs font-bold uppercase">
-            Tendencia Prode
-          </h3>
-          {tendency ? (
-            <div className="space-y-3">
-              <BarRow
-                code={match.home.code}
-                label={`Tendencia para ${match.home.name}`}
-                tone="home"
-                value={tendency.home}
-              />
-              <BarRow
-                code="EMP"
-                label="Tendencia para empate"
-                tone="draw"
-                value={tendency.draw}
-              />
-              <BarRow
-                code={match.away.code}
-                label={`Tendencia para ${match.away.name}`}
-                tone="away"
-                value={tendency.away}
-              />
-            </div>
-          ) : (
-            <p className="border-[3px] border-dashed border-prode-black p-3 font-technical text-xs font-bold uppercase text-muted-foreground">
-              {match.tendency.status === "hidden-until-lock"
-                ? "La tendencia se habilita cuando cierre el partido."
-                : "Todavía no hay suficientes pronósticos."}
-            </p>
-          )}
-        </section>
-
-        <section className="border-t-[3px] border-dashed border-prode-black pt-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-technical text-xs font-bold uppercase">
               Datos del partido
@@ -190,6 +115,69 @@ export function MatchStatsPanel({ match }: MatchStatsPanelProps) {
             ))}
           </ul>
         </section>
+
+        <section className="border-t-[3px] border-dashed border-prode-black pt-5">
+          <h3 className="mb-3 font-technical text-xs font-bold uppercase">
+            Participación / Tendencia Prode
+          </h3>
+
+          {stats.status === "available" && stats.distribution ? (
+            <>
+              <div className="space-y-3">
+                <BarRow
+                  code={match.home.code}
+                  label={`Tendencia para ${match.home.name}`}
+                  tone="home"
+                  value={stats.distribution.home}
+                />
+                <BarRow
+                  code="EMP"
+                  label="Tendencia para empate"
+                  tone="draw"
+                  value={stats.distribution.draw}
+                />
+                <BarRow
+                  code={match.away.code}
+                  label={`Tendencia para ${match.away.name}`}
+                  tone="away"
+                  value={stats.distribution.away}
+                />
+              </div>
+              <PredictionCount total={stats.totalPredictions ?? 0} />
+            </>
+          ) : (
+            <>
+              <p className="border-[3px] border-dashed border-prode-black p-3 font-technical text-xs font-bold uppercase text-muted-foreground">
+                {stats.status === "hidden-until-lock"
+                  ? "La tendencia se habilita cuando cierre el partido para no condicionar los pronósticos."
+                  : "Todavía no hay suficientes pronósticos para mostrar tendencia."}
+              </p>
+              {typeof stats.totalPredictions === "number" && (
+                <PredictionCount total={stats.totalPredictions} />
+              )}
+            </>
+          )}
+        </section>
+
+        {stats.status === "available" && stats.topScorelines.length > 0 && (
+          <section className="border-t-[3px] border-dashed border-prode-black pt-5">
+            <h3 className="mb-3 font-technical text-xs font-bold uppercase">
+              Marcadores más elegidos
+            </h3>
+            <ol className="space-y-2">
+              {stats.topScorelines.map((scoreline) => (
+                <li
+                  className="prode-frame bg-[#f7f4df] px-3 py-2 font-technical text-xs font-black uppercase"
+                  key={`${scoreline.home}-${scoreline.away}`}
+                >
+                  {match.home.code} {scoreline.home} - {scoreline.away}{" "}
+                  {match.away.code} · {scoreline.count}{" "}
+                  {scoreline.count === 1 ? "voto" : "votos"}
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
       </div>
     </aside>
   );

@@ -13,7 +13,10 @@ import {
   getMatchWithDetailsById,
   getNextActiveMatchAfter,
 } from "@/lib/supabase/queries/matches";
-import { getPredictionForMatch } from "@/lib/supabase/queries/predictions";
+import {
+  getMatchPredictionStats,
+  getPredictionForMatch,
+} from "@/lib/supabase/queries/predictions";
 import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -57,9 +60,14 @@ export default async function MatchPage({ params }: MatchPageProps) {
     );
   }
 
-  const [prediction, nextMatchRow] = await Promise.all([
+  const [prediction, nextMatchRow, predictionStats] = await Promise.all([
     getPredictionForMatch(supabase, matchRow.id, pool.id),
     getNextActiveMatchAfter(supabase, matchRow),
+    getMatchPredictionStats(supabase, {
+      lockAt: matchRow.lock_at,
+      matchId: matchRow.id,
+      poolId: pool.id,
+    }),
   ]);
   const match = mapSupabaseMatchToPredictionMatch(matchRow, prediction);
   const nextMatch = nextMatchRow
@@ -86,7 +94,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
         </div>
 
         <div className="lg:col-span-4">
-          <MatchStatsPanel match={match} />
+          <MatchStatsPanel match={match} stats={predictionStats} />
         </div>
       </div>
     </AuthenticatedAppShell>

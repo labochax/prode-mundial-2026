@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { buildMatchPredictionStats } from "@/lib/matches/match-prediction-stats";
 import type { Database } from "@/lib/supabase/database.types";
 
 type SupabaseDatabaseClient = SupabaseClient<Database>;
@@ -72,4 +73,35 @@ export async function getPredictionsForMatches(
   }
 
   return new Map(data.map((prediction) => [prediction.match_id, prediction]));
+}
+
+export async function getMatchPredictionStats(
+  client: SupabaseDatabaseClient,
+  {
+    lockAt,
+    matchId,
+    poolId,
+  }: {
+    lockAt: string;
+    matchId: string;
+    poolId: string;
+  },
+) {
+  const isVisible = new Date(lockAt).getTime() <= Date.now();
+
+  if (!isVisible) {
+    return buildMatchPredictionStats([], { isVisible: false });
+  }
+
+  const { data, error } = await client
+    .from("predictions")
+    .select("predicted_away_score,predicted_home_score")
+    .eq("pool_id", poolId)
+    .eq("match_id", matchId);
+
+  if (error) {
+    throw error;
+  }
+
+  return buildMatchPredictionStats(data ?? [], { isVisible: true });
 }
