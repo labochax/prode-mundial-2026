@@ -9,7 +9,7 @@ import { ProdeCompactLogo } from "@/components/prode/prode-logo";
 import { getShellPlayerIdentity } from "@/lib/profiles/player-identity";
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
 import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
-import { getCurrentUserTotalPoints } from "@/lib/supabase/queries/shell-points";
+import { getCurrentUserStanding } from "@/lib/supabase/queries/shell-standing";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -31,13 +31,13 @@ async function getCurrentShellIdentity() {
   }
 
   const pool = await getOrJoinDefaultPool(supabase);
-  const totalPoints = await getCurrentUserTotalPoints(
+  const standing = await getCurrentUserStanding(
     supabase,
     pool.id,
     profileState.user.id,
   );
 
-  return getShellPlayerIdentity(profileState.profile, totalPoints);
+  return getShellPlayerIdentity(profileState.profile, standing);
 }
 
 export async function AuthenticatedAppShell({

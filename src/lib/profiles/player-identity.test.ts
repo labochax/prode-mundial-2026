@@ -18,41 +18,62 @@ function profile(overrides: Record<string, unknown> = {}) {
 }
 
 describe("getShellPlayerIdentity", () => {
-  it.each([
-    [0, "0 puntos"],
-    [1, "1 punto"],
-    [37, "37 puntos"],
-  ] as const)("formats %i total points as %s", (totalPoints, pointsLabel) => {
-    expect(getShellPlayerIdentity(profile(), totalPoints).pointsLabel).toBe(
-      pointsLabel,
-    );
+  it("formats zero points and a global rank", () => {
+    expect(
+      getShellPlayerIdentity(profile(), { rank: 12, totalPoints: 0 }),
+    ).toMatchObject({
+      compactScoreSummaryLabel: "0 pts · #12",
+      scoreSummaryLabel: "0 puntos · Puesto #12",
+    });
   });
 
-  it("preserves real points with a Google avatar", () => {
+  it("formats singular points and a global rank", () => {
+    expect(
+      getShellPlayerIdentity(profile(), { rank: 2, totalPoints: 1 }),
+    ).toMatchObject({
+      compactScoreSummaryLabel: "1 pt · #2",
+      scoreSummaryLabel: "1 punto · Puesto #2",
+    });
+  });
+
+  it("shows only points when global rank is unavailable", () => {
+    expect(
+      getShellPlayerIdentity(profile(), { rank: null, totalPoints: 37 }),
+    ).toMatchObject({
+      compactScoreSummaryLabel: "37 pts",
+      scoreSummaryLabel: "37 puntos",
+    });
+  });
+
+  it("preserves score labels with a Google avatar", () => {
     expect(
       getShellPlayerIdentity(
         profile({
           avatar_kind: "google",
           google_avatar_url: "https://example.com/avatar.png",
         }),
-        12,
+        { rank: 4, totalPoints: 12 },
       ),
     ).toMatchObject({
       avatar: {
         kind: "google",
         src: "https://example.com/avatar.png",
       },
-      pointsLabel: "12 puntos",
+      compactScoreSummaryLabel: "12 pts · #4",
+      scoreSummaryLabel: "12 puntos · Puesto #4",
     });
   });
 
-  it("preserves real points with a Stitch avatar and prefers the first subgroup", () => {
-    expect(getShellPlayerIdentity(profile(), 8)).toMatchObject({
+  it("preserves score labels with a Stitch avatar and prefers the first subgroup", () => {
+    expect(
+      getShellPlayerIdentity(profile(), { rank: 7, totalPoints: 8 }),
+    ).toMatchObject({
       avatar: {
         kind: "stitch",
       },
+      compactScoreSummaryLabel: "8 pts · #7",
       groupLabel: "Familia",
-      pointsLabel: "8 puntos",
+      scoreSummaryLabel: "8 puntos · Puesto #7",
     });
   });
 });

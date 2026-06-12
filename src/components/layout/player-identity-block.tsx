@@ -59,19 +59,38 @@ export function PlayerIdentityBlock({
           )}
         </div>
 
-        <div className="min-w-0">
-          <p className="truncate font-editorial text-base font-bold leading-tight">
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              "truncate font-editorial font-bold leading-tight",
+              compact ? "text-sm" : "text-base",
+            )}
+          >
             {identity.displayName}
           </p>
-          <p className="truncate font-technical text-xs font-bold uppercase text-muted-foreground">
-            {identity.groupLabel}
-          </p>
+          {compact ? (
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p className="min-w-0 truncate font-technical text-[9px] font-bold uppercase leading-none text-muted-foreground">
+                {identity.groupLabel}
+              </p>
+              <span
+                className="shrink-0 whitespace-nowrap border-2 border-prode-black bg-prode-yellow px-1 py-0.5 font-technical text-[9px] font-bold uppercase leading-none"
+                title={identity.scoreSummaryLabel}
+              >
+                {identity.compactScoreSummaryLabel}
+              </span>
+            </div>
+          ) : (
+            <p className="truncate font-technical text-xs font-bold uppercase text-muted-foreground">
+              {identity.groupLabel}
+            </p>
+          )}
         </div>
       </Link>
 
       {!compact && (
         <div className="prode-frame bg-prode-yellow px-3 py-1.5 font-technical text-xs font-bold uppercase">
-          {identity.pointsLabel}
+          {identity.scoreSummaryLabel}
         </div>
       )}
 

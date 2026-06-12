@@ -19,9 +19,10 @@ type GooglePlayerAvatar = {
 
 export type ShellPlayerIdentity = {
   avatar: StitchPlayerAvatar | GooglePlayerAvatar;
+  compactScoreSummaryLabel: string;
   displayName: string;
   groupLabel: string;
-  pointsLabel: string;
+  scoreSummaryLabel: string;
 };
 
 const defaultIdentity: ShellPlayerIdentity = {
@@ -29,9 +30,15 @@ const defaultIdentity: ShellPlayerIdentity = {
     ...defaultStitchAvatar,
     kind: "stitch",
   },
+  compactScoreSummaryLabel: "0 pts",
   displayName: "Jugador invitado",
   groupLabel: "Grupo privado",
-  pointsLabel: "0 puntos",
+  scoreSummaryLabel: "0 puntos",
+};
+
+type ShellPlayerStanding = {
+  rank: number | null;
+  totalPoints: number;
 };
 
 function getEmailPrefix(email: string | null) {
@@ -48,16 +55,35 @@ function formatPointsLabel(totalPoints: number) {
   return points === 1 ? "1 punto" : `${points} puntos`;
 }
 
+function formatCompactPointsLabel(totalPoints: number) {
+  const points = Number.isFinite(totalPoints) ? Math.max(0, totalPoints) : 0;
+
+  return points === 1 ? "1 pt" : `${points} pts`;
+}
+
+function formatScoreSummary(standing: ShellPlayerStanding) {
+  const rank = standing.rank && standing.rank > 0 ? standing.rank : null;
+
+  return {
+    compactScoreSummaryLabel: `${formatCompactPointsLabel(standing.totalPoints)}${
+      rank ? ` · #${rank}` : ""
+    }`,
+    scoreSummaryLabel: `${formatPointsLabel(standing.totalPoints)}${
+      rank ? ` · Puesto #${rank}` : ""
+    }`,
+  };
+}
+
 export function getShellPlayerIdentity(
   profile: ProfileRow | null,
-  totalPoints = 0,
+  standing: ShellPlayerStanding = { rank: null, totalPoints: 0 },
 ): ShellPlayerIdentity {
-  const pointsLabel = formatPointsLabel(totalPoints);
+  const scoreSummary = formatScoreSummary(standing);
 
   if (!profile) {
     return {
       ...defaultIdentity,
-      pointsLabel,
+      ...scoreSummary,
     };
   }
 
@@ -76,9 +102,9 @@ export function getShellPlayerIdentity(
         kind: "google",
         src: profile.google_avatar_url,
       },
+      ...scoreSummary,
       displayName,
       groupLabel,
-      pointsLabel,
     };
   }
 
@@ -92,8 +118,8 @@ export function getShellPlayerIdentity(
       src: stitchAvatar.src,
       width: stitchAvatar.width,
     },
+    ...scoreSummary,
     displayName,
     groupLabel,
-    pointsLabel,
   };
 }
