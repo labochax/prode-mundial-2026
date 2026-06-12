@@ -83,7 +83,7 @@ async function createSyncRun(
       note:
         trigger === "cron"
           ? "Sync automatizable de resultados iniciada desde la ruta cron."
-          : "Sync local/manual de resultados iniciada desde /admin/sync.",
+          : "Sync manual de resultados iniciada desde una acción admin.",
       trigger,
     },
   } satisfies SyncRunInsert;
