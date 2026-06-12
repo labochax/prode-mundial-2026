@@ -42,14 +42,32 @@ function getStitchAvatar(value: string | null) {
   return stitchAvatarAssets.find((avatar) => avatar.id === value) ?? defaultStitchAvatar;
 }
 
-export function getShellPlayerIdentity(profile: ProfileRow | null): ShellPlayerIdentity {
+function formatPointsLabel(totalPoints: number) {
+  const points = Number.isFinite(totalPoints) ? Math.max(0, totalPoints) : 0;
+
+  return points === 1 ? "1 punto" : `${points} puntos`;
+}
+
+export function getShellPlayerIdentity(
+  profile: ProfileRow | null,
+  totalPoints = 0,
+): ShellPlayerIdentity {
+  const pointsLabel = formatPointsLabel(totalPoints);
+
   if (!profile) {
-    return defaultIdentity;
+    return {
+      ...defaultIdentity,
+      pointsLabel,
+    };
   }
 
   const displayName =
     profile.display_name || profile.full_name || getEmailPrefix(profile.email) || "Jugador";
-  const groupLabel = profile.prode_subgroup || profile.school_group || "Grupo privado";
+  const groupLabel =
+    profile.prode_subgroups[0] ||
+    profile.prode_subgroup ||
+    profile.school_group ||
+    "Grupo privado";
 
   if (profile.avatar_kind === "google" && profile.google_avatar_url) {
     return {
@@ -60,7 +78,7 @@ export function getShellPlayerIdentity(profile: ProfileRow | null): ShellPlayerI
       },
       displayName,
       groupLabel,
-      pointsLabel: defaultIdentity.pointsLabel,
+      pointsLabel,
     };
   }
 
@@ -76,6 +94,6 @@ export function getShellPlayerIdentity(profile: ProfileRow | null): ShellPlayerI
     },
     displayName,
     groupLabel,
-    pointsLabel: defaultIdentity.pointsLabel,
+    pointsLabel,
   };
 }

@@ -8,6 +8,8 @@ import { GridTexture } from "@/components/prode/grid-texture";
 import { ProdeCompactLogo } from "@/components/prode/prode-logo";
 import { getShellPlayerIdentity } from "@/lib/profiles/player-identity";
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
+import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
+import { getCurrentUserTotalPoints } from "@/lib/supabase/queries/shell-points";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +26,18 @@ async function getCurrentShellIdentity() {
   const supabase = await createSupabaseServerClient();
   const profileState = await ensureCurrentProfile(supabase);
 
-  return getShellPlayerIdentity(profileState?.profile ?? null);
+  if (!profileState) {
+    return getShellPlayerIdentity(null);
+  }
+
+  const pool = await getOrJoinDefaultPool(supabase);
+  const totalPoints = await getCurrentUserTotalPoints(
+    supabase,
+    pool.id,
+    profileState.user.id,
+  );
+
+  return getShellPlayerIdentity(profileState.profile, totalPoints);
 }
 
 export async function AuthenticatedAppShell({
