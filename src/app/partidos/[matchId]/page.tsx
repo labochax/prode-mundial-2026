@@ -67,6 +67,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
       lockAt: matchRow.lock_at,
       matchId: matchRow.id,
       poolId: pool.id,
+      status: matchRow.status,
     }),
   ]);
   const match = mapSupabaseMatchToPredictionMatch(matchRow, prediction);

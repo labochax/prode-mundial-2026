@@ -15,9 +15,9 @@ export type DashboardStageItem<T> = {
   stage: DashboardStageDisplay;
 };
 
-export type DashboardStageSection<T> = {
+export type DashboardStageSection<TItem extends DashboardStageItem<unknown>> = {
   heading: string;
-  items: DashboardStageItem<T>[];
+  items: TItem[];
   key: string;
   order: number;
 };
@@ -180,10 +180,10 @@ export function getDashboardStageDisplay(
   );
 }
 
-export function groupDashboardStageItems<T>(
-  items: DashboardStageItem<T>[],
-): DashboardStageSection<T>[] {
-  const sections = new Map<string, DashboardStageSection<T>>();
+export function groupDashboardStageItems<
+  TItem extends DashboardStageItem<unknown>,
+>(items: TItem[]): DashboardStageSection<TItem>[] {
+  const sections = new Map<string, DashboardStageSection<TItem>>();
 
   for (const item of items) {
     const current = sections.get(item.stage.key);

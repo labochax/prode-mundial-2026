@@ -12,7 +12,10 @@ import { getDashboardStageDisplay } from "@/lib/matches/dashboard-stage";
 import { mapSupabaseMatchToPredictionMatch } from "@/lib/matches/prediction-match";
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
 import { getActiveUpcomingMatchesWithDetails } from "@/lib/supabase/queries/matches";
-import { getPredictionsForMatches } from "@/lib/supabase/queries/predictions";
+import {
+  getMatchPredictionStatsByMatchIds,
+  getPredictionsForMatches,
+} from "@/lib/supabase/queries/predictions";
 import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -26,17 +29,28 @@ export default async function PredictionsPage() {
 
   const pool = await getOrJoinDefaultPool(supabase);
   const { matches, source } = await getActiveUpcomingMatchesWithDetails(supabase);
-  const predictionsByMatchId = await getPredictionsForMatches(
-    supabase,
-    pool.id,
-    matches.map((match) => match.id),
-  );
+  const [predictionsByMatchId, predictionStatsByMatchId] = await Promise.all([
+    getPredictionsForMatches(
+      supabase,
+      pool.id,
+      matches.map((match) => match.id),
+    ),
+    getMatchPredictionStatsByMatchIds(supabase, {
+      matches: matches.map((match) => ({
+        id: match.id,
+        lockAt: match.lock_at,
+        status: match.status,
+      })),
+      poolId: pool.id,
+    }),
+  ]);
   const predictionMatches = matches.map((match) => ({
     groupCode: match.group_code,
     match: mapSupabaseMatchToPredictionMatch(
       match,
       predictionsByMatchId.get(match.id) ?? null,
     ),
+    predictionStats: predictionStatsByMatchId.get(match.id)!,
     stage: getDashboardStageDisplay(match),
   }));
 

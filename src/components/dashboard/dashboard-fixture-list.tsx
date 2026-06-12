@@ -21,12 +21,14 @@ import {
   groupDashboardStageItems,
 } from "@/lib/matches/dashboard-stage";
 import type { PredictionMatch } from "@/lib/matches/prediction-match";
+import type { MatchPredictionStats } from "@/lib/matches/match-prediction-stats";
 import { shouldConfirmUnsavedNavigation } from "@/lib/dashboard/unsaved-navigation";
 import { cn } from "@/lib/utils";
 
 export type DashboardFixtureListItem = {
   groupCode: string | null;
   match: PredictionMatch;
+  predictionStats: MatchPredictionStats;
   stage: DashboardStageDisplay;
 };
 
@@ -447,7 +449,7 @@ export function DashboardFixtureList({
               </div>
 
               <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                {section.items.map(({ match, stage }) => (
+                {section.items.map(({ match, predictionStats, stage }) => (
                   <MatchPredictionCard
                     hideIndividualSave
                     isDirty={dirtyIds.includes(match.id)}
@@ -455,6 +457,7 @@ export function DashboardFixtureList({
                     match={match}
                     onPredictionChange={handlePredictionChange}
                     prediction={currentPredictions[match.id]}
+                    predictionStats={predictionStats}
                     saveAction={saveAction}
                     stageHeading={stage.heading}
                     stageMarker={stage.marker}

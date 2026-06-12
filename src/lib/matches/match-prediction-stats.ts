@@ -3,6 +3,10 @@ export type MatchPredictionStatsRow = {
   predicted_home_score: number;
 };
 
+export type MatchPredictionStatsBatchRow = MatchPredictionStatsRow & {
+  match_id: string;
+};
+
 export type MatchPredictionStats = {
   counts: {
     away: number;
@@ -24,6 +28,31 @@ export type MatchPredictionStats = {
 };
 
 const outcomeKeys = ["home", "draw", "away"] as const;
+const visibleMatchStatuses = new Set([
+  "AWARDED",
+  "EXTRA_TIME",
+  "FINISHED",
+  "IN_PLAY",
+  "LIVE",
+  "PAUSED",
+  "PENALTY_SHOOTOUT",
+  "SUSPENDED",
+]);
+
+export function isMatchPredictionStatsVisible({
+  lockAt,
+  now = Date.now(),
+  status,
+}: {
+  lockAt: string;
+  now?: number;
+  status?: string | null;
+}) {
+  return (
+    new Date(lockAt).getTime() <= now ||
+    visibleMatchStatuses.has((status ?? "").trim().toUpperCase())
+  );
+}
 
 function getRoundedDistribution(
   counts: MatchPredictionStats["counts"],
@@ -138,4 +167,33 @@ export function buildMatchPredictionStats(
     topScorelines: getTopScorelines(rows),
     totalPredictions,
   };
+}
+
+export function buildMatchPredictionStatsByMatchIds(
+  rows: MatchPredictionStatsBatchRow[],
+  matches: Array<{
+    isVisible: boolean;
+    matchId: string;
+  }>,
+) {
+  const rowsByMatchId = new Map<string, MatchPredictionStatsRow[]>();
+
+  for (const row of rows) {
+    const matchRows = rowsByMatchId.get(row.match_id) ?? [];
+
+    matchRows.push({
+      predicted_away_score: row.predicted_away_score,
+      predicted_home_score: row.predicted_home_score,
+    });
+    rowsByMatchId.set(row.match_id, matchRows);
+  }
+
+  return new Map(
+    matches.map(({ isVisible, matchId }) => [
+      matchId,
+      buildMatchPredictionStats(rowsByMatchId.get(matchId) ?? [], {
+        isVisible,
+      }),
+    ]),
+  );
 }

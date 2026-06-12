@@ -13,6 +13,7 @@ import type {
   PredictionMatch,
   PredictionMatchTeam,
 } from "@/lib/matches/prediction-match";
+import type { MatchPredictionStats } from "@/lib/matches/match-prediction-stats";
 import {
   generateQuickPickScore,
   type QuickPickOutcome,
@@ -34,6 +35,7 @@ type MatchPredictionCardProps = {
     away: number;
     home: number;
   };
+  predictionStats?: MatchPredictionStats;
   saveAction: (
     previousState: SavePredictionActionState,
     formData: FormData,
@@ -197,6 +199,7 @@ export function MatchPredictionCard({
   match,
   onPredictionChange,
   prediction: controlledPrediction,
+  predictionStats,
   saveAction,
   stageHeading,
   stageMarker,
@@ -338,7 +341,7 @@ export function MatchPredictionCard({
         <MatchPointsBreakdown match={match} />
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <MatchTendencyStrip match={match} />
+          <MatchTendencyStrip match={match} stats={predictionStats} />
 
           <form action={formAction} className="flex shrink-0 items-center gap-3">
             {!hideIndividualSave && (

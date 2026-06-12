@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { buildMatchPredictionStats } from "@/lib/matches/match-prediction-stats";
+import {
+  buildMatchPredictionStats,
+  buildMatchPredictionStatsByMatchIds,
+  isMatchPredictionStatsVisible,
+} from "@/lib/matches/match-prediction-stats";
 import type { Database } from "@/lib/supabase/database.types";
 
 type SupabaseDatabaseClient = SupabaseClient<Database>;
@@ -81,13 +85,15 @@ export async function getMatchPredictionStats(
     lockAt,
     matchId,
     poolId,
+    status,
   }: {
     lockAt: string;
     matchId: string;
     poolId: string;
+    status?: string | null;
   },
 ) {
-  const isVisible = new Date(lockAt).getTime() <= Date.now();
+  const isVisible = isMatchPredictionStatsVisible({ lockAt, status });
 
   if (!isVisible) {
     return buildMatchPredictionStats([], { isVisible: false });
@@ -104,4 +110,46 @@ export async function getMatchPredictionStats(
   }
 
   return buildMatchPredictionStats(data ?? [], { isVisible: true });
+}
+
+export async function getMatchPredictionStatsByMatchIds(
+  client: SupabaseDatabaseClient,
+  {
+    matches,
+    poolId,
+  }: {
+    matches: Array<{
+      id: string;
+      lockAt: string;
+      status: string;
+    }>;
+    poolId: string;
+  },
+) {
+  const matchVisibility = matches.map((match) => ({
+    isVisible: isMatchPredictionStatsVisible({
+      lockAt: match.lockAt,
+      status: match.status,
+    }),
+    matchId: match.id,
+  }));
+  const visibleMatchIds = matchVisibility
+    .filter((match) => match.isVisible)
+    .map((match) => match.matchId);
+
+  if (visibleMatchIds.length === 0) {
+    return buildMatchPredictionStatsByMatchIds([], matchVisibility);
+  }
+
+  const { data, error } = await client
+    .from("predictions")
+    .select("match_id,predicted_away_score,predicted_home_score")
+    .eq("pool_id", poolId)
+    .in("match_id", visibleMatchIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return buildMatchPredictionStatsByMatchIds(data ?? [], matchVisibility);
 }
