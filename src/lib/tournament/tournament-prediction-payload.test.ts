@@ -9,6 +9,7 @@ import { rankThirdPlacedTeams } from "@/lib/tournament/rank-third-placed";
 import {
   buildTournamentPredictionPayload,
   getProjectedBracketFromSavedTournamentPrediction,
+  getReadOnlyTournamentPredictionFromSavedJson,
   getSelectionsFromSavedTournamentPrediction,
 } from "@/lib/tournament/tournament-prediction-payload";
 import type {
@@ -194,6 +195,36 @@ describe("tournament prediction payload helpers", () => {
 
   it("returns null when the persisted bracket snapshot is missing", () => {
     expect(getProjectedBracketFromSavedTournamentPrediction(null)).toBeNull();
+  });
+
+  it("reconstructs a complete read-only tournament prediction", () => {
+    const { bracket, selections } = completeSelections();
+    const result = buildTournamentPredictionPayload(bracket, selections);
+
+    expect(result.status).toBe("success");
+
+    if (result.status !== "success") {
+      return;
+    }
+
+    const readOnly = getReadOnlyTournamentPredictionFromSavedJson(
+      result.payload.bracket_json,
+    );
+
+    expect(readOnly?.rounds.roundOf32).toHaveLength(16);
+    expect(readOnly?.rounds.roundOf16).toHaveLength(8);
+    expect(readOnly?.rounds.quarterfinals).toHaveLength(4);
+    expect(readOnly?.rounds.semifinals).toHaveLength(2);
+    expect(readOnly?.rounds.summary.champion).not.toBeNull();
+  });
+
+  it("rejects malformed read-only bracket JSON safely", () => {
+    expect(
+      getReadOnlyTournamentPredictionFromSavedJson({
+        projectedRoundOf32: [],
+        selections: {},
+      }),
+    ).toBeNull();
   });
 
   it("does not mutate the input bracket or selections", () => {

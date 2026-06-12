@@ -1,5 +1,6 @@
 import {
   buildDerivedKnockoutRounds,
+  sanitizeKnockoutSelections,
   type DerivedKnockoutMatch,
   type KnockoutSelectionMap,
 } from "@/lib/tournament/knockout-selection";
@@ -426,4 +427,38 @@ export function getProjectedBracketFromSavedTournamentPrediction(
         ? (bracketJson.thirdPlaceCombination as ProjectedBracket["thirdPlaceCombination"])
         : null,
   };
+}
+
+export function getReadOnlyTournamentPredictionFromSavedJson(
+  bracketJson: unknown,
+) {
+  const bracket = getProjectedBracketFromSavedTournamentPrediction(bracketJson);
+
+  if (!bracket || bracket.status !== "complete") {
+    return null;
+  }
+
+  const initialSelections =
+    getSelectionsFromSavedTournamentPrediction(bracketJson);
+  const { removedSelectionIds, selections } = sanitizeKnockoutSelections(
+    bracket.roundOf32,
+    initialSelections,
+  );
+  const rounds = buildDerivedKnockoutRounds(bracket.roundOf32, selections);
+  const isComplete =
+    removedSelectionIds.length === 0 &&
+    rounds.roundOf32.length === 16 &&
+    rounds.roundOf16.length === 8 &&
+    rounds.quarterfinals.length === 4 &&
+    rounds.semifinals.length === 2 &&
+    rounds.final.length === 1 &&
+    rounds.thirdPlace.length === 1 &&
+    Boolean(
+      rounds.summary.champion &&
+        rounds.summary.runnerUp &&
+        rounds.summary.thirdPlace &&
+        rounds.summary.fourthPlace,
+    );
+
+  return isComplete ? { bracket, rounds, selections } : null;
 }

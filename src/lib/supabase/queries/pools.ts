@@ -106,3 +106,22 @@ export async function getOrJoinDefaultPool(
 
   return pool;
 }
+
+export async function getPoolMembershipForUser(
+  client: SupabaseDatabaseClient,
+  poolId: string,
+  userId: string,
+) {
+  const { data, error } = await client
+    .from("pool_memberships")
+    .select("*")
+    .eq("pool_id", poolId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}

@@ -41,6 +41,25 @@ export async function getCurrentTournamentPrediction(
   return data;
 }
 
+export async function getVisibleTournamentPredictionForUser(
+  client: SupabaseDatabaseClient,
+  poolId: string,
+  userId: string,
+): Promise<TournamentPredictionRow | null> {
+  const { data, error } = await client
+    .from("tournament_predictions")
+    .select("*")
+    .eq("pool_id", poolId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
 export async function getTournamentLockAt(
   client: SupabaseDatabaseClient,
 ): Promise<string | null> {
