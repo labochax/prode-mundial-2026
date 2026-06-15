@@ -1,0 +1,24 @@
+name: Sincronizar resultados Football-Data
+
+on:
+  schedule:
+    - cron: "2/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  sync-results:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ejecutar sincronización de resultados
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PRODE_APP_URL: ${{ secrets.PRODE_APP_URL }}
+        run: |
+          set -euo pipefail
+          curl \
+            --fail-with-body \
+            --show-error \
+            --silent \
+            --request GET \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            "${PRODE_APP_URL%/}/api/cron/football-data?mode=results"

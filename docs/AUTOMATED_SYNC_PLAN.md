@@ -96,6 +96,25 @@ Autorización:
 La ruta corre en modo `smart` por default para evitar query strings en la
 configuración de Vercel Cron.
 
+## GitHub Actions Para Resultados
+
+El workflow `.github/workflows/sync-football-data-results.yml` ejecuta
+automáticamente el modo `results` cada 5 minutos, desplazado al minuto 2, y
+también permite una ejecución manual desde GitHub Actions.
+
+Configurar estos GitHub Actions secrets en el repositorio:
+
+- `PRODE_APP_URL`: URL productiva de la aplicación, sin secretos.
+- `CRON_SECRET`: mismo secreto privado configurado en la aplicación productiva.
+
+El workflow llama a:
+
+- `GET <PRODE_APP_URL>/api/cron/football-data?mode=results`
+- header `Authorization: Bearer <CRON_SECRET>`
+
+`/admin/resultados` permanece como respaldo manual autorizado para sincronizar
+o finalizar resultados cuando Football-Data esté demorado.
+
 ## Decisiones Smart Sync
 
 ### Fixtures
