@@ -51,5 +51,8 @@ describe("LeaderboardRow", () => {
     );
     expect(html).toContain("Ver Mi Mundial de Jose");
     expect(html).toContain("Tú");
+    expect(html).toContain(
+      "grid-cols-[2.25rem_minmax(0,1fr)_3.75rem]",
+    );
   });
 });

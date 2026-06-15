@@ -98,7 +98,7 @@ export function LeaderboardRow({ player, reduceMotion }: LeaderboardRowProps) {
       <motion.div
         animate={{ opacity: 1, y: 0 }}
         className={cn(
-          "group relative grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-3 border-b-[3px] border-prode-black px-3 py-4 last:border-b-0 sm:grid-cols-[4rem_minmax(0,1fr)_auto] sm:px-4 md:grid-cols-[4.5rem_minmax(12rem,1fr)_9rem_7rem_8rem] md:px-6 xl:grid-cols-[4.5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_8rem]",
+          "group relative grid grid-cols-[2.25rem_minmax(0,1fr)_3.75rem] items-center gap-2 border-b-[3px] border-prode-black px-2 py-3.5 last:border-b-0 sm:grid-cols-[4rem_minmax(0,1fr)_auto] sm:gap-3 sm:px-4 sm:py-4 md:grid-cols-[4.5rem_minmax(12rem,1fr)_9rem_7rem_8rem] md:px-6 xl:grid-cols-[4.5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_8rem]",
           player.isCurrentPlayer
             ? "z-10 bg-prode-yellow outline outline-[4px] -outline-offset-[4px] outline-prode-black shadow-[8px_8px_0_var(--prode-black)]"
             : "bg-prode-surface hover:bg-[#f7f4df]",
@@ -115,14 +115,14 @@ export function LeaderboardRow({ player, reduceMotion }: LeaderboardRowProps) {
           />
         )}
 
-        <div className="font-display text-4xl uppercase leading-none sm:text-5xl">
+        <div className="font-display text-3xl uppercase leading-none sm:text-5xl">
           {player.rank}
         </div>
 
-        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <div
             className={cn(
-              "relative size-12 shrink-0 overflow-hidden border-[3px] border-prode-black bg-[#e2e2e2] sm:size-14",
+              "relative size-10 shrink-0 overflow-hidden border-[3px] border-prode-black bg-[#e2e2e2] sm:size-14",
               player.isCurrentPlayer && "bg-prode-surface",
             )}
           >
@@ -158,10 +158,10 @@ export function LeaderboardRow({ player, reduceMotion }: LeaderboardRowProps) {
                 Tú
               </p>
             )}
-            <h2 className="truncate font-editorial text-xl font-bold leading-tight sm:text-2xl">
+            <h2 className="truncate font-editorial text-lg font-bold leading-tight sm:text-2xl">
               {player.name}
             </h2>
-            <p className="truncate font-technical text-[0.68rem] font-bold uppercase text-muted-foreground">
+            <p className="truncate font-technical text-[0.6rem] font-bold uppercase text-muted-foreground sm:text-[0.68rem]">
               {player.groupName}
             </p>
           </div>
@@ -190,10 +190,10 @@ export function LeaderboardRow({ player, reduceMotion }: LeaderboardRowProps) {
         </div>
 
         <div className="text-right font-technical uppercase">
-          <p className="text-xl font-black leading-none sm:text-2xl">
+          <p className="text-lg font-black leading-none sm:text-2xl">
             {player.totalPoints.toLocaleString("es-AR")}
           </p>
-          <p className="mt-1 max-w-28 text-[0.58rem] font-bold leading-tight text-muted-foreground sm:max-w-none sm:text-[0.66rem]">
+          <p className="mt-1 max-w-[3.75rem] text-[0.52rem] font-bold leading-tight text-muted-foreground sm:max-w-none sm:text-[0.66rem]">
             Partidos {player.matchPoints.toLocaleString("es-AR")} · Mi Mundial{" "}
             {player.miMundialBonusPoints.toLocaleString("es-AR")}
           </p>
