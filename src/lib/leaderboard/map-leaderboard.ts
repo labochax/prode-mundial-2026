@@ -9,6 +9,7 @@ import type {
 } from "@/lib/leaderboard/leaderboard-types";
 import type { LeaderboardProfileGroups } from "@/lib/supabase/queries/leaderboard-profiles";
 import type { PoolLeaderboardRow } from "@/lib/supabase/queries/leaderboard";
+import { getFallbackRecentResultMarkers } from "@/lib/supabase/queries/leaderboard-recent-results";
 
 const defaultLeaderboardGroups: LeaderboardPlayer["groups"] = {
   age: null,
@@ -59,31 +60,16 @@ function resolveLeaderboardAvatar(row: PoolLeaderboardRow): LeaderboardAvatar {
   };
 }
 
-function getDerivedRecentMarkers(row: PoolLeaderboardRow): LeaderboardResultMarker[] {
-  const markers: LeaderboardResultMarker[] = [];
-
-  for (let index = 0; index < row.exact_hits && markers.length < 5; index += 1) {
-    markers.push("exact");
-  }
-
-  for (let index = 0; index < row.outcome_hits && markers.length < 5; index += 1) {
-    markers.push("outcome");
-  }
-
-  while (markers.length < 5) {
-    markers.push("miss");
-  }
-
-  return markers;
-}
-
 export function mapPoolLeaderboardRows(
   rows: PoolLeaderboardRow[],
   currentUserId: string,
   groupsByUserId: Map<string, LeaderboardProfileGroups> = new Map(),
+  recentMarkersByUserId: Map<string, LeaderboardResultMarker[]> = new Map(),
 ): LeaderboardPlayer[] {
   return rows.map((row) => {
     const groups = groupsByUserId.get(row.user_id) ?? defaultLeaderboardGroups;
+    const lastFive =
+      recentMarkersByUserId.get(row.user_id) ?? getFallbackRecentResultMarkers();
 
     return {
       avatar: resolveLeaderboardAvatar(row),
@@ -92,7 +78,7 @@ export function mapPoolLeaderboardRows(
       groups,
       id: row.user_id,
       isCurrentPlayer: row.user_id === currentUserId,
-      lastFive: getDerivedRecentMarkers(row),
+      lastFive,
       matchPoints: row.match_points,
       miMundialBonusPoints: row.mi_mundial_bonus_points,
       name: row.display_name,

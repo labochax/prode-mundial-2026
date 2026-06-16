@@ -6,6 +6,7 @@ import { mapPoolLeaderboardRows } from "@/lib/leaderboard/map-leaderboard";
 import { ensureCurrentProfile } from "@/lib/supabase/profile-bootstrap";
 import { getPoolLeaderboard } from "@/lib/supabase/queries/leaderboard";
 import { getPoolLeaderboardProfileGroups } from "@/lib/supabase/queries/leaderboard-profiles";
+import { getLeaderboardRecentResultMarkers } from "@/lib/supabase/queries/leaderboard-recent-results";
 import { getOrJoinDefaultPool } from "@/lib/supabase/queries/pools";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -18,14 +19,16 @@ export default async function StandingsPage() {
   }
 
   const pool = await getOrJoinDefaultPool(supabase);
-  const [leaderboardRows, groupsByUserId] = await Promise.all([
+  const [leaderboardRows, groupsByUserId, recentMarkersByUserId] = await Promise.all([
     getPoolLeaderboard(supabase, pool.id),
     getPoolLeaderboardProfileGroups(supabase, pool.id),
+    getLeaderboardRecentResultMarkers(supabase, pool.id),
   ]);
   const players = mapPoolLeaderboardRows(
     leaderboardRows,
     current.user.id,
     groupsByUserId,
+    recentMarkersByUserId,
   );
 
   return (
