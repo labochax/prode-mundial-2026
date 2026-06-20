@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowDown } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
 import type {
@@ -16,6 +17,10 @@ import {
   type DashboardPredictionMap,
   type DashboardPredictionValue,
 } from "@/lib/dashboard/batch-predictions";
+import {
+  getMatchAnchorId,
+  getNextUnfinishedMatchId,
+} from "@/lib/dashboard/fixture-jump";
 import {
   type DashboardStageDisplay,
   groupDashboardStageItems,
@@ -249,6 +254,10 @@ export function DashboardFixtureList({
   const [batchStatus, setBatchStatus] =
     useState<SavePredictionsBatchActionState["status"]>("idle");
   const [activeFilterKey, setActiveFilterKey] = useState<string>(allFilter.key);
+  const [pendingScrollMatchId, setPendingScrollMatchId] = useState<
+    string | null
+  >(null);
+  const [jumpMessage, setJumpMessage] = useState<string | null>(null);
   const activeFilter =
     filters.find((filter) => filter.key === activeFilterKey) ?? filters[0] ?? allFilter;
   const filteredItems = items.filter((item) => itemMatchesFilter(item, activeFilter));
@@ -323,6 +332,49 @@ export function DashboardFixtureList({
       document.removeEventListener("click", handleClick, true);
     };
   }, [hasDirtyChanges]);
+
+  useEffect(() => {
+    if (
+      !pendingScrollMatchId ||
+      !filteredItems.some((item) => item.match.id === pendingScrollMatchId)
+    ) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(
+        getMatchAnchorId(pendingScrollMatchId),
+      );
+
+      target?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start",
+      });
+      setPendingScrollMatchId(null);
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [filteredItems, pendingScrollMatchId]);
+
+  const jumpToNextUnfinishedMatch = () => {
+    const targetMatchId = getNextUnfinishedMatchId(items);
+
+    if (!targetMatchId) {
+      setPendingScrollMatchId(null);
+      setJumpMessage("Ya terminaron todos los partidos.");
+      return;
+    }
+
+    if (!filteredItems.some((item) => item.match.id === targetMatchId)) {
+      setActiveFilterKey(allFilter.key);
+    }
+
+    setJumpMessage(null);
+    setPendingScrollMatchId(targetMatchId);
+  };
+
   const handlePredictionChange = (
     matchId: string,
     prediction: DashboardPredictionValue,
@@ -394,9 +446,32 @@ export function DashboardFixtureList({
         aria-label="Filtros de partidos"
         className="space-y-3 border-b-[3px] border-prode-black pb-6"
       >
-        <p className="max-w-3xl font-body text-sm leading-6 text-muted-foreground">
-          Filtrá por grupo o fase para cargar pronósticos más rápido.
-        </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="max-w-3xl font-body text-sm leading-6 text-muted-foreground">
+              Filtrá por grupo o fase para cargar pronósticos más rápido.
+            </p>
+            <p className="mt-1 font-technical text-[0.68rem] font-bold uppercase text-muted-foreground">
+              Saltá al primer partido pendiente o en vivo.
+            </p>
+          </div>
+          <button
+            className="prode-frame prode-hard-shadow prode-pressable inline-flex min-h-12 shrink-0 items-center justify-center gap-2 bg-prode-yellow px-4 py-2 font-technical text-xs font-black uppercase text-prode-black outline-none focus-visible:ring-[3px] focus-visible:ring-prode-black focus-visible:ring-offset-[3px] focus-visible:ring-offset-prode-paper"
+            onClick={jumpToNextUnfinishedMatch}
+            type="button"
+          >
+            <ArrowDown aria-hidden="true" className="size-4" />
+            Ir al próximo partido
+          </button>
+        </div>
+        {jumpMessage && (
+          <p
+            aria-live="polite"
+            className="prode-frame inline-flex bg-prode-surface px-3 py-2 font-technical text-xs font-black uppercase"
+          >
+            {jumpMessage}
+          </p>
+        )}
         <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
           <div className="flex w-max min-w-full gap-3">
             {filters.map((filter) => {
@@ -450,18 +525,23 @@ export function DashboardFixtureList({
 
               <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 {section.items.map(({ match, predictionStats, stage }) => (
-                  <MatchPredictionCard
-                    hideIndividualSave
-                    isDirty={dirtyIds.includes(match.id)}
+                  <div
+                    className="scroll-mt-28 lg:scroll-mt-8"
+                    id={getMatchAnchorId(match.id)}
                     key={match.id}
-                    match={match}
-                    onPredictionChange={handlePredictionChange}
-                    prediction={currentPredictions[match.id]}
-                    predictionStats={predictionStats}
-                    saveAction={saveAction}
-                    stageHeading={stage.heading}
-                    stageMarker={stage.marker}
-                  />
+                  >
+                    <MatchPredictionCard
+                      hideIndividualSave
+                      isDirty={dirtyIds.includes(match.id)}
+                      match={match}
+                      onPredictionChange={handlePredictionChange}
+                      prediction={currentPredictions[match.id]}
+                      predictionStats={predictionStats}
+                      saveAction={saveAction}
+                      stageHeading={stage.heading}
+                      stageMarker={stage.marker}
+                    />
+                  </div>
                 ))}
               </div>
             </section>
