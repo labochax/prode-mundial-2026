@@ -59,12 +59,22 @@ function compareLeaderboardRows(
 export function rankLeaderboardByTotalPoints<T extends LeaderboardPointsBreakdownRow>(
   rows: readonly T[],
 ) {
-  return [...rows]
-    .sort(compareLeaderboardRows)
-    .map((row, index) => ({
+  const sortedRows = [...rows].sort(compareLeaderboardRows);
+  let previousRank = 0;
+  let previousTotalPoints: number | null = null;
+
+  return sortedRows.map((row, index) => {
+    const rank =
+      previousTotalPoints === row.total_points ? previousRank : index + 1;
+
+    previousRank = rank;
+    previousTotalPoints = row.total_points;
+
+    return {
       ...row,
-      rank: index + 1,
-    }));
+      rank,
+    };
+  });
 }
 
 export function mergeMiMundialBonusPoints<T extends LeaderboardBasePointsRow>(

@@ -117,6 +117,36 @@ describe("mergeMiMundialBonusPoints", () => {
 });
 
 describe("rankLeaderboardByTotalPoints", () => {
+  test("uses competition ranking when players share total points", () => {
+    const rows = rankLeaderboardByTotalPoints([
+      rankingRow("user-80", "Alma", 80, 2, 2, 8),
+      rankingRow("user-70", "Beto", 70, 2, 2, 8),
+      rankingRow("user-52-a", "Carla", 52, 1, 8, 9),
+      rankingRow("user-52-b", "Dario", 52, 5, 1, 9),
+      rankingRow("user-40", "Elena", 40, 1, 1, 8),
+    ]);
+
+    expect(rows.map((row) => [row.user_id, row.rank])).toEqual([
+      ["user-80", 1],
+      ["user-70", 2],
+      ["user-52-b", 3],
+      ["user-52-a", 3],
+      ["user-40", 5],
+    ]);
+  });
+
+  test("keeps deterministic tie-break ordering without changing the shared rank", () => {
+    const rows = rankLeaderboardByTotalPoints([
+      rankingRow("user-ana", "Ana", 52, 1, 9, 9),
+      rankingRow("user-bruno", "Bruno", 52, 3, 1, 9),
+    ]);
+
+    expect(rows.map((row) => [row.user_id, row.rank])).toEqual([
+      ["user-bruno", 1],
+      ["user-ana", 1],
+    ]);
+  });
+
   test("preserves bonus breakdown when ranking a filtered group", () => {
     const rows = mergeMiMundialBonusPoints(baseRows, [
       {
@@ -147,3 +177,26 @@ describe("rankLeaderboardByTotalPoints", () => {
     ]);
   });
 });
+
+function rankingRow(
+  userId: string,
+  displayName: string,
+  totalPoints: number,
+  exactHits: number,
+  outcomeHits: number,
+  predictedMatchesCount: number,
+) {
+  return {
+    avatar_kind: "stitch",
+    avatar_value: null,
+    display_name: displayName,
+    exact_hits: exactHits,
+    match_points: totalPoints,
+    mi_mundial_bonus_points: 0,
+    outcome_hits: outcomeHits,
+    predicted_matches_count: predictedMatchesCount,
+    rank: 0,
+    total_points: totalPoints,
+    user_id: userId,
+  };
+}
