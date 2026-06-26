@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Prode Mundial 2026
 
-## Getting Started
+Prode privado para seguir el Mundial 2026 con amigos: pronósticos partido a partido, simulación de llave personal, tabla de posiciones y resultados oficiales sincronizados.
 
-First, run the development server:
+## Funcionalidades
+
+- Autenticación con Supabase y acceso con Google.
+- Perfil de jugador, grupos y subgrupos para competir en rankings filtrados.
+- `/predicciones`: pronósticos de marcador, guardado por lote, filtros por fase/grupo, salto al próximo partido y Tendencia Prode real.
+- `/predicciones/grupos`: tablas de grupos proyectadas a partir de pronósticos guardados.
+- `/mi-mundial`: llave personal, bonus de Mi Mundial y resumen del torneo.
+- `/posiciones`: ranking global y por grupos, puntos de partidos + bonus, últimos resultados y tendencia.
+- `/jugadores/[userId]/mi-mundial`: vista de solo lectura del Mi Mundial y de predicciones visibles de otros jugadores.
+- `/partidos/[matchId]`: detalle del partido, pronóstico, resultado y estadísticas agregadas del Prode.
+- `/admin/resultados`: control protegido para sincronizar resultados y finalizar partidos manualmente cuando sea necesario.
+- Sincronización de fixtures y resultados con Football-Data.org, con enriquecimiento visual opcional mediante TheSportsDB.
+
+## Stack
+
+- Next.js App Router y TypeScript
+- Supabase: Auth, Postgres y RLS
+- Tailwind CSS y sistema visual Prode
+- Football-Data.org para fixtures, estados y resultados
+- TheSportsDB para assets visuales de equipos
+- Vitest para pruebas unitarias
+- Vercel para despliegue y GitHub Actions para sincronización programada
+
+## Desarrollo local
+
+```bash
+npm install
+cp .env.example .env.local
+# Completar las variables necesarias en .env.local
+npm run dev
+```
+
+La aplicación queda disponible en `http://localhost:3000`.
+
+## Variables de entorno
+
+Definí únicamente las variables que correspondan a tu entorno. No publiques valores reales ni archivos `.env.local`.
+
+| Variable | Uso |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL pública del proyecto Supabase. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Clave pública de Supabase para el cliente. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Operaciones administrativas y scripts server-only. Nunca se expone al navegador. |
+| `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` | Configuración de acceso con Google. |
+| `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` | Secreto de configuración de Google server-only. |
+| `FOOTBALL_DATA_API_TOKEN` | Sincronización de Football-Data.org. |
+| `THESPORTSDB_API_KEY` | Enriquecimiento visual opcional de equipos. |
+| `LOCK_MINUTES_BEFORE_KICKOFF` | Minutos de cierre antes del inicio de cada partido. |
+| `CRON_SECRET` | Protege el endpoint de sincronización programada. |
+| `ADMIN_EMAILS` | Lista separada por comas de correos autorizados para controles administrativos. |
+
+## Scripts útiles
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run test
+npm run build
+npm run lint
+
+# Enriquecimiento visual de equipos
+npm run enrich:teams:thesportsdb:dry
+npm run enrich:teams:thesportsdb
+
+# Enriquecimiento de estadios
+npm run enrich:stadiums:dry
+npm run enrich:stadiums
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Despliegue y sincronización
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+La app se despliega en Vercel. El endpoint de resultados es:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```text
+/api/cron/football-data?mode=results
+```
 
-## Learn More
+Está protegido por `CRON_SECRET`. El workflow de GitHub Actions lo llama periódicamente con los secretos `PRODE_APP_URL` y `CRON_SECRET`. Si la sincronización automática se retrasa o Football-Data aún no publica un resultado, `/admin/resultados` es el respaldo manual autorizado.
 
-To learn more about Next.js, take a look at the following resources:
+Un cron de Vercel, si está configurado, puede permanecer como respaldo adicional.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Seguridad de datos
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Un despliegue normal no modifica datos de Supabase. Ejecutá comandos destructivos solo con una intención explícita y entendiendo su efecto, especialmente:
 
-## Deploy on Vercel
+```bash
+npx supabase db reset
+npx supabase db push --include-seed
+npx supabase seed
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`db reset` puede eliminar datos locales, incluyendo usuarios, perfiles, fixtures importados y pronósticos de prueba.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Documentación
+
+- [Brief del proyecto](docs/PROJECT_BRIEF.md)
+- [Modelo de datos](docs/DATA_MODEL.md)
+- [Puntuación local y posiciones](docs/LOCAL_SCORING_AND_LEADERBOARD_NOTES.md)
+- [Automatización de sincronización](docs/AUTOMATED_SYNC_PLAN.md)
+- [Control administrativo de resultados](docs/ADMIN_RESULTS_CONTROL_NOTES.md)
+- [Ranking por grupos](docs/GROUP_LEADERBOARD_NOTES.md)
+- [Mi Mundial y bonus](docs/MI_MUNDIAL_SIMULATOR_PLAN.md)
+- [Enriquecimiento de equipos con TheSportsDB](docs/THESPORTSDB_TEAM_ENRICHMENT_NOTES.md)
