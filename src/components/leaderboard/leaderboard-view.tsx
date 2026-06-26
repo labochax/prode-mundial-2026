@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { LeaderboardHeader } from "@/components/leaderboard/leaderboard-header";
 import { LeaderboardTable } from "@/components/leaderboard/leaderboard-table";
 import { ProdeBadge } from "@/components/prode/prode-badge";
+import { rankLeaderboardPlayersByTotalPoints } from "@/lib/leaderboard/leaderboard-points";
 import {
   filterLeaderboardPlayersByGroups,
   getCurrentPlayerDefaultGroupValue,
@@ -98,10 +99,7 @@ export function LeaderboardView({ players }: LeaderboardViewProps) {
       : players;
   const rankedPlayers =
     mode === "groups"
-      ? activePlayers.map((player, index) => ({
-          ...player,
-          rank: index + 1,
-        }))
+      ? rankLeaderboardPlayersByTotalPoints(activePlayers)
       : activePlayers;
   const currentPlayer = rankedPlayers.find((player) => player.isCurrentPlayer);
   const hasLeaderboardPoints = rankedPlayers.some(

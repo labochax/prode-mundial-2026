@@ -1,3 +1,8 @@
+import type {
+  LeaderboardPlayer,
+  LeaderboardTrendDirection,
+} from "@/lib/leaderboard/leaderboard-types";
+
 export type LeaderboardBasePointsRow = {
   display_name: string;
   exact_hits: number | null;
@@ -26,6 +31,11 @@ export type LeaderboardPointsBreakdownRow<
   predicted_matches_count: number;
   rank: number;
   total_points: number;
+};
+
+export type LeaderboardRankTrend = {
+  direction: LeaderboardTrendDirection;
+  value: number;
 };
 
 function toScoreNumber(value: bigint | number | null | undefined) {
@@ -75,6 +85,102 @@ export function rankLeaderboardByTotalPoints<T extends LeaderboardPointsBreakdow
       rank,
     };
   });
+}
+
+export function rankLeaderboardPlayersByTotalPoints(
+  players: readonly LeaderboardPlayer[],
+) {
+  const playersById = new Map(players.map((player) => [player.id, player]));
+  const rankedRows = rankLeaderboardByTotalPoints(
+    players.map((player) => ({
+      display_name: player.name,
+      exact_hits: player.exactHits,
+      match_points: player.matchPoints,
+      mi_mundial_bonus_points: player.miMundialBonusPoints,
+      outcome_hits: player.outcomeHits,
+      predicted_matches_count: player.predictedMatchesCount,
+      rank: player.rank,
+      total_points: player.totalPoints,
+      user_id: player.id,
+    })),
+  );
+
+  return rankedRows.map((row) => ({
+    ...playersById.get(row.user_id)!,
+    rank: row.rank,
+  }));
+}
+
+export function getLeaderboardRankTrends<
+  T extends LeaderboardPointsBreakdownRow,
+>(
+  rows: readonly T[],
+  latestScoredMatchPointsByUserId: ReadonlyMap<string, number>,
+) {
+  const currentRows = rankLeaderboardByTotalPoints(rows);
+  const currentRankByUserId = new Map(
+    currentRows.map((row) => [row.user_id, row.rank]),
+  );
+
+  if (latestScoredMatchPointsByUserId.size === 0) {
+    return new Map<string, LeaderboardRankTrend>(
+      currentRows.map((row) => [row.user_id, { direction: "same", value: 0 }]),
+    );
+  }
+
+  const previousRows = rankLeaderboardByTotalPoints(
+    rows.map((row) => {
+      const latestMatchPoints =
+        latestScoredMatchPointsByUserId.get(row.user_id) ?? 0;
+      const hasLatestScoredPrediction = latestScoredMatchPointsByUserId.has(
+        row.user_id,
+      );
+
+      return {
+        ...row,
+        exact_hits: Math.max(
+          0,
+          row.exact_hits - (latestMatchPoints === 3 ? 1 : 0),
+        ),
+        match_points: Math.max(0, row.match_points - latestMatchPoints),
+        outcome_hits: Math.max(
+          0,
+          row.outcome_hits - (latestMatchPoints === 1 ? 1 : 0),
+        ),
+        predicted_matches_count: Math.max(
+          0,
+          row.predicted_matches_count - (hasLatestScoredPrediction ? 1 : 0),
+        ),
+        total_points: Math.max(0, row.total_points - latestMatchPoints),
+      };
+    }),
+  );
+  const previousRankByUserId = new Map(
+    previousRows.map((row) => [row.user_id, row.rank]),
+  );
+
+  return new Map<string, LeaderboardRankTrend>(
+    currentRows.map((row) => {
+      const currentRank = currentRankByUserId.get(row.user_id) ?? row.rank;
+      const previousRank = previousRankByUserId.get(row.user_id) ?? currentRank;
+
+      if (previousRank > currentRank) {
+        return [
+          row.user_id,
+          { direction: "up", value: previousRank - currentRank },
+        ];
+      }
+
+      if (previousRank < currentRank) {
+        return [
+          row.user_id,
+          { direction: "down", value: currentRank - previousRank },
+        ];
+      }
+
+      return [row.user_id, { direction: "same", value: 0 }];
+    }),
+  );
 }
 
 export function mergeMiMundialBonusPoints<T extends LeaderboardBasePointsRow>(

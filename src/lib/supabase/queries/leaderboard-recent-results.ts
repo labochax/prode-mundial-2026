@@ -7,20 +7,27 @@ type SupabaseDatabaseClient = SupabaseClient<Database>;
 
 export type LeaderboardRecentPredictionRow = {
   matches: {
+    id: string;
     kickoff_at: string | null;
     match_number: number | null;
+    status: string;
   } | null;
   points: number | null;
   user_id: string;
 };
 
 const fallbackRecentMarkers: LeaderboardResultMarker[] = [
-  "miss",
-  "miss",
-  "miss",
-  "miss",
-  "miss",
+  "empty",
+  "empty",
+  "empty",
+  "empty",
+  "empty",
 ];
+
+export type LeaderboardRecentResults = {
+  latestScoredMatchPointsByUserId: Map<string, number>;
+  recentMarkersByUserId: Map<string, LeaderboardResultMarker[]>;
+};
 
 export function mapPredictionPointsToResultMarker(
   points: number | null,
@@ -33,7 +40,11 @@ export function mapPredictionPointsToResultMarker(
     return "outcome";
   }
 
-  return "miss";
+  if (points === 0) {
+    return "miss";
+  }
+
+  return "empty";
 }
 
 function compareRecentPredictions(
@@ -52,7 +63,18 @@ function compareRecentPredictions(
     return kickoffDiff;
   }
 
-  return (right.matches?.match_number ?? -1) - (left.matches?.match_number ?? -1);
+  const matchNumberDiff =
+    (right.matches?.match_number ?? -1) - (left.matches?.match_number ?? -1);
+
+  if (matchNumberDiff !== 0) {
+    return matchNumberDiff;
+  }
+
+  return (right.matches?.id ?? "").localeCompare(left.matches?.id ?? "");
+}
+
+function isScoredFinishedPrediction(row: LeaderboardRecentPredictionRow) {
+  return row.matches?.status === "FINISHED" && typeof row.points === "number";
 }
 
 export function buildRecentResultMarkersByUser(
@@ -60,7 +82,7 @@ export function buildRecentResultMarkersByUser(
 ) {
   const rowsByUserId = new Map<string, LeaderboardRecentPredictionRow[]>();
 
-  for (const row of rows) {
+  for (const row of rows.filter(isScoredFinishedPrediction)) {
     const userRows = rowsByUserId.get(row.user_id) ?? [];
 
     userRows.push(row);
@@ -75,7 +97,7 @@ export function buildRecentResultMarkersByUser(
         .map((row) => mapPredictionPointsToResultMarker(row.points));
 
       while (markers.length < 5) {
-        markers.push("miss");
+        markers.push("empty");
       }
 
       return [userId, markers] as const;
@@ -83,17 +105,44 @@ export function buildRecentResultMarkersByUser(
   );
 }
 
+function getLatestScoredMatchPointsByUser(
+  rows: LeaderboardRecentPredictionRow[],
+) {
+  const scoredRows = rows.filter(isScoredFinishedPrediction);
+  const latestMatchId = [...scoredRows].sort(compareRecentPredictions)[0]?.matches
+    ?.id;
+
+  if (!latestMatchId) {
+    return new Map<string, number>();
+  }
+
+  return new Map(
+    scoredRows
+      .filter((row) => row.matches?.id === latestMatchId)
+      .map((row) => [row.user_id, row.points as number]),
+  );
+}
+
+export function buildLeaderboardRecentResults(
+  rows: LeaderboardRecentPredictionRow[],
+): LeaderboardRecentResults {
+  return {
+    latestScoredMatchPointsByUserId: getLatestScoredMatchPointsByUser(rows),
+    recentMarkersByUserId: buildRecentResultMarkersByUser(rows),
+  };
+}
+
 export function getFallbackRecentResultMarkers() {
   return [...fallbackRecentMarkers];
 }
 
-export async function getLeaderboardRecentResultMarkers(
+export async function getLeaderboardRecentResults(
   client: SupabaseDatabaseClient,
   poolId: string,
 ) {
   const { data, error } = await client
     .from("predictions")
-    .select("user_id,points,matches!inner(kickoff_at,match_number,status)")
+    .select("user_id,points,matches!inner(id,kickoff_at,match_number,status)")
     .eq("pool_id", poolId)
     .not("points", "is", null)
     .eq("matches.status", "FINISHED");
@@ -102,7 +151,7 @@ export async function getLeaderboardRecentResultMarkers(
     throw error;
   }
 
-  return buildRecentResultMarkersByUser(
+  return buildLeaderboardRecentResults(
     (data ?? []) as LeaderboardRecentPredictionRow[],
   );
 }

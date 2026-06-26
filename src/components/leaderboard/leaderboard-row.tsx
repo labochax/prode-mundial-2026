@@ -17,20 +17,16 @@ type LeaderboardRowProps = {
 };
 
 const resultLabels: Record<LeaderboardResultMarker, string> = {
+  empty: "Sin resultado puntuado",
   exact: "Resultado exacto",
   miss: "Pronóstico errado",
   outcome: "Resultado correcto",
 };
 
-function ResultMarker({
-  isCurrentPlayer,
-  marker,
-}: {
-  isCurrentPlayer?: boolean;
-  marker: LeaderboardResultMarker;
-}) {
-  const isHit = marker !== "miss";
+function ResultMarker({ marker }: { marker: LeaderboardResultMarker }) {
+  const isHit = marker === "exact" || marker === "outcome";
   const isExact = marker === "exact";
+  const isEmpty = marker === "empty";
 
   return (
     <span
@@ -38,16 +34,16 @@ function ResultMarker({
       className={cn(
         "flex size-6 items-center justify-center border-2 border-prode-black",
         isExact && "bg-prode-black text-prode-yellow",
-        marker === "outcome" &&
-          (isCurrentPlayer
-            ? "bg-prode-black text-prode-yellow"
-            : "bg-prode-yellow text-prode-black"),
+        marker === "outcome" && "bg-prode-yellow text-prode-black",
         marker === "miss" && "bg-prode-surface text-prode-black",
+        isEmpty && "border-dashed bg-[#f7f4df] text-muted-foreground",
       )}
       title={resultLabels[marker]}
     >
       {isHit ? (
         <Check aria-hidden="true" className="size-4 stroke-[3]" />
+      ) : isEmpty ? (
+        <Minus aria-hidden="true" className="size-4 stroke-[3]" />
       ) : (
         <X aria-hidden="true" className="size-4 stroke-[3]" />
       )}
@@ -100,7 +96,7 @@ export function LeaderboardRow({ player, reduceMotion }: LeaderboardRowProps) {
         className={cn(
           "group relative grid grid-cols-[2.25rem_minmax(0,1fr)_3.75rem] items-center gap-2 border-b-[3px] border-prode-black px-2 py-3.5 last:border-b-0 sm:grid-cols-[4rem_minmax(0,1fr)_auto] sm:gap-3 sm:px-4 sm:py-4 md:grid-cols-[4.5rem_minmax(12rem,1fr)_9rem_7rem_8rem] md:px-6 xl:grid-cols-[4.5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_8rem]",
           player.isCurrentPlayer
-            ? "z-10 bg-prode-yellow outline outline-[4px] -outline-offset-[4px] outline-prode-black shadow-[8px_8px_0_var(--prode-black)]"
+            ? "z-10 bg-prode-surface outline outline-[3px] -outline-offset-[3px] outline-prode-black"
             : "bg-prode-surface hover:bg-[#f7f4df]",
         )}
         initial={reduceMotion ? false : { opacity: 0, y: 8 }}
@@ -120,30 +116,19 @@ export function LeaderboardRow({ player, reduceMotion }: LeaderboardRowProps) {
         </div>
 
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-          <div
-            className={cn(
-              "relative size-10 shrink-0 overflow-hidden border-[3px] border-prode-black bg-[#e2e2e2] sm:size-14",
-              player.isCurrentPlayer && "bg-prode-surface",
-            )}
-          >
+          <div className="relative size-10 shrink-0 overflow-hidden border-[3px] border-prode-black bg-[#e2e2e2] sm:size-14">
             {player.avatar.kind === "google" ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 alt={player.avatar.alt}
-                className={cn(
-                  "size-full object-cover",
-                  !player.isCurrentPlayer && "grayscale",
-                )}
+                className="size-full object-cover"
                 referrerPolicy="no-referrer"
                 src={player.avatar.src}
               />
             ) : (
               <Image
                 alt={player.avatar.alt}
-                className={cn(
-                  "size-full object-cover",
-                  !player.isCurrentPlayer && "grayscale",
-                )}
+                className="size-full object-cover"
                 height={player.avatar.height}
                 sizes="3.5rem"
                 src={player.avatar.src}
@@ -170,7 +155,6 @@ export function LeaderboardRow({ player, reduceMotion }: LeaderboardRowProps) {
         <div className="hidden items-center justify-center gap-1 md:flex">
           {player.lastFive.map((marker, index) => (
             <ResultMarker
-              isCurrentPlayer={player.isCurrentPlayer}
               key={`${player.id}-${marker}-${index}`}
               marker={marker}
             />

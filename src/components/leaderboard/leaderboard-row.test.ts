@@ -54,5 +54,47 @@ describe("LeaderboardRow", () => {
     expect(html).toContain(
       "grid-cols-[2.25rem_minmax(0,1fr)_3.75rem]",
     );
+    expect(html).toContain("bg-prode-yellow text-prode-black");
+    expect(html).not.toContain("bg-prode-yellow outline");
+    expect(html).not.toContain("grayscale");
+  });
+
+  it("renders neutral recent-result slots as dashes", () => {
+    const html = renderToStaticMarkup(
+      createElement(LeaderboardRow, {
+        player: {
+          ...player,
+          lastFive: ["empty", "empty", "empty", "empty", "empty"],
+        },
+        reduceMotion: true,
+      }),
+    );
+
+    expect(html).toContain("Sin resultado puntuado");
+    expect(html).not.toContain("Pronóstico errado");
+  });
+
+  it("uses the same outcome marker color and avatar treatment for every player", () => {
+    const currentPlayerHtml = renderToStaticMarkup(
+      createElement(LeaderboardRow, {
+        player,
+        reduceMotion: true,
+      }),
+    );
+    const otherPlayerHtml = renderToStaticMarkup(
+      createElement(LeaderboardRow, {
+        player: {
+          ...player,
+          id: "00000000-0000-4000-8000-000000000002",
+          isCurrentPlayer: false,
+        },
+        reduceMotion: true,
+      }),
+    );
+
+    expect(currentPlayerHtml).toContain("bg-prode-yellow text-prode-black");
+    expect(otherPlayerHtml).toContain("bg-prode-yellow text-prode-black");
+    expect(currentPlayerHtml).not.toContain("grayscale");
+    expect(otherPlayerHtml).not.toContain("grayscale");
   });
 });

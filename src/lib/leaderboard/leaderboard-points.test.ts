@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  getLeaderboardRankTrends,
   mergeMiMundialBonusPoints,
   rankLeaderboardByTotalPoints,
 } from "@/lib/leaderboard/leaderboard-points";
@@ -175,6 +176,66 @@ describe("rankLeaderboardByTotalPoints", () => {
         user_id: "user-carla",
       },
     ]);
+  });
+});
+
+describe("getLeaderboardRankTrends", () => {
+  test("reports an upward movement after the latest scored match", () => {
+    const trends = getLeaderboardRankTrends(
+      [
+        rankingRow("user-a", "Alma", 20, 3, 1, 8),
+        rankingRow("user-b", "Beto", 18, 2, 1, 8),
+        rankingRow("user-target", "Carla", 15, 2, 1, 8),
+        rankingRow("user-d", "Dario", 14, 1, 1, 8),
+        rankingRow("user-e", "Elena", 13, 1, 1, 8),
+      ],
+      new Map([["user-target", 3]]),
+    );
+
+    expect(trends.get("user-target")).toEqual({ direction: "up", value: 2 });
+  });
+
+  test("reports a downward movement after other players score", () => {
+    const trends = getLeaderboardRankTrends(
+      [
+        rankingRow("user-a", "Alma", 20, 3, 1, 8),
+        rankingRow("user-b", "Beto", 18, 2, 1, 8),
+        rankingRow("user-c", "Carla", 18, 2, 1, 8),
+        rankingRow("user-target", "Dario", 17, 2, 1, 8),
+      ],
+      new Map([
+        ["user-b", 3],
+        ["user-c", 3],
+      ]),
+    );
+
+    expect(trends.get("user-target")).toEqual({ direction: "down", value: 2 });
+  });
+
+  test("keeps a same trend when visible rank does not change", () => {
+    const trends = getLeaderboardRankTrends(
+      [
+        rankingRow("user-a", "Alma", 20, 3, 1, 8),
+        rankingRow("user-target", "Beto", 17, 2, 1, 8),
+        rankingRow("user-c", "Carla", 14, 1, 1, 8),
+      ],
+      new Map([["user-target", 1]]),
+    );
+
+    expect(trends.get("user-target")).toEqual({ direction: "same", value: 0 });
+  });
+
+  test("uses competition ranks for tied totals", () => {
+    const trends = getLeaderboardRankTrends(
+      [
+        rankingRow("user-a", "Alma", 20, 3, 1, 8),
+        rankingRow("user-peer", "Beto", 17, 2, 1, 8),
+        rankingRow("user-target", "Carla", 17, 2, 1, 8),
+      ],
+      new Map([["user-target", 1]]),
+    );
+
+    expect(trends.get("user-target")).toEqual({ direction: "up", value: 1 });
   });
 });
 

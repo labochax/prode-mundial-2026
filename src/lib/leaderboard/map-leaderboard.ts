@@ -7,6 +7,7 @@ import type {
   LeaderboardPlayer,
   LeaderboardResultMarker,
 } from "@/lib/leaderboard/leaderboard-types";
+import type { LeaderboardRankTrend } from "@/lib/leaderboard/leaderboard-points";
 import type { LeaderboardProfileGroups } from "@/lib/supabase/queries/leaderboard-profiles";
 import type { PoolLeaderboardRow } from "@/lib/supabase/queries/leaderboard";
 import { getFallbackRecentResultMarkers } from "@/lib/supabase/queries/leaderboard-recent-results";
@@ -65,6 +66,7 @@ export function mapPoolLeaderboardRows(
   currentUserId: string,
   groupsByUserId: Map<string, LeaderboardProfileGroups> = new Map(),
   recentMarkersByUserId: Map<string, LeaderboardResultMarker[]> = new Map(),
+  trendsByUserId: Map<string, LeaderboardRankTrend> = new Map(),
 ): LeaderboardPlayer[] {
   return rows.map((row) => {
     const groups = groupsByUserId.get(row.user_id) ?? defaultLeaderboardGroups;
@@ -86,10 +88,7 @@ export function mapPoolLeaderboardRows(
       predictedMatchesCount: row.predicted_matches_count,
       rank: Number(row.rank),
       totalPoints: row.total_points,
-      trend: {
-        direction: "same",
-        value: 0,
-      },
+      trend: trendsByUserId.get(row.user_id) ?? { direction: "same", value: 0 },
     };
   });
 }

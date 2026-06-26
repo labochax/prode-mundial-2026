@@ -1,7 +1,7 @@
 import type { StitchAvatarAsset } from "@/lib/design/stitch-assets";
 
 export type LeaderboardMode = "global" | "groups";
-export type LeaderboardResultMarker = "exact" | "miss" | "outcome";
+export type LeaderboardResultMarker = "empty" | "exact" | "miss" | "outcome";
 export type LeaderboardTrendDirection = "down" | "same" | "up";
 export type LeaderboardGroupDimension =
   | "ageGroup"

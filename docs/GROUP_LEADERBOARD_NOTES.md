@@ -59,7 +59,7 @@ La pantalla conserva la primera variante legible encontrada para mostrar el valo
 
 - El ranking de grupos se calcula filtrando el leaderboard del pool activo con datos reales cargados desde Supabase, no con una función SQL dedicada.
 - El bonus de `Mi Mundial` se toma de `tournament_predictions.bonus_points` y vale `0` hasta que se puntúe.
-- Los filtros de grupo deciden quién aparece; el orden se mantiene por puntos totales.
+- Los filtros de grupo deciden quién aparece; el orden se mantiene por puntos totales y usa posiciones de competencia para empates (`1, 2, 3, 3, 5`).
 - `GLOBAL` y `GRUPOS` usan el mismo pool local por ahora.
-- Las tendencias siguen siendo derivadas/placeholder hasta tener historial real de movimientos de ranking.
+- La tendencia se calcula globalmente: compara el puesto actual con el puesto antes del último partido finalizado y puntuado. En modo `GRUPOS` se conserva ese indicador global para no mezclarlo con la composición variable de los filtros.
 - Si un jugador no completa un dato de perfil, esa dimensión no puede usarse para compararlo.
