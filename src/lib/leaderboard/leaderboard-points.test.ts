@@ -180,32 +180,59 @@ describe("rankLeaderboardByTotalPoints", () => {
 });
 
 describe("getLeaderboardRankTrends", () => {
-  test("reports an upward movement after the latest scored match", () => {
+  test("reports an upward movement over the latest five-match trend window", () => {
     const trends = getLeaderboardRankTrends(
       [
-        rankingRow("user-a", "Alma", 20, 3, 1, 8),
-        rankingRow("user-b", "Beto", 18, 2, 1, 8),
-        rankingRow("user-target", "Carla", 15, 2, 1, 8),
-        rankingRow("user-d", "Dario", 14, 1, 1, 8),
-        rankingRow("user-e", "Elena", 13, 1, 1, 8),
+        rankingRow("user-a", "Alma", 25, 3, 1, 8),
+        rankingRow("user-b", "Beto", 22, 2, 1, 8),
+        rankingRow("user-target", "Carla", 21, 3, 3, 10),
+        rankingRow("user-c", "Dario", 20, 1, 1, 8),
+        rankingRow("user-d", "Elena", 18, 1, 1, 8),
       ],
-      new Map([["user-target", 3]]),
+      new Map([
+        [
+          "user-target",
+          {
+            exactHits: 1,
+            outcomeHits: 2,
+            points: 5,
+            predictedMatchesCount: 3,
+          },
+        ],
+      ]),
     );
 
     expect(trends.get("user-target")).toEqual({ direction: "up", value: 2 });
   });
 
-  test("reports a downward movement after other players score", () => {
+  test("reports a downward movement over the latest five-match trend window", () => {
     const trends = getLeaderboardRankTrends(
       [
-        rankingRow("user-a", "Alma", 20, 3, 1, 8),
-        rankingRow("user-b", "Beto", 18, 2, 1, 8),
-        rankingRow("user-c", "Carla", 18, 2, 1, 8),
-        rankingRow("user-target", "Dario", 17, 2, 1, 8),
+        rankingRow("user-a", "Alma", 30, 3, 1, 8),
+        rankingRow("user-b", "Beto", 27, 4, 2, 10),
+        rankingRow("user-c", "Carla", 26, 3, 3, 10),
+        rankingRow("user-target", "Dario", 25, 2, 1, 8),
+        rankingRow("user-d", "Elena", 24, 1, 1, 8),
       ],
       new Map([
-        ["user-b", 3],
-        ["user-c", 3],
+        [
+          "user-b",
+          {
+            exactHits: 1,
+            outcomeHits: 2,
+            points: 5,
+            predictedMatchesCount: 3,
+          },
+        ],
+        [
+          "user-c",
+          {
+            exactHits: 1,
+            outcomeHits: 2,
+            points: 5,
+            predictedMatchesCount: 3,
+          },
+        ],
       ]),
     );
 
@@ -219,7 +246,17 @@ describe("getLeaderboardRankTrends", () => {
         rankingRow("user-target", "Beto", 17, 2, 1, 8),
         rankingRow("user-c", "Carla", 14, 1, 1, 8),
       ],
-      new Map([["user-target", 1]]),
+      new Map([
+        [
+          "user-target",
+          {
+            exactHits: 0,
+            outcomeHits: 1,
+            points: 1,
+            predictedMatchesCount: 1,
+          },
+        ],
+      ]),
     );
 
     expect(trends.get("user-target")).toEqual({ direction: "same", value: 0 });
@@ -232,7 +269,17 @@ describe("getLeaderboardRankTrends", () => {
         rankingRow("user-peer", "Beto", 17, 2, 1, 8),
         rankingRow("user-target", "Carla", 17, 2, 1, 8),
       ],
-      new Map([["user-target", 1]]),
+      new Map([
+        [
+          "user-target",
+          {
+            exactHits: 0,
+            outcomeHits: 1,
+            points: 1,
+            predictedMatchesCount: 1,
+          },
+        ],
+      ]),
     );
 
     expect(trends.get("user-target")).toEqual({ direction: "up", value: 1 });

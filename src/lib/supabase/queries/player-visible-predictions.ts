@@ -1,7 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getMatchStageLabel } from "@/lib/matches/dashboard-stage";
-import { getMatchEditability } from "@/lib/matches/match-editability";
+import {
+  comparePredictionMatchesChronologically,
+  getPredictionResultMarker,
+  isVisiblePlayerPredictionMatch,
+  type VisiblePredictionMatch,
+} from "@/lib/predictions/visible-prediction-results";
 import type { Database } from "@/lib/supabase/database.types";
 
 type SupabaseDatabaseClient = SupabaseClient<Database>;
@@ -40,7 +45,7 @@ export type PlayerVisiblePrediction = {
   stageLabel: string;
 };
 
-export type PlayerVisiblePredictionMatchRow = Pick<
+export type PlayerVisiblePredictionMatchRow = VisiblePredictionMatch & Pick<
   MatchRow,
   | "away_score"
   | "away_team_id"
@@ -93,21 +98,23 @@ const playerVisiblePredictionSelect = `
 export function getPlayerVisiblePredictionBadge(
   points: number | null,
 ): PlayerVisiblePredictionBadge {
-  if (points === 3) {
+  const marker = getPredictionResultMarker(points);
+
+  if (marker === "exact") {
     return {
       label: "Exacto +3",
       tone: "exact",
     };
   }
 
-  if (points === 1) {
+  if (marker === "outcome") {
     return {
       label: "Resultado +1",
       tone: "outcome",
     };
   }
 
-  if (points === 0) {
+  if (marker === "miss") {
     return {
       label: "Fallado +0",
       tone: "miss",
@@ -127,9 +134,7 @@ export function isPlayerMatchPredictionVisible(
   >,
   now = new Date(),
 ) {
-  const editability = getMatchEditability(match, now);
-
-  return !editability.canEdit && editability.reason !== "missing_teams";
+  return isVisiblePlayerPredictionMatch(match, now);
 }
 
 function getTeamName(team: TeamRow | null, fallback: string) {
@@ -138,21 +143,6 @@ function getTeamName(team: TeamRow | null, fallback: string) {
 
 function getTeamCode(team: TeamRow | null, fallback: string) {
   return (team?.tla ?? team?.short_name ?? fallback).slice(0, 3).toUpperCase();
-}
-
-function compareVisiblePredictions(
-  left: PlayerVisiblePrediction,
-  right: PlayerVisiblePrediction,
-) {
-  const kickoffDiff =
-    new Date(left.kickoffAt).getTime() - new Date(right.kickoffAt).getTime();
-
-  if (kickoffDiff !== 0) {
-    return kickoffDiff;
-  }
-
-  return (left.matchNumber ?? Number.MAX_SAFE_INTEGER) -
-    (right.matchNumber ?? Number.MAX_SAFE_INTEGER);
 }
 
 export function buildPlayerVisiblePredictions(
@@ -167,6 +157,9 @@ export function buildPlayerVisiblePredictions(
 
       return isPlayerMatchPredictionVisible(row.matches, now);
     })
+    .sort((left, right) =>
+      comparePredictionMatchesChronologically(left.matches!, right.matches!),
+    )
     .map((row): PlayerVisiblePrediction => {
       const match = row.matches as PlayerVisiblePredictionMatchRow;
 
@@ -186,8 +179,7 @@ export function buildPlayerVisiblePredictions(
         predictionId: row.id,
         stageLabel: getMatchStageLabel(match),
       };
-    })
-    .sort(compareVisiblePredictions);
+    });
 }
 
 export async function getPlayerVisiblePredictions(

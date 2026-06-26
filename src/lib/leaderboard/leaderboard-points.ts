@@ -38,6 +38,13 @@ export type LeaderboardRankTrend = {
   value: number;
 };
 
+export type LeaderboardTrendWindowContribution = {
+  exactHits: number;
+  outcomeHits: number;
+  points: number;
+  predictedMatchesCount: number;
+};
+
 function toScoreNumber(value: bigint | number | null | undefined) {
   if (typeof value === "bigint") {
     return Number(value);
@@ -115,14 +122,17 @@ export function getLeaderboardRankTrends<
   T extends LeaderboardPointsBreakdownRow,
 >(
   rows: readonly T[],
-  latestScoredMatchPointsByUserId: ReadonlyMap<string, number>,
+  trendWindowContributionsByUserId: ReadonlyMap<
+    string,
+    LeaderboardTrendWindowContribution
+  >,
 ) {
   const currentRows = rankLeaderboardByTotalPoints(rows);
   const currentRankByUserId = new Map(
     currentRows.map((row) => [row.user_id, row.rank]),
   );
 
-  if (latestScoredMatchPointsByUserId.size === 0) {
+  if (trendWindowContributionsByUserId.size === 0) {
     return new Map<string, LeaderboardRankTrend>(
       currentRows.map((row) => [row.user_id, { direction: "same", value: 0 }]),
     );
@@ -130,28 +140,29 @@ export function getLeaderboardRankTrends<
 
   const previousRows = rankLeaderboardByTotalPoints(
     rows.map((row) => {
-      const latestMatchPoints =
-        latestScoredMatchPointsByUserId.get(row.user_id) ?? 0;
-      const hasLatestScoredPrediction = latestScoredMatchPointsByUserId.has(
-        row.user_id,
-      );
+      const contribution = trendWindowContributionsByUserId.get(row.user_id) ?? {
+        exactHits: 0,
+        outcomeHits: 0,
+        points: 0,
+        predictedMatchesCount: 0,
+      };
 
       return {
         ...row,
         exact_hits: Math.max(
           0,
-          row.exact_hits - (latestMatchPoints === 3 ? 1 : 0),
+          row.exact_hits - contribution.exactHits,
         ),
-        match_points: Math.max(0, row.match_points - latestMatchPoints),
+        match_points: Math.max(0, row.match_points - contribution.points),
         outcome_hits: Math.max(
           0,
-          row.outcome_hits - (latestMatchPoints === 1 ? 1 : 0),
+          row.outcome_hits - contribution.outcomeHits,
         ),
         predicted_matches_count: Math.max(
           0,
-          row.predicted_matches_count - (hasLatestScoredPrediction ? 1 : 0),
+          row.predicted_matches_count - contribution.predictedMatchesCount,
         ),
-        total_points: Math.max(0, row.total_points - latestMatchPoints),
+        total_points: Math.max(0, row.total_points - contribution.points),
       };
     }),
   );

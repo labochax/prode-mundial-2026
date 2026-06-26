@@ -27,7 +27,7 @@ export default async function StandingsPage() {
   ]);
   const trendsByUserId = getLeaderboardRankTrends(
     leaderboardRows,
-    recentResults.latestScoredMatchPointsByUserId,
+    recentResults.trendWindowContributionsByUserId,
   );
   const players = mapPoolLeaderboardRows(
     leaderboardRows,

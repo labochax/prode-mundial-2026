@@ -1,17 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { LeaderboardTrendWindowContribution } from "@/lib/leaderboard/leaderboard-points";
 import type { LeaderboardResultMarker } from "@/lib/leaderboard/leaderboard-types";
+import {
+  comparePredictionMatchesByMostRecent,
+  comparePredictionMatchesChronologically,
+  getPredictionResultMarker,
+  isFinishedScoredVisiblePrediction,
+  type VisiblePredictionMatch,
+} from "@/lib/predictions/visible-prediction-results";
 import type { Database } from "@/lib/supabase/database.types";
 
 type SupabaseDatabaseClient = SupabaseClient<Database>;
 
 export type LeaderboardRecentPredictionRow = {
-  matches: {
-    id: string;
-    kickoff_at: string | null;
-    match_number: number | null;
-    status: string;
-  } | null;
+  matches: VisiblePredictionMatch | null;
   points: number | null;
   user_id: string;
 };
@@ -25,56 +28,21 @@ const fallbackRecentMarkers: LeaderboardResultMarker[] = [
 ];
 
 export type LeaderboardRecentResults = {
-  latestScoredMatchPointsByUserId: Map<string, number>;
   recentMarkersByUserId: Map<string, LeaderboardResultMarker[]>;
+  trendWindowContributionsByUserId: Map<
+    string,
+    LeaderboardTrendWindowContribution
+  >;
 };
 
 export function mapPredictionPointsToResultMarker(
   points: number | null,
 ): LeaderboardResultMarker {
-  if (points === 3) {
-    return "exact";
-  }
-
-  if (points === 1) {
-    return "outcome";
-  }
-
-  if (points === 0) {
-    return "miss";
-  }
-
-  return "empty";
-}
-
-function compareRecentPredictions(
-  left: LeaderboardRecentPredictionRow,
-  right: LeaderboardRecentPredictionRow,
-) {
-  const leftKickoff = left.matches?.kickoff_at
-    ? new Date(left.matches.kickoff_at).getTime()
-    : Number.NEGATIVE_INFINITY;
-  const rightKickoff = right.matches?.kickoff_at
-    ? new Date(right.matches.kickoff_at).getTime()
-    : Number.NEGATIVE_INFINITY;
-  const kickoffDiff = rightKickoff - leftKickoff;
-
-  if (kickoffDiff !== 0) {
-    return kickoffDiff;
-  }
-
-  const matchNumberDiff =
-    (right.matches?.match_number ?? -1) - (left.matches?.match_number ?? -1);
-
-  if (matchNumberDiff !== 0) {
-    return matchNumberDiff;
-  }
-
-  return (right.matches?.id ?? "").localeCompare(left.matches?.id ?? "");
+  return getPredictionResultMarker(points);
 }
 
 function isScoredFinishedPrediction(row: LeaderboardRecentPredictionRow) {
-  return row.matches?.status === "FINISHED" && typeof row.points === "number";
+  return isFinishedScoredVisiblePrediction(row);
 }
 
 export function buildRecentResultMarkersByUser(
@@ -92,8 +60,10 @@ export function buildRecentResultMarkersByUser(
   return new Map(
     [...rowsByUserId.entries()].map(([userId, userRows]) => {
       const markers = userRows
-        .sort(compareRecentPredictions)
-        .slice(0, 5)
+        .sort((left, right) =>
+          comparePredictionMatchesChronologically(left.matches!, right.matches!),
+        )
+        .slice(-5)
         .map((row) => mapPredictionPointsToResultMarker(row.points));
 
       while (markers.length < 5) {
@@ -105,30 +75,65 @@ export function buildRecentResultMarkersByUser(
   );
 }
 
-function getLatestScoredMatchPointsByUser(
+function getTrendWindowMatchIds(
   rows: LeaderboardRecentPredictionRow[],
 ) {
   const scoredRows = rows.filter(isScoredFinishedPrediction);
-  const latestMatchId = [...scoredRows].sort(compareRecentPredictions)[0]?.matches
-    ?.id;
+  const matchesById = new Map(
+    scoredRows.map((row) => [row.matches!.id, row.matches!] as const),
+  );
 
-  if (!latestMatchId) {
-    return new Map<string, number>();
+  return [...matchesById.values()]
+    .sort(comparePredictionMatchesByMostRecent)
+    .slice(0, 5)
+    .map((match) => match.id);
+}
+
+function getTrendWindowContributionsByUser(
+  rows: LeaderboardRecentPredictionRow[],
+) {
+  const trendWindowMatchIds = new Set(getTrendWindowMatchIds(rows));
+
+  if (trendWindowMatchIds.size === 0) {
+    return new Map<string, LeaderboardTrendWindowContribution>();
   }
 
-  return new Map(
-    scoredRows
-      .filter((row) => row.matches?.id === latestMatchId)
-      .map((row) => [row.user_id, row.points as number]),
-  );
+  const contributionsByUserId = new Map<
+    string,
+    LeaderboardTrendWindowContribution
+  >();
+
+  for (const row of rows.filter(isScoredFinishedPrediction)) {
+    if (!trendWindowMatchIds.has(row.matches!.id)) {
+      continue;
+    }
+
+    const points = row.points as 0 | 1 | 3;
+    const contribution = contributionsByUserId.get(row.user_id) ?? {
+      exactHits: 0,
+      outcomeHits: 0,
+      points: 0,
+      predictedMatchesCount: 0,
+    };
+
+    contribution.exactHits += points === 3 ? 1 : 0;
+    contribution.outcomeHits += points === 1 ? 1 : 0;
+    contribution.points += points;
+    contribution.predictedMatchesCount += 1;
+
+    contributionsByUserId.set(row.user_id, contribution);
+  }
+
+  return contributionsByUserId;
 }
 
 export function buildLeaderboardRecentResults(
   rows: LeaderboardRecentPredictionRow[],
 ): LeaderboardRecentResults {
   return {
-    latestScoredMatchPointsByUserId: getLatestScoredMatchPointsByUser(rows),
     recentMarkersByUserId: buildRecentResultMarkersByUser(rows),
+    trendWindowContributionsByUserId:
+      getTrendWindowContributionsByUser(rows),
   };
 }
 
@@ -142,7 +147,9 @@ export async function getLeaderboardRecentResults(
 ) {
   const { data, error } = await client
     .from("predictions")
-    .select("user_id,points,matches!inner(id,kickoff_at,match_number,status)")
+    .select(
+      "user_id,points,matches!inner(id,kickoff_at,lock_at,match_number,status,home_team_id,away_team_id)",
+    )
     .eq("pool_id", poolId)
     .not("points", "is", null)
     .eq("matches.status", "FINISHED");

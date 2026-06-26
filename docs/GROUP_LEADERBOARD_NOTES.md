@@ -61,5 +61,6 @@ La pantalla conserva la primera variante legible encontrada para mostrar el valo
 - El bonus de `Mi Mundial` se toma de `tournament_predictions.bonus_points` y vale `0` hasta que se puntúe.
 - Los filtros de grupo deciden quién aparece; el orden se mantiene por puntos totales y usa posiciones de competencia para empates (`1, 2, 3, 3, 5`).
 - `GLOBAL` y `GRUPOS` usan el mismo pool local por ahora.
-- La tendencia se calcula globalmente: compara el puesto actual con el puesto antes del último partido finalizado y puntuado. En modo `GRUPOS` se conserva ese indicador global para no mezclarlo con la composición variable de los filtros.
+- La tendencia se calcula globalmente: compara el puesto actual con el puesto reconstruido antes de la ventana de los cinco últimos partidos finalizados y puntuados. En modo `GRUPOS` se conserva ese indicador global para no mezclarlo con la composición variable de los filtros.
+- `Últimos resultados` usa las mismas predicciones visibles y puntuadas que el detalle público del jugador: toma las cinco más recientes, las muestra en orden cronológico y completa solo los huecos reales con marcadores neutros.
 - Si un jugador no completa un dato de perfil, esa dimensión no puede usarse para compararlo.
