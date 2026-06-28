@@ -164,6 +164,19 @@ export default async function AdminResultsPage({
                   getSearchValue(resolvedSearchParams, "sync_scored") ?? "0"
                 }. Datos desactualizados protegidos: ${
                   getSearchValue(resolvedSearchParams, "sync_stale") ?? "0"
+                }. 16avos mapeados: ${
+                  getSearchValue(resolvedSearchParams, "sync_knockout_applied") ??
+                  "0"
+                }. 16avos corregidos: ${
+                  getSearchValue(
+                    resolvedSearchParams,
+                    "sync_knockout_corrected",
+                  ) ?? "0"
+                }. 16avos sin equipo local: ${
+                  getSearchValue(
+                    resolvedSearchParams,
+                    "sync_knockout_missing_team",
+                  ) ?? "0"
                 }. 16avos sin mapa oficial: ${
                   getSearchValue(
                     resolvedSearchParams,

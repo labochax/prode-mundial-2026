@@ -5,7 +5,10 @@ import {
   buildOfficialKnockoutTeamUpdatePlan,
   resolveOfficialRoundOf32Assignments,
 } from "@/lib/tournament/official-knockout-resolver";
-import type { OfficialKnockoutFixtureMapEntry } from "@/lib/tournament/official-knockout-fixture-map";
+import {
+  OFFICIAL_ROUND_OF_32_FIXTURE_MAP,
+  type OfficialKnockoutFixtureMapEntry,
+} from "@/lib/tournament/official-knockout-fixture-map";
 
 describe("resolveOfficialRoundOf32Assignments", () => {
   it("resolves M73 from completed Group A and Group B runners-up", () => {
@@ -352,6 +355,119 @@ describe("buildOfficialKnockoutTeamUpdatePlan", () => {
     ]);
     expect(plan.stats.knockoutTeamSlotsSkipped).toBeGreaterThan(0);
   });
+
+  it("applies all 16 verified Round of 32 fixtures when TLA teams exist", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      OFFICIAL_ROUND_OF_32_FIXTURE_MAP.map((entry) =>
+        knockout(
+          `fixture-${entry.footballDataId}`,
+          null,
+          "2026-06-28T19:00:00.000Z",
+          entry.footballDataId,
+        ),
+      ),
+      {
+        teamIdsByTla: teamIdsByTlaForFixtureMap(),
+      },
+    );
+
+    expect(plan.updates).toHaveLength(16);
+    expect(plan.stats.knockoutMappedFixturesApplied).toBe(16);
+    expect(plan.stats.knockoutTeamSlotsResolved).toBe(32);
+    expect(plan.stats.knockoutTeamSlotsSkipped).toBe(0);
+    expect(plan.stats.knockoutSkippedMissingOfficialFixtureMap).toBe(0);
+  });
+
+  it("resolves Germany against Paraguay and Netherlands against Morocco from the verified map", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      [
+        knockout("germany-paraguay", null, "2026-06-29T20:30:00.000Z", 537415),
+        knockout("netherlands-morocco", null, "2026-06-30T01:00:00.000Z", 537418),
+      ],
+      {
+        teamIdsByTla: teamIdsByTlaForFixtureMap(),
+      },
+    );
+
+    expect(plan.updates).toEqual(
+      expect.arrayContaining([
+        {
+          away_team_id: "team-par",
+          home_team_id: "team-ger",
+          id: "germany-paraguay",
+        },
+        {
+          away_team_id: "team-mar",
+          home_team_id: "team-ned",
+          id: "netherlands-morocco",
+        },
+      ]),
+    );
+  });
+
+  it("does not assign Morocco to more than one verified Round of 32 fixture", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      OFFICIAL_ROUND_OF_32_FIXTURE_MAP.map((entry) =>
+        knockout(
+          `fixture-${entry.footballDataId}`,
+          null,
+          "2026-06-28T19:00:00.000Z",
+          entry.footballDataId,
+        ),
+      ),
+      {
+        teamIdsByTla: teamIdsByTlaForFixtureMap(),
+      },
+    );
+    const assignedTeamIds = plan.updates.flatMap((update) =>
+      [update.home_team_id, update.away_team_id].filter(Boolean),
+    );
+
+    expect(assignedTeamIds.filter((teamId) => teamId === "team-mar")).toHaveLength(
+      1,
+    );
+    expect(new Set(assignedTeamIds)).toHaveLength(assignedTeamIds.length);
+  });
+
+  it("corrects wrong existing teams only for a fixture in the verified map", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      [
+        {
+          ...knockout("germany-paraguay", null, "2026-06-29T20:30:00.000Z", 537415),
+          away_team_id: "team-mar",
+          home_team_id: "team-ger",
+        },
+      ],
+      {
+        teamIdsByTla: teamIdsByTlaForFixtureMap(),
+      },
+    );
+
+    expect(plan.updates).toEqual([
+      {
+        away_team_id: "team-par",
+        id: "germany-paraguay",
+      },
+    ]);
+    expect(plan.stats.knockoutMappedFixturesCorrected).toBe(1);
+  });
+
+  it("skips a mapped fixture safely when a local TLA cannot be resolved", () => {
+    const teamIdsByTla = teamIdsByTlaForFixtureMap();
+    teamIdsByTla.delete("PAR");
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      [
+        knockout("germany-paraguay", null, "2026-06-29T20:30:00.000Z", 537415),
+      ],
+      {
+        teamIdsByTla,
+      },
+    );
+
+    expect(plan.updates).toEqual([]);
+    expect(plan.stats.knockoutMappedFixturesSkippedMissingTeam).toBe(1);
+    expect(plan.stats.knockoutTeamSlotsResolved).toBe(0);
+  });
 });
 
 function group(groupCode: string, standings: Array<[string, number]>) {
@@ -493,4 +609,13 @@ function knockout(
     stage: "LAST_32",
     status: "TIMED",
   };
+}
+
+function teamIdsByTlaForFixtureMap() {
+  return new Map(
+    OFFICIAL_ROUND_OF_32_FIXTURE_MAP.flatMap((entry) => [
+      [entry.homeTla, `team-${entry.homeTla.toLowerCase()}`] as const,
+      [entry.awayTla, `team-${entry.awayTla.toLowerCase()}`] as const,
+    ]),
+  );
 }

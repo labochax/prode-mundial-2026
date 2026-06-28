@@ -17,7 +17,7 @@ cuando haya deploy:
 - `Sincronizar resultados ahora`: actualiza estado, marcador, minuto, sede y
   asignaciones oficiales de equipos cuando Football-Data ya devuelve
   `homeTeam.id` / `awayTeam.id`; también puede completar cruces de 16avos
-  solo si existe un mapeo confiable `football_data_id -> match_number FIFA`.
+  solo si existe un mapeo confiable `football_data_id -> equipos oficiales`.
   Puntúa solo partidos `FINISHED`.
 
 No hay deploy ni Edge Functions en esta etapa. `vercel.json` queda preparado
@@ -153,13 +153,17 @@ o finalizar resultados cuando Football-Data esté demorado.
   recibe un ID concreto y ese equipo existe localmente.
 - Si Football-Data todavía no informa equipos de eliminación, el modo
   `results` no infiere el número de partido por horario. Los 16avos solo pueden
-  completarse desde resultados oficiales de grupos si el fixture tiene una
-  entrada explícita y revisada en `official-knockout-fixture-map.ts`.
+  completarse si el fixture tiene una entrada explícita y revisada en
+  `official-knockout-fixture-map.ts`.
+- El mapa verificado de 16avos está keyed por `football_data_id` e incluye TLA
+  local/visitante. El sync resuelve esas TLAs contra `teams.tla`, corrige lados
+  no nulos que contradigan el mapa verificado y no usa orden cronológico.
 - Los fixtures de eliminación sin ese mapa quedan bloqueados como `P/D`; esto
   es intencional para evitar cruces imposibles o equipos duplicados.
 - El resumen de resultados incluye `knockoutTeamSlotsResolved`,
   `knockoutMatchesUnlocked`, `knockoutTeamSlotsSkipped` y
-  `knockoutSkippedMissingOfficialFixtureMap`.
+  `knockoutSkippedMissingOfficialFixtureMap`, además de los contadores de
+  fixtures mapeados aplicados, corregidos o salteados por falta de equipo local.
 - Si después de fixtures queda cuota por minuto muy baja, el orquestador omite
   resultados para evitar una llamada que probablemente termine en `429`.
 - Las respuestas JSON no incluyen secretos.

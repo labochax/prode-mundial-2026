@@ -60,6 +60,9 @@ const stoppedStatuses = new Set<FootballDataMatchStatus>([
 export type FootballDataResultsSyncResult = {
   checkedMatches: number;
   finishedMatchesScored: number;
+  knockoutMappedFixturesApplied: number;
+  knockoutMappedFixturesCorrected: number;
+  knockoutMappedFixturesSkippedMissingTeam: number;
   knockoutMatchesUnlocked: number;
   knockoutSkippedMissingOfficialFixtureMap: number;
   knockoutTeamSlotsResolved: number;
@@ -277,6 +280,9 @@ async function syncResultsToDatabase(
     }
   }
   const {
+    knockoutMappedFixturesApplied,
+    knockoutMappedFixturesCorrected,
+    knockoutMappedFixturesSkippedMissingTeam,
     knockoutMatchesUnlocked,
     knockoutSkippedMissingOfficialFixtureMap,
     knockoutTeamSlotsResolved,
@@ -285,6 +291,9 @@ async function syncResultsToDatabase(
 
   return {
     finishedMatchesScored,
+    knockoutMappedFixturesApplied,
+    knockoutMappedFixturesCorrected,
+    knockoutMappedFixturesSkippedMissingTeam,
     knockoutMatchesUnlocked,
     knockoutSkippedMissingOfficialFixtureMap,
     knockoutTeamSlotsResolved,
@@ -311,6 +320,9 @@ export async function syncFootballDataResults(
     });
     const {
       finishedMatchesScored,
+      knockoutMappedFixturesApplied,
+      knockoutMappedFixturesCorrected,
+      knockoutMappedFixturesSkippedMissingTeam,
       knockoutMatchesUnlocked,
       knockoutSkippedMissingOfficialFixtureMap,
       knockoutTeamSlotsResolved,
@@ -325,6 +337,9 @@ export async function syncFootballDataResults(
     const result = {
       checkedMatches: candidates.matches.length,
       finishedMatchesScored,
+      knockoutMappedFixturesApplied,
+      knockoutMappedFixturesCorrected,
+      knockoutMappedFixturesSkippedMissingTeam,
       knockoutMatchesUnlocked,
       knockoutSkippedMissingOfficialFixtureMap,
       knockoutTeamSlotsResolved,

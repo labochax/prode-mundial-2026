@@ -74,8 +74,13 @@ export async function syncFootballDataResultsAction() {
       results_checked: String(result.checkedMatches),
       results_estado: "ok",
       results_finished: String(result.finishedMatchesScored),
+      results_knockout_applied: String(result.knockoutMappedFixturesApplied),
+      results_knockout_corrected: String(result.knockoutMappedFixturesCorrected),
       results_knockout_missing_map: String(
         result.knockoutSkippedMissingOfficialFixtureMap,
+      ),
+      results_knockout_missing_team: String(
+        result.knockoutMappedFixturesSkippedMissingTeam,
       ),
       results_live: String(result.liveMatchesUpdated),
       results_reset: result.rateLimitReset ?? "",
@@ -86,6 +91,9 @@ export async function syncFootballDataResultsAction() {
       results_text:
         `Actualizados: ${result.matchesUpdated}. ` +
         `Resultados desactualizados protegidos: ${result.staleResultsSkipped}. ` +
+        `16avos mapeados: ${result.knockoutMappedFixturesApplied}. ` +
+        `16avos corregidos: ${result.knockoutMappedFixturesCorrected}. ` +
+        `16avos sin equipo local: ${result.knockoutMappedFixturesSkippedMissingTeam}. ` +
         `16avos sin mapa oficial: ${result.knockoutSkippedMissingOfficialFixtureMap}. ` +
         "Predicciones directas modificadas: 0.",
     });
