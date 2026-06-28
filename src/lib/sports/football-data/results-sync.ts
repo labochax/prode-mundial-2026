@@ -73,6 +73,13 @@ export type FootballDataResultsSyncResult = {
   rateLimitReset: string | null;
   requestsAvailable: string | null;
   requestsAvailableMinute: string | null;
+  roundOf16MappedFixturesApplied: number;
+  roundOf16MappedFixturesCorrected: number;
+  roundOf16MatchesUnlocked: number;
+  roundOf16SkippedMissingSourceFixture: number;
+  roundOf16SkippedMissingTargetFixtureMap: number;
+  roundOf16SkippedWaitingForSourceWinner: number;
+  roundOf16TeamSlotsResolved: number;
   scoredPredictions: number;
   staleResultsSkipped: number;
   stoppedMatchesUpdated: number;
@@ -287,6 +294,13 @@ async function syncResultsToDatabase(
     knockoutSkippedMissingOfficialFixtureMap,
     knockoutTeamSlotsResolved,
     knockoutTeamSlotsSkipped,
+    roundOf16MappedFixturesApplied,
+    roundOf16MappedFixturesCorrected,
+    roundOf16MatchesUnlocked,
+    roundOf16SkippedMissingSourceFixture,
+    roundOf16SkippedMissingTargetFixtureMap,
+    roundOf16SkippedWaitingForSourceWinner,
+    roundOf16TeamSlotsResolved,
   } = await syncOfficialKnockoutTeamsFromGroupResults(client);
 
   return {
@@ -300,6 +314,13 @@ async function syncResultsToDatabase(
     knockoutTeamSlotsSkipped,
     liveMatchesUpdated,
     matchesUpdated,
+    roundOf16MappedFixturesApplied,
+    roundOf16MappedFixturesCorrected,
+    roundOf16MatchesUnlocked,
+    roundOf16SkippedMissingSourceFixture,
+    roundOf16SkippedMissingTargetFixtureMap,
+    roundOf16SkippedWaitingForSourceWinner,
+    roundOf16TeamSlotsResolved,
     scoredPredictions,
     staleResultsSkipped,
     stoppedMatchesUpdated,
@@ -329,6 +350,13 @@ export async function syncFootballDataResults(
       knockoutTeamSlotsSkipped,
       liveMatchesUpdated,
       matchesUpdated,
+      roundOf16MappedFixturesApplied,
+      roundOf16MappedFixturesCorrected,
+      roundOf16MatchesUnlocked,
+      roundOf16SkippedMissingSourceFixture,
+      roundOf16SkippedMissingTargetFixtureMap,
+      roundOf16SkippedWaitingForSourceWinner,
+      roundOf16TeamSlotsResolved,
       scoredPredictions,
       staleResultsSkipped,
       stoppedMatchesUpdated,
@@ -350,6 +378,13 @@ export async function syncFootballDataResults(
       rateLimitReset: candidates.rateLimit.requestCounterReset,
       requestsAvailable: candidates.rateLimit.requestsAvailable,
       requestsAvailableMinute: candidates.rateLimit.requestsAvailableMinute,
+      roundOf16MappedFixturesApplied,
+      roundOf16MappedFixturesCorrected,
+      roundOf16MatchesUnlocked,
+      roundOf16SkippedMissingSourceFixture,
+      roundOf16SkippedMissingTargetFixtureMap,
+      roundOf16SkippedWaitingForSourceWinner,
+      roundOf16TeamSlotsResolved,
       scoredPredictions,
       staleResultsSkipped,
       stoppedMatchesUpdated,

@@ -88,6 +88,17 @@ export async function syncResultsFromAdminAction() {
         result.knockoutMappedFixturesSkippedMissingTeam,
       ),
       sync_minute: result.requestsAvailableMinute ?? "",
+      sync_r16_applied: String(result.roundOf16MappedFixturesApplied),
+      sync_r16_corrected: String(result.roundOf16MappedFixturesCorrected),
+      sync_r16_missing_source: String(
+        result.roundOf16SkippedMissingSourceFixture,
+      ),
+      sync_r16_missing_target: String(
+        result.roundOf16SkippedMissingTargetFixtureMap,
+      ),
+      sync_r16_resolved: String(result.roundOf16TeamSlotsResolved),
+      sync_r16_unlocked: String(result.roundOf16MatchesUnlocked),
+      sync_r16_waiting: String(result.roundOf16SkippedWaitingForSourceWinner),
       sync_scored: String(result.scoredPredictions),
       sync_stale: String(result.staleResultsSkipped),
       sync_updated: String(result.matchesUpdated),

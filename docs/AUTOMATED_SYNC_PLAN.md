@@ -158,12 +158,18 @@ o finalizar resultados cuando Football-Data esté demorado.
 - El mapa verificado de 16avos está keyed por `football_data_id` e incluye TLA
   local/visitante. El sync resuelve esas TLAs contra `teams.tla`, corrige lados
   no nulos que contradigan el mapa verificado y no usa orden cronológico.
+- Los octavos se completan desde un mapa explícito de avance M89-M96 keyed por
+  `football_data_id`. Cada lado toma el ganador oficial de su partido de
+  16avos fuente; si el source no terminó, está empatado sin `winner`, o falta el
+  target mapeado, el lado queda sin asignar.
 - Los fixtures de eliminación sin ese mapa quedan bloqueados como `P/D`; esto
   es intencional para evitar cruces imposibles o equipos duplicados.
 - El resumen de resultados incluye `knockoutTeamSlotsResolved`,
   `knockoutMatchesUnlocked`, `knockoutTeamSlotsSkipped` y
   `knockoutSkippedMissingOfficialFixtureMap`, además de los contadores de
   fixtures mapeados aplicados, corregidos o salteados por falta de equipo local.
+  Para octavos también incluye slots resueltos, partidos desbloqueados,
+  correcciones, sources faltantes, sources sin ganador y targets sin mapa.
 - Si después de fixtures queda cuota por minuto muy baja, el orquestador omite
   resultados para evitar una llamada que probablemente termine en `429`.
 - Las respuestas JSON no incluyen secretos.

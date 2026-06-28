@@ -83,6 +83,17 @@ export async function syncFootballDataResultsAction() {
         result.knockoutMappedFixturesSkippedMissingTeam,
       ),
       results_live: String(result.liveMatchesUpdated),
+      results_r16_applied: String(result.roundOf16MappedFixturesApplied),
+      results_r16_corrected: String(result.roundOf16MappedFixturesCorrected),
+      results_r16_missing_source: String(
+        result.roundOf16SkippedMissingSourceFixture,
+      ),
+      results_r16_missing_target: String(
+        result.roundOf16SkippedMissingTargetFixtureMap,
+      ),
+      results_r16_resolved: String(result.roundOf16TeamSlotsResolved),
+      results_r16_unlocked: String(result.roundOf16MatchesUnlocked),
+      results_r16_waiting: String(result.roundOf16SkippedWaitingForSourceWinner),
       results_reset: result.rateLimitReset ?? "",
       results_run: result.syncRunId,
       results_scored: String(result.scoredPredictions),
@@ -95,6 +106,8 @@ export async function syncFootballDataResultsAction() {
         `16avos corregidos: ${result.knockoutMappedFixturesCorrected}. ` +
         `16avos sin equipo local: ${result.knockoutMappedFixturesSkippedMissingTeam}. ` +
         `16avos sin mapa oficial: ${result.knockoutSkippedMissingOfficialFixtureMap}. ` +
+        `Octavos slots resueltos: ${result.roundOf16TeamSlotsResolved}. ` +
+        `Octavos desbloqueados: ${result.roundOf16MatchesUnlocked}. ` +
         "Predicciones directas modificadas: 0.",
     });
   } catch (error) {

@@ -6,6 +6,7 @@ import {
   resolveOfficialRoundOf32Assignments,
 } from "@/lib/tournament/official-knockout-resolver";
 import {
+  OFFICIAL_ROUND_OF_16_ADVANCEMENT_MAP,
   OFFICIAL_ROUND_OF_32_FIXTURE_MAP,
   type OfficialKnockoutFixtureMapEntry,
 } from "@/lib/tournament/official-knockout-fixture-map";
@@ -468,6 +469,135 @@ describe("buildOfficialKnockoutTeamUpdatePlan", () => {
     expect(plan.stats.knockoutMappedFixturesSkippedMissingTeam).toBe(1);
     expect(plan.stats.knockoutTeamSlotsResolved).toBe(0);
   });
+
+  it("populates M90 from winners of M73 and M75", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      finishedKnockout("m73", 73, 537417, "team-rsa", "team-can", "HOME_TEAM"),
+      finishedKnockout("m75", 75, 537418, "team-ned", "team-mar", "AWAY_TEAM"),
+      last16("m90", null, "2026-07-04T19:00:00.000Z", 537376),
+    ]);
+
+    expect(plan.updates).toEqual([
+      {
+        away_team_id: "team-mar",
+        home_team_id: "team-rsa",
+        id: "m90",
+      },
+    ]);
+    expect(plan.stats.roundOf16TeamSlotsResolved).toBe(2);
+    expect(plan.stats.roundOf16MatchesUnlocked).toBe(1);
+    expect(
+      getMatchEditability({
+        away_team_id: "team-mar",
+        home_team_id: "team-rsa",
+        lock_at: "2026-07-04T19:00:00.000Z",
+        status: "TIMED",
+      }).canEdit,
+    ).toBe(true);
+  });
+
+  it("populates one M90 side when only M73 has a finished winner", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      finishedKnockout("m73", 73, 537417, "team-rsa", "team-can", "AWAY_TEAM"),
+      knockout("m75", null, "2026-06-30T01:00:00.000Z", 537418),
+      last16("m90", null, "2026-07-04T19:00:00.000Z", 537376),
+    ]);
+
+    expect(plan.updates).toEqual([
+      {
+        home_team_id: "team-can",
+        id: "m90",
+      },
+    ]);
+    expect(plan.stats.roundOf16TeamSlotsResolved).toBe(1);
+    expect(plan.stats.roundOf16MatchesUnlocked).toBe(0);
+    expect(
+      getMatchEditability({
+        away_team_id: null,
+        home_team_id: "team-can",
+        lock_at: "2026-07-04T19:00:00.000Z",
+        status: "TIMED",
+      }).reason,
+    ).toBe("missing_teams");
+  });
+
+  it("does not populate a Round of 16 side from a tied source without an official winner", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      {
+        ...finishedKnockout("m73", 73, 537417, "team-rsa", "team-can", null),
+        away_score: 1,
+        home_score: 1,
+      },
+      finishedKnockout("m75", 75, 537418, "team-ned", "team-mar", "HOME_TEAM"),
+      last16("m90", null, "2026-07-04T19:00:00.000Z", 537376),
+    ]);
+
+    expect(plan.updates).toEqual([
+      {
+        away_team_id: "team-ned",
+        id: "m90",
+      },
+    ]);
+    expect(plan.stats.roundOf16SkippedWaitingForSourceWinner).toBe(1);
+  });
+
+  it("respects official winner over score direction for a penalty-style source winner", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      {
+        ...finishedKnockout("m73", 73, 537417, "team-rsa", "team-can", "AWAY_TEAM"),
+        away_score: 1,
+        home_score: 2,
+      },
+      finishedKnockout("m75", 75, 537418, "team-ned", "team-mar", "HOME_TEAM"),
+      last16("m90", null, "2026-07-04T19:00:00.000Z", 537376),
+    ]);
+
+    expect(plan.updates).toEqual([
+      {
+        away_team_id: "team-ned",
+        home_team_id: "team-can",
+        id: "m90",
+      },
+    ]);
+  });
+
+  it("corrects a wrong existing mapped Round of 16 side", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      finishedKnockout("m73", 73, 537417, "team-rsa", "team-can", "HOME_TEAM"),
+      finishedKnockout("m75", 75, 537418, "team-ned", "team-mar", "AWAY_TEAM"),
+      {
+        ...last16("m90", null, "2026-07-04T19:00:00.000Z", 537376),
+        away_team_id: "wrong-away",
+        home_team_id: "team-rsa",
+      },
+    ]);
+
+    expect(plan.updates).toEqual([
+      {
+        away_team_id: "team-mar",
+        id: "m90",
+      },
+    ]);
+    expect(plan.stats.roundOf16MappedFixturesCorrected).toBe(1);
+  });
+
+  it("skips a Round of 16 target without a trusted target fixture map", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      [
+        finishedKnockout("m73", 73, 537417, "team-rsa", "team-can", "HOME_TEAM"),
+        finishedKnockout("m75", 75, 537418, "team-ned", "team-mar", "HOME_TEAM"),
+        last16("unmapped-last-16", null, "2026-07-04T19:00:00.000Z", 999999),
+      ],
+      {
+        roundOf16Map: OFFICIAL_ROUND_OF_16_ADVANCEMENT_MAP.filter(
+          (entry) => entry.targetFootballDataId !== 999999,
+        ),
+      },
+    );
+
+    expect(plan.updates).toEqual([]);
+    expect(plan.stats.roundOf16SkippedMissingTargetFixtureMap).toBe(1);
+  });
 });
 
 function group(groupCode: string, standings: Array<[string, number]>) {
@@ -608,6 +738,38 @@ function knockout(
     match_number: matchNumber,
     stage: "LAST_32",
     status: "TIMED",
+    winner: null,
+  };
+}
+
+function finishedKnockout(
+  id: string,
+  matchNumber: number,
+  footballDataId: number,
+  homeTeamId: string,
+  awayTeamId: string,
+  winner: "AWAY_TEAM" | "HOME_TEAM" | null,
+) {
+  return {
+    ...knockout(id, matchNumber, "2026-06-28T19:00:00.000Z", footballDataId),
+    away_score: winner === "AWAY_TEAM" ? 2 : 0,
+    away_team_id: awayTeamId,
+    home_score: winner === "HOME_TEAM" ? 2 : 0,
+    home_team_id: homeTeamId,
+    status: "FINISHED",
+    winner,
+  };
+}
+
+function last16(
+  id: string,
+  matchNumber: number | null,
+  kickoffAt: string,
+  footballDataId: number,
+) {
+  return {
+    ...knockout(id, matchNumber, kickoffAt, footballDataId),
+    stage: "LAST_16",
   };
 }
 

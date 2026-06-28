@@ -182,6 +182,18 @@ export default async function AdminResultsPage({
                     resolvedSearchParams,
                     "sync_knockout_missing_map",
                   ) ?? "0"
+                }. Octavos slots resueltos: ${
+                  getSearchValue(resolvedSearchParams, "sync_r16_resolved") ??
+                  "0"
+                }. Octavos desbloqueados: ${
+                  getSearchValue(resolvedSearchParams, "sync_r16_unlocked") ??
+                  "0"
+                }. Octavos corregidos: ${
+                  getSearchValue(resolvedSearchParams, "sync_r16_corrected") ??
+                  "0"
+                }. Octavos esperando ganador: ${
+                  getSearchValue(resolvedSearchParams, "sync_r16_waiting") ??
+                  "0"
                 }. Cuota por minuto: ${
                   getSearchValue(resolvedSearchParams, "sync_minute") ?? "sin dato"
                 }.`}
