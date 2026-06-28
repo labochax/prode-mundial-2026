@@ -16,6 +16,7 @@ import {
   getRelatedTeamIds,
   getTeamIdLookup,
 } from "@/lib/sports/football-data/team-id-lookup";
+import { syncOfficialKnockoutTeamsFromGroupResults } from "@/lib/tournament/official-knockout-resolver";
 import type {
   FootballDataMatchCandidate,
   FootballDataMatchStatus,
@@ -59,6 +60,9 @@ const stoppedStatuses = new Set<FootballDataMatchStatus>([
 export type FootballDataResultsSyncResult = {
   checkedMatches: number;
   finishedMatchesScored: number;
+  knockoutMatchesUnlocked: number;
+  knockoutTeamSlotsResolved: number;
+  knockoutTeamSlotsSkipped: number;
   liveMatchesUpdated: number;
   matchesUpdated: number;
   predictionsChanged: 0;
@@ -271,9 +275,17 @@ async function syncResultsToDatabase(
       }
     }
   }
+  const {
+    knockoutMatchesUnlocked,
+    knockoutTeamSlotsResolved,
+    knockoutTeamSlotsSkipped,
+  } = await syncOfficialKnockoutTeamsFromGroupResults(client);
 
   return {
     finishedMatchesScored,
+    knockoutMatchesUnlocked,
+    knockoutTeamSlotsResolved,
+    knockoutTeamSlotsSkipped,
     liveMatchesUpdated,
     matchesUpdated,
     scoredPredictions,
@@ -296,6 +308,9 @@ export async function syncFootballDataResults(
     });
     const {
       finishedMatchesScored,
+      knockoutMatchesUnlocked,
+      knockoutTeamSlotsResolved,
+      knockoutTeamSlotsSkipped,
       liveMatchesUpdated,
       matchesUpdated,
       scoredPredictions,
@@ -306,6 +321,9 @@ export async function syncFootballDataResults(
     const result = {
       checkedMatches: candidates.matches.length,
       finishedMatchesScored,
+      knockoutMatchesUnlocked,
+      knockoutTeamSlotsResolved,
+      knockoutTeamSlotsSkipped,
       liveMatchesUpdated,
       matchesUpdated,
       predictionsChanged: 0,

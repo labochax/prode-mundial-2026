@@ -16,7 +16,9 @@ cuando haya deploy:
 - `Sincronizar fixtures oficiales`: importa equipos y calendario disponible.
 - `Sincronizar resultados ahora`: actualiza estado, marcador, minuto, sede y
   asignaciones oficiales de equipos cuando Football-Data ya devuelve
-  `homeTeam.id` / `awayTeam.id`; puntúa solo partidos `FINISHED`.
+  `homeTeam.id` / `awayTeam.id`; también puede completar cruces de 16avos
+  derivables desde resultados oficiales de grupos ya guardados. Puntúa solo
+  partidos `FINISHED`.
 
 No hay deploy ni Edge Functions en esta etapa. `vercel.json` queda preparado
 con una ejecución conservadora cada 5 minutos; la ruta decide si realmente
@@ -149,6 +151,14 @@ o finalizar resultados cuando Football-Data esté demorado.
 - El modo `results` no limpia equipos asignados si el proveedor omite
   temporalmente `homeTeam.id` o `awayTeam.id`; solo escribe relaciones cuando
   recibe un ID concreto y ese equipo existe localmente.
+- Si Football-Data todavía no informa equipos de eliminación, el modo
+  `results` intenta resolver los 16avos desde los resultados oficiales de fase
+  de grupos guardados localmente. Los primeros y segundos se asignan por grupo
+  completado; los mejores terceros se asignan solo cuando la combinación de
+  Annexe C queda determinada. Empates que requieran desempates FIFA no
+  disponibles quedan sin resolver.
+- El resumen de resultados incluye `knockoutTeamSlotsResolved`,
+  `knockoutMatchesUnlocked` y `knockoutTeamSlotsSkipped`.
 - Si después de fixtures queda cuota por minuto muy baja, el orquestador omite
   resultados para evitar una llamada que probablemente termine en `429`.
 - Las respuestas JSON no incluyen secretos.
