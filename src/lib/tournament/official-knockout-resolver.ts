@@ -1,11 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
+  OFFICIAL_KNOCKOUT_ADVANCEMENT_MAP,
   OFFICIAL_ROUND_OF_16_ADVANCEMENT_MAP,
   getOfficialRoundOf32FixtureMapEntry,
   getOfficialRoundOf32FixtureTlas,
   getOfficialRoundOf32MatchNumberForFootballDataId,
   OFFICIAL_ROUND_OF_32_FIXTURE_MAP,
+  type OfficialKnockoutAdvancementMapEntry,
+  type OfficialKnockoutAdvancementOutcome,
   type OfficialKnockoutFixtureMapEntry,
   type OfficialRoundOf16AdvancementMapEntry,
 } from "@/lib/tournament/official-knockout-fixture-map";
@@ -74,6 +77,13 @@ export type OfficialRoundOf32Assignment = {
 };
 
 export type OfficialKnockoutTeamSyncStats = {
+  knockoutAdvancementMappedFixturesApplied: number;
+  knockoutAdvancementMappedFixturesCorrected: number;
+  knockoutAdvancementMatchesUnlocked: number;
+  knockoutAdvancementSkippedMissingSourceFixture: number;
+  knockoutAdvancementSkippedMissingTargetFixture: number;
+  knockoutAdvancementSkippedWaitingForSourceResult: number;
+  knockoutAdvancementTeamSlotsResolved: number;
   knockoutMappedFixturesApplied: number;
   knockoutMappedFixturesCorrected: number;
   knockoutMappedFixturesSkippedMissingTeam: number;
@@ -98,6 +108,7 @@ export type OfficialKnockoutTeamUpdate = Pick<
 };
 
 export type OfficialKnockoutTeamUpdatePlanOptions = {
+  advancementMap?: readonly OfficialKnockoutAdvancementMapEntry[];
   fixtureMap?: readonly OfficialKnockoutFixtureMapEntry[];
   roundOf16Map?: readonly OfficialRoundOf16AdvancementMapEntry[];
   teamIdsByTla?: ReadonlyMap<string, string>;
@@ -240,6 +251,48 @@ function isRoundOf16Match(match: OfficialKnockoutResolverMatch) {
     stage.includes("ROUND_16") ||
     stage.includes("OCTAVOS")
   );
+}
+
+function getAdvancementRoundForMatch(
+  match: OfficialKnockoutResolverMatch,
+): OfficialKnockoutAdvancementMapEntry["round"] | null {
+  const stage = normalizeStage(match.stage);
+
+  if (
+    stage.includes("LAST_16") ||
+    stage.includes("ROUND_OF_16") ||
+    stage.includes("ROUND_16") ||
+    stage.includes("OCTAVOS")
+  ) {
+    return "round-16";
+  }
+
+  if (
+    stage.includes("QUARTER_FINAL") ||
+    stage.includes("QUARTERFINALS") ||
+    stage.includes("CUARTOS")
+  ) {
+    return "quarter-finals";
+  }
+
+  if (stage.includes("SEMI_FINAL") || stage.includes("SEMIFINAL")) {
+    return "semi-finals";
+  }
+
+  if (
+    stage.includes("THIRD_PLACE") ||
+    stage.includes("THIRD_PLACE_PLAY") ||
+    stage.includes("3_PUESTO") ||
+    stage.includes("TERCER")
+  ) {
+    return "third-place";
+  }
+
+  if (stage === "FINAL" || stage.includes("FINAL")) {
+    return "final";
+  }
+
+  return null;
 }
 
 function isFinishedGroupMatch(match: OfficialKnockoutResolverMatch) {
@@ -684,52 +737,56 @@ function getExistingRoundOf16TeamMatchIds(
   return teamMatchIds;
 }
 
-function getFinishedMatchWinnerTeamId(
+function getFinishedMatchOutcomeTeamId(
   match: OfficialKnockoutResolverMatch | undefined,
+  outcome: OfficialKnockoutAdvancementOutcome,
 ) {
   if (!match || match.status?.trim().toUpperCase() !== "FINISHED") {
     return null;
   }
 
+  let winnerTeamId: string | null = null;
+  let loserTeamId: string | null = null;
+
   if (match.winner === "HOME_TEAM") {
-    return match.home_team_id;
-  }
-
-  if (match.winner === "AWAY_TEAM") {
-    return match.away_team_id;
-  }
-
-  if (
+    winnerTeamId = match.home_team_id;
+    loserTeamId = match.away_team_id;
+  } else if (match.winner === "AWAY_TEAM") {
+    winnerTeamId = match.away_team_id;
+    loserTeamId = match.home_team_id;
+  } else if (
     typeof match.home_score === "number" &&
     typeof match.away_score === "number"
   ) {
     if (match.home_score > match.away_score) {
-      return match.home_team_id;
+      winnerTeamId = match.home_team_id;
+      loserTeamId = match.away_team_id;
     }
 
     if (match.away_score > match.home_score) {
-      return match.away_team_id;
+      winnerTeamId = match.away_team_id;
+      loserTeamId = match.home_team_id;
     }
   }
 
-  return null;
+  return outcome === "winner" ? winnerTeamId : loserTeamId;
 }
 
-function getRoundOf16TargetMap(
+function getAdvancementTargetMap(
   matches: OfficialKnockoutResolverMatch[],
-  roundOf16Map: readonly OfficialRoundOf16AdvancementMapEntry[],
+  advancementMap: readonly OfficialKnockoutAdvancementMapEntry[],
 ) {
   const mappedTargetIds = new Set(
-    roundOf16Map.map((entry) => entry.targetFootballDataId),
+    advancementMap.map((entry) => entry.targetFootballDataId),
   );
   const targetByFootballDataId = new Map(
     matches
-      .filter(isRoundOf16Match)
+      .filter((match) => getAdvancementRoundForMatch(match) !== null)
       .filter((match) => typeof match.football_data_id === "number")
       .map((match) => [match.football_data_id as number, match]),
   );
   const skippedMissingTargetFixtureMap = matches
-    .filter(isRoundOf16Match)
+    .filter((match) => getAdvancementRoundForMatch(match) !== null)
     .filter(
       (match) =>
         typeof match.football_data_id !== "number" ||
@@ -740,6 +797,120 @@ function getRoundOf16TargetMap(
     skippedMissingTargetFixtureMap,
     targetByFootballDataId,
   };
+}
+
+function getExistingAdvancementTeamMatchIds(
+  matches: OfficialKnockoutResolverMatch[],
+) {
+  const teamMatchIdsByRound = new Map<
+    OfficialKnockoutAdvancementMapEntry["round"],
+    Map<string, string>
+  >();
+
+  for (const match of matches) {
+    const round = getAdvancementRoundForMatch(match);
+
+    if (!round) {
+      continue;
+    }
+
+    const teamMatchIds = teamMatchIdsByRound.get(round) ?? new Map<string, string>();
+
+    for (const teamId of [match.home_team_id, match.away_team_id]) {
+      if (teamId && !teamMatchIds.has(teamId)) {
+        teamMatchIds.set(teamId, match.id);
+      }
+    }
+
+    teamMatchIdsByRound.set(round, teamMatchIds);
+  }
+
+  return teamMatchIdsByRound;
+}
+
+function countRoundOf16TargetMapMisses(
+  matches: OfficialKnockoutResolverMatch[],
+  advancementMap: readonly OfficialKnockoutAdvancementMapEntry[],
+) {
+  const roundOf16TargetIds = new Set(
+    advancementMap
+      .filter((entry) => entry.round === "round-16")
+      .map((entry) => entry.targetFootballDataId),
+  );
+
+  return matches
+    .filter(isRoundOf16Match)
+    .filter(
+      (match) =>
+        typeof match.football_data_id !== "number" ||
+        !roundOf16TargetIds.has(match.football_data_id),
+    ).length;
+}
+
+function addAdvancementMissingSource(
+  stats: OfficialKnockoutTeamSyncStats,
+  advancement: OfficialKnockoutAdvancementMapEntry,
+) {
+  stats.knockoutAdvancementSkippedMissingSourceFixture += 1;
+
+  if (advancement.round === "round-16") {
+    stats.roundOf16SkippedMissingSourceFixture += 1;
+  }
+}
+
+function addAdvancementWaitingForSource(
+  stats: OfficialKnockoutTeamSyncStats,
+  advancement: OfficialKnockoutAdvancementMapEntry,
+) {
+  stats.knockoutAdvancementSkippedWaitingForSourceResult += 1;
+
+  if (advancement.round === "round-16") {
+    stats.roundOf16SkippedWaitingForSourceWinner += 1;
+  }
+}
+
+function addAdvancementResolvedSlot(
+  stats: OfficialKnockoutTeamSyncStats,
+  advancement: OfficialKnockoutAdvancementMapEntry,
+) {
+  stats.knockoutAdvancementTeamSlotsResolved += 1;
+
+  if (advancement.round === "round-16") {
+    stats.roundOf16TeamSlotsResolved += 1;
+  }
+}
+
+function addAdvancementCorrectedFixture(
+  stats: OfficialKnockoutTeamSyncStats,
+  advancement: OfficialKnockoutAdvancementMapEntry,
+) {
+  stats.knockoutAdvancementMappedFixturesCorrected += 1;
+
+  if (advancement.round === "round-16") {
+    stats.roundOf16MappedFixturesCorrected += 1;
+  }
+}
+
+function addAdvancementAppliedFixture(
+  stats: OfficialKnockoutTeamSyncStats,
+  advancement: OfficialKnockoutAdvancementMapEntry,
+) {
+  stats.knockoutAdvancementMappedFixturesApplied += 1;
+
+  if (advancement.round === "round-16") {
+    stats.roundOf16MappedFixturesApplied += 1;
+  }
+}
+
+function addAdvancementUnlockedMatch(
+  stats: OfficialKnockoutTeamSyncStats,
+  advancement: OfficialKnockoutAdvancementMapEntry,
+) {
+  stats.knockoutAdvancementMatchesUnlocked += 1;
+
+  if (advancement.round === "round-16") {
+    stats.roundOf16MatchesUnlocked += 1;
+  }
 }
 
 export function buildOfficialKnockoutTeamUpdatePlan(
@@ -761,15 +932,26 @@ export function buildOfficialKnockoutTeamUpdatePlan(
   const verifiedTeamMatchIds = new Map<string, string>();
   const directMappedMatchIds = new Set<string>();
   const fixtureMap = options.fixtureMap ?? OFFICIAL_ROUND_OF_32_FIXTURE_MAP;
-  const roundOf16Map =
-    options.roundOf16Map ?? OFFICIAL_ROUND_OF_16_ADVANCEMENT_MAP;
+  const advancementMap =
+    options.advancementMap ??
+    options.roundOf16Map ??
+    OFFICIAL_KNOCKOUT_ADVANCEMENT_MAP;
   const matchesByFootballDataId = getMatchesByFootballDataId(matches);
   const {
     skippedMissingTargetFixtureMap,
-    targetByFootballDataId: roundOf16TargetsByFootballDataId,
-  } = getRoundOf16TargetMap(matches, roundOf16Map);
-  const plannedRoundOf16TeamMatchIds = getExistingRoundOf16TeamMatchIds(matches);
+    targetByFootballDataId: advancementTargetsByFootballDataId,
+  } = getAdvancementTargetMap(matches, advancementMap);
+  const plannedAdvancementTeamMatchIds =
+    getExistingAdvancementTeamMatchIds(matches);
   const stats: OfficialKnockoutTeamSyncStats = {
+    knockoutAdvancementMappedFixturesApplied: 0,
+    knockoutAdvancementMappedFixturesCorrected: 0,
+    knockoutAdvancementMatchesUnlocked: 0,
+    knockoutAdvancementSkippedMissingSourceFixture: 0,
+    knockoutAdvancementSkippedMissingTargetFixture:
+      skippedMissingTargetFixtureMap,
+    knockoutAdvancementSkippedWaitingForSourceResult: 0,
+    knockoutAdvancementTeamSlotsResolved: 0,
     knockoutMappedFixturesApplied: 0,
     knockoutMappedFixturesCorrected: 0,
     knockoutMappedFixturesSkippedMissingTeam: 0,
@@ -783,13 +965,13 @@ export function buildOfficialKnockoutTeamUpdatePlan(
     roundOf16MatchesUnlocked: 0,
     roundOf16SkippedMissingSourceFixture: 0,
     roundOf16SkippedMissingTargetFixtureMap:
-      skippedMissingTargetFixtureMap,
+      countRoundOf16TargetMapMisses(matches, advancementMap),
     roundOf16SkippedWaitingForSourceWinner: 0,
     roundOf16TeamSlotsResolved: 0,
   };
 
-  for (const advancement of roundOf16Map) {
-    const target = roundOf16TargetsByFootballDataId.get(
+  for (const advancement of advancementMap) {
+    const target = advancementTargetsByFootballDataId.get(
       advancement.targetFootballDataId,
     );
 
@@ -803,76 +985,85 @@ export function buildOfficialKnockoutTeamUpdatePlan(
     const awaySource = matchesByFootballDataId.get(
       advancement.awaySourceFootballDataId,
     );
-    const homeWinnerTeamId = getFinishedMatchWinnerTeamId(homeSource);
-    const awayWinnerTeamId = getFinishedMatchWinnerTeamId(awaySource);
+    const homeTeamId = getFinishedMatchOutcomeTeamId(
+      homeSource,
+      advancement.homeSourceOutcome,
+    );
+    const awayTeamId = getFinishedMatchOutcomeTeamId(
+      awaySource,
+      advancement.awaySourceOutcome,
+    );
 
     if (!homeSource) {
-      stats.roundOf16SkippedMissingSourceFixture += 1;
-    } else if (!homeWinnerTeamId) {
-      stats.roundOf16SkippedWaitingForSourceWinner += 1;
+      addAdvancementMissingSource(stats, advancement);
+    } else if (!homeTeamId) {
+      addAdvancementWaitingForSource(stats, advancement);
     }
 
     if (!awaySource) {
-      stats.roundOf16SkippedMissingSourceFixture += 1;
-    } else if (!awayWinnerTeamId) {
-      stats.roundOf16SkippedWaitingForSourceWinner += 1;
+      addAdvancementMissingSource(stats, advancement);
+    } else if (!awayTeamId) {
+      addAdvancementWaitingForSource(stats, advancement);
     }
 
     const update: OfficialKnockoutTeamUpdate = {
       id: target.id,
     };
     let correctedFixture = false;
+    const plannedTeamMatchIds =
+      plannedAdvancementTeamMatchIds.get(advancement.round) ??
+      new Map<string, string>();
 
-    if (homeWinnerTeamId) {
-      const duplicateMatchId =
-        plannedRoundOf16TeamMatchIds.get(homeWinnerTeamId);
+    if (homeTeamId) {
+      const duplicateMatchId = plannedTeamMatchIds.get(homeTeamId);
 
       if (duplicateMatchId && duplicateMatchId !== target.id) {
-        stats.roundOf16SkippedWaitingForSourceWinner += 1;
+        addAdvancementWaitingForSource(stats, advancement);
       } else {
         const home = getVerifiedSideUpdate(
           target.home_team_id,
-          homeWinnerTeamId,
+          homeTeamId,
         );
 
-        plannedRoundOf16TeamMatchIds.set(homeWinnerTeamId, target.id);
+        plannedTeamMatchIds.set(homeTeamId, target.id);
 
         if (home.value) {
           update.home_team_id = home.value;
-          stats.roundOf16TeamSlotsResolved += 1;
+          addAdvancementResolvedSlot(stats, advancement);
           correctedFixture ||= home.corrected;
         }
       }
     }
 
-    if (awayWinnerTeamId) {
-      const duplicateMatchId =
-        plannedRoundOf16TeamMatchIds.get(awayWinnerTeamId);
+    if (awayTeamId) {
+      const duplicateMatchId = plannedTeamMatchIds.get(awayTeamId);
 
       if (duplicateMatchId && duplicateMatchId !== target.id) {
-        stats.roundOf16SkippedWaitingForSourceWinner += 1;
+        addAdvancementWaitingForSource(stats, advancement);
       } else {
         const away = getVerifiedSideUpdate(
           target.away_team_id,
-          awayWinnerTeamId,
+          awayTeamId,
         );
 
-        plannedRoundOf16TeamMatchIds.set(awayWinnerTeamId, target.id);
+        plannedTeamMatchIds.set(awayTeamId, target.id);
 
         if (away.value) {
           update.away_team_id = away.value;
-          stats.roundOf16TeamSlotsResolved += 1;
+          addAdvancementResolvedSlot(stats, advancement);
           correctedFixture ||= away.corrected;
         }
       }
     }
 
+    plannedAdvancementTeamMatchIds.set(advancement.round, plannedTeamMatchIds);
+
     if (correctedFixture) {
-      stats.roundOf16MappedFixturesCorrected += 1;
+      addAdvancementCorrectedFixture(stats, advancement);
     }
 
     if (update.home_team_id || update.away_team_id) {
-      stats.roundOf16MappedFixturesApplied += 1;
+      addAdvancementAppliedFixture(stats, advancement);
       const hadBothTeams = Boolean(target.home_team_id && target.away_team_id);
       const willHaveBothTeams = Boolean(
         (target.home_team_id ?? update.home_team_id) &&
@@ -880,7 +1071,7 @@ export function buildOfficialKnockoutTeamUpdatePlan(
       );
 
       if (!hadBothTeams && willHaveBothTeams) {
-        stats.roundOf16MatchesUnlocked += 1;
+        addAdvancementUnlockedMatch(stats, advancement);
       }
 
       updates.push(update);

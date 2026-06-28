@@ -79,6 +79,21 @@ export async function syncResultsFromAdminAction() {
       sync_checked: String(result.checkedMatches),
       sync_estado: "ok",
       sync_finished: String(result.finishedMatchesScored),
+      sync_adv_applied: String(result.knockoutAdvancementMappedFixturesApplied),
+      sync_adv_corrected: String(
+        result.knockoutAdvancementMappedFixturesCorrected,
+      ),
+      sync_adv_missing_source: String(
+        result.knockoutAdvancementSkippedMissingSourceFixture,
+      ),
+      sync_adv_missing_target: String(
+        result.knockoutAdvancementSkippedMissingTargetFixture,
+      ),
+      sync_adv_resolved: String(result.knockoutAdvancementTeamSlotsResolved),
+      sync_adv_unlocked: String(result.knockoutAdvancementMatchesUnlocked),
+      sync_adv_waiting: String(
+        result.knockoutAdvancementSkippedWaitingForSourceResult,
+      ),
       sync_knockout_applied: String(result.knockoutMappedFixturesApplied),
       sync_knockout_corrected: String(result.knockoutMappedFixturesCorrected),
       sync_knockout_missing_map: String(

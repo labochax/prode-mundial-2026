@@ -74,6 +74,21 @@ export async function syncFootballDataResultsAction() {
       results_checked: String(result.checkedMatches),
       results_estado: "ok",
       results_finished: String(result.finishedMatchesScored),
+      results_adv_applied: String(result.knockoutAdvancementMappedFixturesApplied),
+      results_adv_corrected: String(
+        result.knockoutAdvancementMappedFixturesCorrected,
+      ),
+      results_adv_missing_source: String(
+        result.knockoutAdvancementSkippedMissingSourceFixture,
+      ),
+      results_adv_missing_target: String(
+        result.knockoutAdvancementSkippedMissingTargetFixture,
+      ),
+      results_adv_resolved: String(result.knockoutAdvancementTeamSlotsResolved),
+      results_adv_unlocked: String(result.knockoutAdvancementMatchesUnlocked),
+      results_adv_waiting: String(
+        result.knockoutAdvancementSkippedWaitingForSourceResult,
+      ),
       results_knockout_applied: String(result.knockoutMappedFixturesApplied),
       results_knockout_corrected: String(result.knockoutMappedFixturesCorrected),
       results_knockout_missing_map: String(
@@ -108,6 +123,8 @@ export async function syncFootballDataResultsAction() {
         `16avos sin mapa oficial: ${result.knockoutSkippedMissingOfficialFixtureMap}. ` +
         `Octavos slots resueltos: ${result.roundOf16TeamSlotsResolved}. ` +
         `Octavos desbloqueados: ${result.roundOf16MatchesUnlocked}. ` +
+        `Avances M89-M104 slots resueltos: ${result.knockoutAdvancementTeamSlotsResolved}. ` +
+        `Avances M89-M104 desbloqueados: ${result.knockoutAdvancementMatchesUnlocked}. ` +
         "Predicciones directas modificadas: 0.",
     });
   } catch (error) {

@@ -60,6 +60,13 @@ const stoppedStatuses = new Set<FootballDataMatchStatus>([
 export type FootballDataResultsSyncResult = {
   checkedMatches: number;
   finishedMatchesScored: number;
+  knockoutAdvancementMappedFixturesApplied: number;
+  knockoutAdvancementMappedFixturesCorrected: number;
+  knockoutAdvancementMatchesUnlocked: number;
+  knockoutAdvancementSkippedMissingSourceFixture: number;
+  knockoutAdvancementSkippedMissingTargetFixture: number;
+  knockoutAdvancementSkippedWaitingForSourceResult: number;
+  knockoutAdvancementTeamSlotsResolved: number;
   knockoutMappedFixturesApplied: number;
   knockoutMappedFixturesCorrected: number;
   knockoutMappedFixturesSkippedMissingTeam: number;
@@ -287,6 +294,13 @@ async function syncResultsToDatabase(
     }
   }
   const {
+    knockoutAdvancementMappedFixturesApplied,
+    knockoutAdvancementMappedFixturesCorrected,
+    knockoutAdvancementMatchesUnlocked,
+    knockoutAdvancementSkippedMissingSourceFixture,
+    knockoutAdvancementSkippedMissingTargetFixture,
+    knockoutAdvancementSkippedWaitingForSourceResult,
+    knockoutAdvancementTeamSlotsResolved,
     knockoutMappedFixturesApplied,
     knockoutMappedFixturesCorrected,
     knockoutMappedFixturesSkippedMissingTeam,
@@ -305,6 +319,13 @@ async function syncResultsToDatabase(
 
   return {
     finishedMatchesScored,
+    knockoutAdvancementMappedFixturesApplied,
+    knockoutAdvancementMappedFixturesCorrected,
+    knockoutAdvancementMatchesUnlocked,
+    knockoutAdvancementSkippedMissingSourceFixture,
+    knockoutAdvancementSkippedMissingTargetFixture,
+    knockoutAdvancementSkippedWaitingForSourceResult,
+    knockoutAdvancementTeamSlotsResolved,
     knockoutMappedFixturesApplied,
     knockoutMappedFixturesCorrected,
     knockoutMappedFixturesSkippedMissingTeam,
@@ -341,6 +362,13 @@ export async function syncFootballDataResults(
     });
     const {
       finishedMatchesScored,
+      knockoutAdvancementMappedFixturesApplied,
+      knockoutAdvancementMappedFixturesCorrected,
+      knockoutAdvancementMatchesUnlocked,
+      knockoutAdvancementSkippedMissingSourceFixture,
+      knockoutAdvancementSkippedMissingTargetFixture,
+      knockoutAdvancementSkippedWaitingForSourceResult,
+      knockoutAdvancementTeamSlotsResolved,
       knockoutMappedFixturesApplied,
       knockoutMappedFixturesCorrected,
       knockoutMappedFixturesSkippedMissingTeam,
@@ -365,6 +393,13 @@ export async function syncFootballDataResults(
     const result = {
       checkedMatches: candidates.matches.length,
       finishedMatchesScored,
+      knockoutAdvancementMappedFixturesApplied,
+      knockoutAdvancementMappedFixturesCorrected,
+      knockoutAdvancementMatchesUnlocked,
+      knockoutAdvancementSkippedMissingSourceFixture,
+      knockoutAdvancementSkippedMissingTargetFixture,
+      knockoutAdvancementSkippedWaitingForSourceResult,
+      knockoutAdvancementTeamSlotsResolved,
       knockoutMappedFixturesApplied,
       knockoutMappedFixturesCorrected,
       knockoutMappedFixturesSkippedMissingTeam,

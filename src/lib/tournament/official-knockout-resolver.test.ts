@@ -6,6 +6,7 @@ import {
   resolveOfficialRoundOf32Assignments,
 } from "@/lib/tournament/official-knockout-resolver";
 import {
+  OFFICIAL_KNOCKOUT_ADVANCEMENT_MAP,
   OFFICIAL_ROUND_OF_16_ADVANCEMENT_MAP,
   OFFICIAL_ROUND_OF_32_FIXTURE_MAP,
   type OfficialKnockoutFixtureMapEntry,
@@ -598,6 +599,195 @@ describe("buildOfficialKnockoutTeamUpdatePlan", () => {
     expect(plan.updates).toEqual([]);
     expect(plan.stats.roundOf16SkippedMissingTargetFixtureMap).toBe(1);
   });
+
+  it("populates M97 from winners of M89 and M90", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      finishedKnockout("m89", 89, 537375, "team-ger", "team-fra", "HOME_TEAM", "LAST_16"),
+      finishedKnockout("m90", 90, 537376, "team-rsa", "team-mar", "AWAY_TEAM", "LAST_16"),
+      knockoutStage("m97", null, "2026-07-09T19:00:00.000Z", 537383, "QUARTER_FINALS"),
+    ]);
+
+    expect(plan.updates).toEqual([
+      {
+        away_team_id: "team-mar",
+        home_team_id: "team-ger",
+        id: "m97",
+      },
+    ]);
+    expect(plan.stats.knockoutAdvancementTeamSlotsResolved).toBe(2);
+    expect(plan.stats.knockoutAdvancementMatchesUnlocked).toBe(1);
+  });
+
+  it("populates M98 from winners of M91 and M92", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      finishedKnockout("m91", 91, 537377, "team-bra", "team-civ", "AWAY_TEAM", "LAST_16"),
+      finishedKnockout("m92", 92, 537378, "team-mex", "team-eng", "HOME_TEAM", "LAST_16"),
+      knockoutStage("m98", null, "2026-07-10T19:00:00.000Z", 537384, "QUARTER_FINALS"),
+    ]);
+
+    expect(plan.updates).toEqual([
+      {
+        away_team_id: "team-mex",
+        home_team_id: "team-civ",
+        id: "m98",
+      },
+    ]);
+  });
+
+  it("populates M101 and M102 from quarterfinal winners", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      finishedKnockout("m97", 97, 537383, "team-ger", "team-mar", "HOME_TEAM", "QUARTER_FINALS"),
+      finishedKnockout("m98", 98, 537384, "team-civ", "team-mex", "AWAY_TEAM", "QUARTER_FINALS"),
+      finishedKnockout("m99", 99, 537385, "team-por", "team-bel", "AWAY_TEAM", "QUARTER_FINALS"),
+      finishedKnockout("m100", 100, 537386, "team-arg", "team-sui", "HOME_TEAM", "QUARTER_FINALS"),
+      knockoutStage("m101", null, "2026-07-14T19:00:00.000Z", 537387, "SEMI_FINALS"),
+      knockoutStage("m102", null, "2026-07-15T19:00:00.000Z", 537388, "SEMI_FINALS"),
+    ]);
+
+    expect(plan.updates).toEqual(
+      expect.arrayContaining([
+        {
+          away_team_id: "team-mex",
+          home_team_id: "team-ger",
+          id: "m101",
+        },
+        {
+          away_team_id: "team-arg",
+          home_team_id: "team-bel",
+          id: "m102",
+        },
+      ]),
+    );
+  });
+
+  it("populates Final from semifinal winners and Third Place from semifinal losers", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      finishedKnockout("m101", 101, 537387, "team-ger", "team-mex", "HOME_TEAM", "SEMI_FINALS"),
+      finishedKnockout("m102", 102, 537388, "team-bel", "team-arg", "AWAY_TEAM", "SEMI_FINALS"),
+      knockoutStage("third-place", null, "2026-07-18T19:00:00.000Z", 537389, "THIRD_PLACE"),
+      knockoutStage("final", null, "2026-07-19T19:00:00.000Z", 537390, "FINAL"),
+    ]);
+
+    expect(plan.updates).toEqual(
+      expect.arrayContaining([
+        {
+          away_team_id: "team-bel",
+          home_team_id: "team-mex",
+          id: "third-place",
+        },
+        {
+          away_team_id: "team-arg",
+          home_team_id: "team-ger",
+          id: "final",
+        },
+      ]),
+    );
+  });
+
+  it("fills only one later-round side when only one source is finished", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      finishedKnockout("m89", 89, 537375, "team-ger", "team-fra", "HOME_TEAM", "LAST_16"),
+      knockoutStage("m90", null, "2026-07-04T19:00:00.000Z", 537376, "LAST_16"),
+      knockoutStage("m97", null, "2026-07-09T19:00:00.000Z", 537383, "QUARTER_FINALS"),
+    ]);
+
+    expect(plan.updates).toEqual([
+      {
+        home_team_id: "team-ger",
+        id: "m97",
+      },
+    ]);
+    expect(plan.stats.knockoutAdvancementSkippedWaitingForSourceResult).toBe(1);
+  });
+
+  it("does not fill a later-round side from a tied source without official winner", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      {
+        ...finishedKnockout("m89", 89, 537375, "team-ger", "team-fra", null, "LAST_16"),
+        away_score: 1,
+        home_score: 1,
+      },
+      knockoutStage("m97", null, "2026-07-09T19:00:00.000Z", 537383, "QUARTER_FINALS"),
+    ]);
+
+    expect(plan.updates).toEqual([]);
+    expect(plan.stats.knockoutAdvancementSkippedWaitingForSourceResult).toBe(1);
+  });
+
+  it("respects official winner over score direction in later rounds", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      {
+        ...finishedKnockout("m89", 89, 537375, "team-ger", "team-fra", "AWAY_TEAM", "LAST_16"),
+        away_score: 1,
+        home_score: 2,
+      },
+      knockoutStage("m90", null, "2026-07-04T19:00:00.000Z", 537376, "LAST_16"),
+      knockoutStage("m97", null, "2026-07-09T19:00:00.000Z", 537383, "QUARTER_FINALS"),
+    ]);
+
+    expect(plan.updates).toEqual([
+      {
+        home_team_id: "team-fra",
+        id: "m97",
+      },
+    ]);
+  });
+
+  it("corrects a wrong existing mapped later-round side and leaves correct side unchanged", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      finishedKnockout("m89", 89, 537375, "team-ger", "team-fra", "HOME_TEAM", "LAST_16"),
+      finishedKnockout("m90", 90, 537376, "team-rsa", "team-mar", "AWAY_TEAM", "LAST_16"),
+      {
+        ...knockoutStage("m97", null, "2026-07-09T19:00:00.000Z", 537383, "QUARTER_FINALS"),
+        away_team_id: "wrong-away",
+        home_team_id: "team-ger",
+      },
+    ]);
+
+    expect(plan.updates).toEqual([
+      {
+        away_team_id: "team-mar",
+        id: "m97",
+      },
+    ]);
+    expect(plan.stats.knockoutAdvancementMappedFixturesCorrected).toBe(1);
+  });
+
+  it("does not assign the same team twice in a target round", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan([
+      finishedKnockout("m89", 89, 537375, "team-ger", "team-fra", "HOME_TEAM", "LAST_16"),
+      finishedKnockout("m90", 90, 537376, "team-rsa", "team-mar", "AWAY_TEAM", "LAST_16"),
+      finishedKnockout("m91", 91, 537377, "team-mar", "team-civ", "HOME_TEAM", "LAST_16"),
+      finishedKnockout("m92", 92, 537378, "team-mex", "team-eng", "HOME_TEAM", "LAST_16"),
+      knockoutStage("m97", null, "2026-07-09T19:00:00.000Z", 537383, "QUARTER_FINALS"),
+      knockoutStage("m98", null, "2026-07-10T19:00:00.000Z", 537384, "QUARTER_FINALS"),
+    ]);
+    const assignedTeams = plan.updates.flatMap((update) =>
+      [update.home_team_id, update.away_team_id].filter(Boolean),
+    );
+
+    expect(assignedTeams.filter((teamId) => teamId === "team-mar")).toHaveLength(
+      1,
+    );
+  });
+
+  it("skips a later-round target without a trusted fixture map", () => {
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      [
+        finishedKnockout("m89", 89, 537375, "team-ger", "team-fra", "HOME_TEAM", "LAST_16"),
+        finishedKnockout("m90", 90, 537376, "team-rsa", "team-mar", "HOME_TEAM", "LAST_16"),
+        knockoutStage("unmapped-quarter", null, "2026-07-09T19:00:00.000Z", 999998, "QUARTER_FINALS"),
+      ],
+      {
+        advancementMap: OFFICIAL_KNOCKOUT_ADVANCEMENT_MAP.filter(
+          (entry) => entry.targetFootballDataId !== 999998,
+        ),
+      },
+    );
+
+    expect(plan.updates).toEqual([]);
+    expect(plan.stats.knockoutAdvancementSkippedMissingTargetFixture).toBe(1);
+  });
 });
 
 function group(groupCode: string, standings: Array<[string, number]>) {
@@ -749,6 +939,7 @@ function finishedKnockout(
   homeTeamId: string,
   awayTeamId: string,
   winner: "AWAY_TEAM" | "HOME_TEAM" | null,
+  stage = "LAST_32",
 ) {
   return {
     ...knockout(id, matchNumber, "2026-06-28T19:00:00.000Z", footballDataId),
@@ -756,8 +947,22 @@ function finishedKnockout(
     away_team_id: awayTeamId,
     home_score: winner === "HOME_TEAM" ? 2 : 0,
     home_team_id: homeTeamId,
+    stage,
     status: "FINISHED",
     winner,
+  };
+}
+
+function knockoutStage(
+  id: string,
+  matchNumber: number | null,
+  kickoffAt: string,
+  footballDataId: number,
+  stage: string,
+) {
+  return {
+    ...knockout(id, matchNumber, kickoffAt, footballDataId),
+    stage,
   };
 }
 

@@ -194,6 +194,18 @@ export default async function AdminResultsPage({
                 }. Octavos esperando ganador: ${
                   getSearchValue(resolvedSearchParams, "sync_r16_waiting") ??
                   "0"
+                }. Avances M89-M104 slots resueltos: ${
+                  getSearchValue(resolvedSearchParams, "sync_adv_resolved") ??
+                  "0"
+                }. Avances M89-M104 desbloqueados: ${
+                  getSearchValue(resolvedSearchParams, "sync_adv_unlocked") ??
+                  "0"
+                }. Avances M89-M104 corregidos: ${
+                  getSearchValue(resolvedSearchParams, "sync_adv_corrected") ??
+                  "0"
+                }. Avances M89-M104 esperando resultado: ${
+                  getSearchValue(resolvedSearchParams, "sync_adv_waiting") ??
+                  "0"
                 }. Cuota por minuto: ${
                   getSearchValue(resolvedSearchParams, "sync_minute") ?? "sin dato"
                 }.`}
