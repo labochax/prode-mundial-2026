@@ -13,6 +13,8 @@ import type { Database } from "@/lib/supabase/database.types";
 
 type SupabaseDatabaseClient = SupabaseClient<Database>;
 
+const leaderboardRecentResultsPageSize = 1000;
+
 export type LeaderboardRecentPredictionRow = {
   matches: VisiblePredictionMatch | null;
   points: number | null;
@@ -141,24 +143,50 @@ export function getFallbackRecentResultMarkers() {
   return [...fallbackRecentMarkers];
 }
 
+async function getAllLeaderboardRecentPredictionRows(
+  client: SupabaseDatabaseClient,
+  poolId: string,
+) {
+  const rows: LeaderboardRecentPredictionRow[] = [];
+  let from = 0;
+
+  while (true) {
+    const to = from + leaderboardRecentResultsPageSize - 1;
+    const { data, error } = await client
+      .from("predictions")
+      .select(
+        "user_id,points,matches!inner(id,kickoff_at,lock_at,match_number,status,home_team_id,away_team_id)",
+      )
+      .eq("pool_id", poolId)
+      .not("points", "is", null)
+      .eq("matches.status", "FINISHED")
+      .order("user_id", { ascending: true })
+      .order("match_id", { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      throw error;
+    }
+
+    const pageRows = (data ?? []) as LeaderboardRecentPredictionRow[];
+
+    rows.push(...pageRows);
+
+    if (pageRows.length < leaderboardRecentResultsPageSize) {
+      break;
+    }
+
+    from += leaderboardRecentResultsPageSize;
+  }
+
+  return rows;
+}
+
 export async function getLeaderboardRecentResults(
   client: SupabaseDatabaseClient,
   poolId: string,
 ) {
-  const { data, error } = await client
-    .from("predictions")
-    .select(
-      "user_id,points,matches!inner(id,kickoff_at,lock_at,match_number,status,home_team_id,away_team_id)",
-    )
-    .eq("pool_id", poolId)
-    .not("points", "is", null)
-    .eq("matches.status", "FINISHED");
-
-  if (error) {
-    throw error;
-  }
-
   return buildLeaderboardRecentResults(
-    (data ?? []) as LeaderboardRecentPredictionRow[],
+    await getAllLeaderboardRecentPredictionRows(client, poolId),
   );
 }

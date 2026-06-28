@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildLeaderboardRecentResults,
   buildRecentResultMarkersByUser,
+  getLeaderboardRecentResults,
   mapPredictionPointsToResultMarker,
 } from "@/lib/supabase/queries/leaderboard-recent-results";
 import { buildPlayerVisiblePredictions } from "@/lib/supabase/queries/player-visible-predictions";
@@ -168,6 +169,52 @@ describe("buildLeaderboardRecentResults", () => {
   });
 });
 
+describe("getLeaderboardRecentResults", () => {
+  it("fetches every paginated prediction page before building recent markers", async () => {
+    const firstPageRows = Array.from({ length: 1000 }, (_, index) =>
+      prediction(
+        `other-user-${index}`,
+        index % 2 === 0 ? 0 : 1,
+        "2026-06-08T12:00:00.000Z",
+        index + 1,
+        "FINISHED",
+        `first-page-match-${index}`,
+      ),
+    );
+    const joweRows = [
+      prediction("jowe", 0, "2026-06-09T12:00:00.000Z", 1001),
+      prediction("jowe", 1, "2026-06-10T12:00:00.000Z", 1002),
+      prediction("jowe", 0, "2026-06-11T12:00:00.000Z", 1003),
+      prediction("jowe", 3, "2026-06-12T12:00:00.000Z", 1004),
+      prediction("jowe", 0, "2026-06-13T12:00:00.000Z", 1005),
+    ];
+    const client = createPagedPredictionsClient([...firstPageRows, ...joweRows]);
+
+    const result = await getLeaderboardRecentResults(
+      client as never,
+      "pool-1",
+    );
+
+    expect(result.recentMarkersByUserId.get("jowe")).toEqual([
+      "miss",
+      "outcome",
+      "miss",
+      "exact",
+      "miss",
+    ]);
+    expect(result.trendWindowContributionsByUserId.get("jowe")).toEqual({
+      exactHits: 1,
+      outcomeHits: 1,
+      points: 4,
+      predictedMatchesCount: 5,
+    });
+    expect(client.getRanges()).toEqual([
+      [0, 999],
+      [1000, 1999],
+    ]);
+  });
+});
+
 function prediction(
   userId: string,
   points: 0 | 1 | 3 | null,
@@ -204,5 +251,45 @@ function team(id: string, name: string, tla: string) {
     name_es: name,
     short_name: name,
     tla,
+  };
+}
+
+function createPagedPredictionsClient(rows: ReturnType<typeof prediction>[]) {
+  const ranges: Array<[number, number]> = [];
+
+  return {
+    getRanges: () => ranges,
+    from: (tableName: string) => {
+      expect(tableName).toBe("predictions");
+
+      const state = {
+        from: 0,
+        to: 999,
+      };
+
+      const builder = {
+        eq: () => builder,
+        not: () => builder,
+        order: () => builder,
+        range: (from: number, to: number) => {
+          ranges.push([from, to]);
+          state.from = from;
+          state.to = to;
+
+          return builder;
+        },
+        select: () => builder,
+        then: (
+          resolve: (value: { data: typeof rows; error: null }) => unknown,
+          reject: (reason?: unknown) => unknown,
+        ) =>
+          Promise.resolve({
+            data: rows.slice(state.from, state.to + 1),
+            error: null,
+          }).then(resolve, reject),
+      };
+
+      return builder;
+    },
   };
 }
