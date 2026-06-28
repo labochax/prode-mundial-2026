@@ -7,6 +7,10 @@ import {
   getStadiumIdForMatchCandidate,
   syncFootballDataMatchStadiums,
 } from "@/lib/sports/football-data/stadium-sync";
+import {
+  getRelatedTeamIds,
+  getTeamIdLookup,
+} from "@/lib/sports/football-data/team-id-lookup";
 import type {
   FootballDataFixtureSyncCandidates,
   FootballDataMatchCandidate,
@@ -20,7 +24,7 @@ type MatchUpdate = Database["public"]["Tables"]["matches"]["Update"];
 type SyncRunInsert = Database["public"]["Tables"]["sync_runs"]["Insert"];
 type SyncRunUpdate = Database["public"]["Tables"]["sync_runs"]["Update"];
 
-type TeamIdLookup = Map<number, string>;
+type TeamIdLookup = Awaited<ReturnType<typeof getTeamIdLookup>>;
 type FootballDataFixtureSyncTrigger = "cron" | "manual";
 
 export type FootballDataFixtureSyncResult = {
@@ -138,41 +142,6 @@ async function upsertTeams(
   }
 
   return data.length;
-}
-
-async function getTeamIdLookup(
-  client: SupabaseAdminClient,
-  footballDataTeamIds: number[],
-): Promise<TeamIdLookup> {
-  const uniqueIds = [...new Set(footballDataTeamIds)];
-
-  if (uniqueIds.length === 0) {
-    return new Map();
-  }
-
-  const { data, error } = await client
-    .from("teams")
-    .select("id, football_data_id")
-    .in("football_data_id", uniqueIds);
-
-  if (error) {
-    throw error;
-  }
-
-  return new Map(
-    data
-      .filter((team) => typeof team.football_data_id === "number")
-      .map((team) => [team.football_data_id as number, team.id]),
-  );
-}
-
-function getRelatedTeamIds(matches: FootballDataMatchCandidate[]) {
-  return matches.flatMap((match) =>
-    [
-      match.home_team_football_data_id,
-      match.away_team_football_data_id,
-    ].filter((value): value is number => typeof value === "number"),
-  );
 }
 
 function getMatchBaseRow(

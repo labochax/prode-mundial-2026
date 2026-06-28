@@ -7,10 +7,15 @@ import {
   applyFootballDataResultUpdateDecision,
   getFootballDataResultUpdateDecision,
 } from "@/lib/sports/football-data/result-update-decision";
+import { getFootballDataResultUpdateRow } from "@/lib/sports/football-data/result-update-row";
 import {
   getStadiumIdForMatchCandidate,
   syncFootballDataMatchStadiums,
 } from "@/lib/sports/football-data/stadium-sync";
+import {
+  getRelatedTeamIds,
+  getTeamIdLookup,
+} from "@/lib/sports/football-data/team-id-lookup";
 import type {
   FootballDataMatchCandidate,
   FootballDataMatchStatus,
@@ -20,10 +25,10 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
 type SupabaseAdminClient = SupabaseClient<Database>;
-type MatchUpdate = Database["public"]["Tables"]["matches"]["Update"];
 type SyncRunInsert = Database["public"]["Tables"]["sync_runs"]["Insert"];
 type SyncRunUpdate = Database["public"]["Tables"]["sync_runs"]["Update"];
 type FootballDataResultsSyncTrigger = "cron" | "manual";
+type TeamIdLookup = Awaited<ReturnType<typeof getTeamIdLookup>>;
 
 type ExistingMatch = Pick<
   Database["public"]["Tables"]["matches"]["Row"],
@@ -167,20 +172,14 @@ async function getExistingMatches(
 function getResultUpdateRow(
   match: FootballDataMatchCandidate,
   stadiumIdsByVenue: Map<string, string>,
+  teamIds: TeamIdLookup,
 ) {
   const stadiumId = getStadiumIdForMatchCandidate(match, stadiumIdsByVenue);
 
-  return {
-    away_score: match.away_score,
-    home_score: match.home_score,
-    kickoff_at: match.kickoff_at,
-    last_synced_at: match.last_synced_at,
-    minute: match.minute,
-    raw_json: match.raw_json,
-    status: match.status,
-    ...(stadiumId ? { stadium_id: stadiumId } : {}),
-    winner: match.winner,
-  } satisfies MatchUpdate;
+  return getFootballDataResultUpdateRow(match, {
+    stadiumId,
+    teamIds,
+  });
 }
 
 async function updateResultMatch(
@@ -188,10 +187,11 @@ async function updateResultMatch(
   matchId: string,
   candidate: FootballDataMatchCandidate,
   stadiumIdsByVenue: Map<string, string>,
+  teamIds: TeamIdLookup,
 ) {
   const { error } = await client
     .from("matches")
-    .update(getResultUpdateRow(candidate, stadiumIdsByVenue))
+    .update(getResultUpdateRow(candidate, stadiumIdsByVenue, teamIds))
     .eq("id", matchId);
 
   if (error) {
@@ -215,6 +215,10 @@ async function syncResultsToDatabase(
   let staleResultsSkipped = 0;
   const { stadiumIdsByVenue, stadiumsUpserted } =
     await syncFootballDataMatchStadiums(client, candidates.matches);
+  const teamIds = await getTeamIdLookup(
+    client,
+    getRelatedTeamIds(candidates.matches),
+  );
 
   for (const candidate of candidates.matches) {
     const existingMatch = existingMatches.get(candidate.football_data_id);
@@ -236,6 +240,7 @@ async function syncResultsToDatabase(
             existingMatch.id,
             candidate,
             stadiumIdsByVenue,
+            teamIds,
           ),
         scorePredictions: async () => {
           const { data, error } = await client.rpc("score_match_predictions", {

@@ -14,7 +14,9 @@ cuando haya deploy:
 
 - `Probar Football-Data`: vista previa limitada, sin escrituras.
 - `Sincronizar fixtures oficiales`: importa equipos y calendario disponible.
-- `Sincronizar resultados ahora`: actualiza estado, marcador, minuto y puntúa solo partidos `FINISHED`.
+- `Sincronizar resultados ahora`: actualiza estado, marcador, minuto, sede y
+  asignaciones oficiales de equipos cuando Football-Data ya devuelve
+  `homeTeam.id` / `awayTeam.id`; puntúa solo partidos `FINISHED`.
 
 No hay deploy ni Edge Functions en esta etapa. `vercel.json` queda preparado
 con una ejecución conservadora cada 5 minutos; la ruta decide si realmente
@@ -123,6 +125,10 @@ o finalizar resultados cuando Football-Data esté demorado.
 - Se ejecuta si no hay partidos oficiales Football-Data.
 - Se ejecuta si la última sync exitosa de fixtures supera 12 horas.
 - Se ejecuta si `mode=fixtures` fuerza el flujo.
+- Sigue siendo el backfill completo de calendario/equipos. `mode=results`
+  también puede completar `home_team_id` / `away_team_id` en cruces ya
+  definidos por Football-Data, pero no crea equipos nuevos si falta el lookup
+  local.
 
 ### Resultados/Live
 
@@ -140,6 +146,9 @@ o finalizar resultados cuando Football-Data esté demorado.
   entrega.
 - El resumen de resultados incluye `staleResultsSkipped`; el mismo contador
   queda en la respuesta cron y en `sync_runs.summary`.
+- El modo `results` no limpia equipos asignados si el proveedor omite
+  temporalmente `homeTeam.id` o `awayTeam.id`; solo escribe relaciones cuando
+  recibe un ID concreto y ese equipo existe localmente.
 - Si después de fixtures queda cuota por minuto muy baja, el orquestador omite
   resultados para evitar una llamada que probablemente termine en `429`.
 - Las respuestas JSON no incluyen secretos.
