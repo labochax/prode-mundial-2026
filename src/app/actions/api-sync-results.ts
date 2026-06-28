@@ -74,6 +74,9 @@ export async function syncFootballDataResultsAction() {
       results_checked: String(result.checkedMatches),
       results_estado: "ok",
       results_finished: String(result.finishedMatchesScored),
+      results_knockout_missing_map: String(
+        result.knockoutSkippedMissingOfficialFixtureMap,
+      ),
       results_live: String(result.liveMatchesUpdated),
       results_reset: result.rateLimitReset ?? "",
       results_run: result.syncRunId,
@@ -83,6 +86,7 @@ export async function syncFootballDataResultsAction() {
       results_text:
         `Actualizados: ${result.matchesUpdated}. ` +
         `Resultados desactualizados protegidos: ${result.staleResultsSkipped}. ` +
+        `16avos sin mapa oficial: ${result.knockoutSkippedMissingOfficialFixtureMap}. ` +
         "Predicciones directas modificadas: 0.",
     });
   } catch (error) {

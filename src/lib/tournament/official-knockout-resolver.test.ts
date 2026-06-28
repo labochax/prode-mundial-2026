@@ -5,6 +5,7 @@ import {
   buildOfficialKnockoutTeamUpdatePlan,
   resolveOfficialRoundOf32Assignments,
 } from "@/lib/tournament/official-knockout-resolver";
+import type { OfficialKnockoutFixtureMapEntry } from "@/lib/tournament/official-knockout-fixture-map";
 
 describe("resolveOfficialRoundOf32Assignments", () => {
   it("resolves M73 from completed Group A and Group B runners-up", () => {
@@ -100,7 +101,7 @@ describe("resolveOfficialRoundOf32Assignments", () => {
 });
 
 describe("buildOfficialKnockoutTeamUpdatePlan", () => {
-  it("maps LAST_32 rows without match_number to M73-M88 by kickoff order", () => {
+  it("does not infer M73-M88 from LAST_32 kickoff order without a trusted fixture map", () => {
     const plan = buildOfficialKnockoutTeamUpdatePlan([
       ...group("A", [
         ["a1", 9],
@@ -118,29 +119,65 @@ describe("buildOfficialKnockoutTeamUpdatePlan", () => {
       knockout("round-32-first", null, "2026-06-28T19:00:00.000Z", 8001),
     ]);
 
+    expect(plan.updates).toEqual([]);
+    expect(plan.stats.knockoutSkippedMissingOfficialFixtureMap).toBe(2);
+    expect(plan.stats.knockoutTeamSlotsResolved).toBe(0);
+  });
+
+  it("resolves a knockout row only when its Football-Data id has a trusted official slot mapping", () => {
+    const fixtureMap: OfficialKnockoutFixtureMapEntry[] = [
+      { footballDataId: 8073, matchNumber: 73 },
+    ];
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      [
+        ...group("A", [
+          ["a1", 9],
+          ["a2", 6],
+          ["a3", 3],
+          ["a4", 0],
+        ]),
+        ...group("B", [
+          ["b1", 9],
+          ["b2", 6],
+          ["b3", 3],
+          ["b4", 0],
+        ]),
+        knockout("m73", null, "2026-06-28T19:00:00.000Z", 8073),
+      ],
+      { fixtureMap },
+    );
+
     expect(plan.updates).toEqual([
       {
         away_team_id: "b2",
         home_team_id: "a2",
-        id: "round-32-first",
+        id: "m73",
       },
     ]);
+    expect(plan.stats.knockoutMatchesUnlocked).toBe(1);
+    expect(plan.stats.knockoutSkippedMissingOfficialFixtureMap).toBe(0);
   });
 
   it("does not clear existing team ids and keeps partially unresolved matches disabled", () => {
-    const plan = buildOfficialKnockoutTeamUpdatePlan([
-      ...group("E", [
-        ["e1", 9],
-        ["e2", 6],
-        ["e3", 3],
-        ["e4", 0],
-      ]),
-      {
-        ...knockout("m74", 74, "2026-06-29T19:00:00.000Z", 8074),
-        away_team_id: null,
-        home_team_id: "e1",
-      },
-    ]);
+    const fixtureMap: OfficialKnockoutFixtureMapEntry[] = [
+      { footballDataId: 8074, matchNumber: 74 },
+    ];
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      [
+        ...group("E", [
+          ["e1", 9],
+          ["e2", 6],
+          ["e3", 3],
+          ["e4", 0],
+        ]),
+        {
+          ...knockout("m74", null, "2026-06-29T19:00:00.000Z", 8074),
+          away_team_id: null,
+          home_team_id: "e1",
+        },
+      ],
+      { fixtureMap },
+    );
 
     expect(plan.updates).toEqual([]);
     expect(plan.stats.knockoutTeamSlotsSkipped).toBeGreaterThan(0);
@@ -155,25 +192,31 @@ describe("buildOfficialKnockoutTeamUpdatePlan", () => {
   });
 
   it("does not overwrite a non-null team id with a conflicting resolved team", () => {
-    const plan = buildOfficialKnockoutTeamUpdatePlan([
-      ...group("A", [
-        ["a1", 9],
-        ["a2", 6],
-        ["a3", 3],
-        ["a4", 0],
-      ]),
-      ...group("B", [
-        ["b1", 9],
-        ["b2", 6],
-        ["b3", 3],
-        ["b4", 0],
-      ]),
-      {
-        ...knockout("m73", 73, "2026-06-28T19:00:00.000Z", 8073),
-        away_team_id: "already-away",
-        home_team_id: null,
-      },
-    ]);
+    const fixtureMap: OfficialKnockoutFixtureMapEntry[] = [
+      { footballDataId: 8073, matchNumber: 73 },
+    ];
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      [
+        ...group("A", [
+          ["a1", 9],
+          ["a2", 6],
+          ["a3", 3],
+          ["a4", 0],
+        ]),
+        ...group("B", [
+          ["b1", 9],
+          ["b2", 6],
+          ["b3", 3],
+          ["b4", 0],
+        ]),
+        {
+          ...knockout("m73", null, "2026-06-28T19:00:00.000Z", 8073),
+          away_team_id: "already-away",
+          home_team_id: null,
+        },
+      ],
+      { fixtureMap },
+    );
 
     expect(plan.updates).toEqual([
       {
@@ -186,24 +229,128 @@ describe("buildOfficialKnockoutTeamUpdatePlan", () => {
   });
 
   it("marks a match unlocked when the update fills both missing sides", () => {
-    const plan = buildOfficialKnockoutTeamUpdatePlan([
-      ...group("A", [
-        ["a1", 9],
-        ["a2", 6],
-        ["a3", 3],
-        ["a4", 0],
-      ]),
-      ...group("B", [
-        ["b1", 9],
-        ["b2", 6],
-        ["b3", 3],
-        ["b4", 0],
-      ]),
-      knockout("m73", 73, "2026-06-28T19:00:00.000Z", 8073),
-    ]);
+    const fixtureMap: OfficialKnockoutFixtureMapEntry[] = [
+      { footballDataId: 8073, matchNumber: 73 },
+    ];
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      [
+        ...group("A", [
+          ["a1", 9],
+          ["a2", 6],
+          ["a3", 3],
+          ["a4", 0],
+        ]),
+        ...group("B", [
+          ["b1", 9],
+          ["b2", 6],
+          ["b3", 3],
+          ["b4", 0],
+        ]),
+        knockout("m73", null, "2026-06-28T19:00:00.000Z", 8073),
+      ],
+      { fixtureMap },
+    );
 
     expect(plan.stats.knockoutTeamSlotsResolved).toBe(2);
     expect(plan.stats.knockoutMatchesUnlocked).toBe(1);
+  });
+
+  it("keeps Germany away from Morocco when trusted mapping puts Germany in M74 and Morocco in M75", () => {
+    const fixtureMap: OfficialKnockoutFixtureMapEntry[] = [
+      { footballDataId: 8074, matchNumber: 74 },
+      { footballDataId: 8075, matchNumber: 75 },
+    ];
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      [
+        ...lowThirdGroup("A"),
+        ...lowThirdGroup("B"),
+        ...customLowThirdGroup("C", {
+          first: "C1",
+          second: "morocco",
+          third: "C3",
+          fourth: "C4",
+        }),
+        ...lowThirdGroup("D"),
+        ...customQualifiedThirdGroup("E", {
+          first: "germany",
+          second: "E2",
+          third: "E3",
+          fourth: "E4",
+        }),
+        ...customQualifiedThirdGroup("F", {
+          first: "netherlands",
+          second: "F2",
+          third: "paraguay",
+          fourth: "F4",
+        }),
+        ...qualifiedThirdGroup("G"),
+        ...qualifiedThirdGroup("H"),
+        ...qualifiedThirdGroup("I"),
+        ...qualifiedThirdGroup("J"),
+        ...qualifiedThirdGroup("K"),
+        ...qualifiedThirdGroup("L"),
+        knockout("m74", null, "2026-06-28T20:00:00.000Z", 8074),
+        knockout("m75", null, "2026-06-28T19:00:00.000Z", 8075),
+      ],
+      { fixtureMap },
+    );
+
+    expect(plan.updates).toEqual(
+      expect.arrayContaining([
+        {
+          away_team_id: "paraguay",
+          home_team_id: "germany",
+          id: "m74",
+        },
+        {
+          away_team_id: "morocco",
+          home_team_id: "netherlands",
+          id: "m75",
+        },
+      ]),
+    );
+    const assignedTeams = plan.updates.flatMap((update) =>
+      [update.home_team_id, update.away_team_id].filter(Boolean),
+    );
+    expect(assignedTeams.filter((teamId) => teamId === "morocco")).toHaveLength(
+      1,
+    );
+  });
+
+  it("does not assign a resolved team that already appears in another Round of 32 match", () => {
+    const fixtureMap: OfficialKnockoutFixtureMapEntry[] = [
+      { footballDataId: 8075, matchNumber: 75 },
+    ];
+    const plan = buildOfficialKnockoutTeamUpdatePlan(
+      [
+        ...customLowThirdGroup("C", {
+          first: "C1",
+          second: "morocco",
+          third: "C3",
+          fourth: "C4",
+        }),
+        ...customQualifiedThirdGroup("F", {
+          first: "netherlands",
+          second: "F2",
+          third: "F3",
+          fourth: "F4",
+        }),
+        {
+          ...knockout("bad-existing-morocco", null, "2026-06-28T18:00:00.000Z", 9001),
+          home_team_id: "morocco",
+        },
+        knockout("m75", null, "2026-06-28T19:00:00.000Z", 8075),
+      ],
+      { fixtureMap },
+    );
+
+    expect(plan.updates).toEqual([
+      {
+        home_team_id: "netherlands",
+        id: "m75",
+      },
+    ]);
+    expect(plan.stats.knockoutTeamSlotsSkipped).toBeGreaterThan(0);
   });
 });
 
@@ -247,6 +394,48 @@ function qualifiedThirdGroup(groupCode: string) {
     match(groupCode, first, third, 1, 0),
     match(groupCode, first, fourth, 1, 0),
     match(groupCode, second, third, 1, 0),
+    match(groupCode, second, fourth, 1, 0),
+    match(groupCode, third, fourth, 1, 0),
+  ];
+}
+
+function customQualifiedThirdGroup(
+  groupCode: string,
+  teams: {
+    first: string;
+    fourth: string;
+    second: string;
+    third: string;
+  },
+) {
+  const { first, fourth, second, third } = teams;
+
+  return [
+    match(groupCode, first, second, 1, 0),
+    match(groupCode, first, third, 1, 0),
+    match(groupCode, first, fourth, 1, 0),
+    match(groupCode, second, third, 1, 0),
+    match(groupCode, second, fourth, 1, 0),
+    match(groupCode, third, fourth, 1, 0),
+  ];
+}
+
+function customLowThirdGroup(
+  groupCode: string,
+  teams: {
+    first: string;
+    fourth: string;
+    second: string;
+    third: string;
+  },
+) {
+  const { first, fourth, second, third } = teams;
+
+  return [
+    match(groupCode, first, second, 1, 0),
+    match(groupCode, first, third, 5, 0),
+    match(groupCode, first, fourth, 1, 0),
+    match(groupCode, second, third, 5, 0),
     match(groupCode, second, fourth, 1, 0),
     match(groupCode, third, fourth, 1, 0),
   ];

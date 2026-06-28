@@ -17,8 +17,8 @@ cuando haya deploy:
 - `Sincronizar resultados ahora`: actualiza estado, marcador, minuto, sede y
   asignaciones oficiales de equipos cuando Football-Data ya devuelve
   `homeTeam.id` / `awayTeam.id`; también puede completar cruces de 16avos
-  derivables desde resultados oficiales de grupos ya guardados. Puntúa solo
-  partidos `FINISHED`.
+  solo si existe un mapeo confiable `football_data_id -> match_number FIFA`.
+  Puntúa solo partidos `FINISHED`.
 
 No hay deploy ni Edge Functions en esta etapa. `vercel.json` queda preparado
 con una ejecución conservadora cada 5 minutos; la ruta decide si realmente
@@ -152,16 +152,32 @@ o finalizar resultados cuando Football-Data esté demorado.
   temporalmente `homeTeam.id` o `awayTeam.id`; solo escribe relaciones cuando
   recibe un ID concreto y ese equipo existe localmente.
 - Si Football-Data todavía no informa equipos de eliminación, el modo
-  `results` intenta resolver los 16avos desde los resultados oficiales de fase
-  de grupos guardados localmente. Los primeros y segundos se asignan por grupo
-  completado; los mejores terceros se asignan solo cuando la combinación de
-  Annexe C queda determinada. Empates que requieran desempates FIFA no
-  disponibles quedan sin resolver.
+  `results` no infiere el número de partido por horario. Los 16avos solo pueden
+  completarse desde resultados oficiales de grupos si el fixture tiene una
+  entrada explícita y revisada en `official-knockout-fixture-map.ts`.
+- Los fixtures de eliminación sin ese mapa quedan bloqueados como `P/D`; esto
+  es intencional para evitar cruces imposibles o equipos duplicados.
 - El resumen de resultados incluye `knockoutTeamSlotsResolved`,
-  `knockoutMatchesUnlocked` y `knockoutTeamSlotsSkipped`.
+  `knockoutMatchesUnlocked`, `knockoutTeamSlotsSkipped` y
+  `knockoutSkippedMissingOfficialFixtureMap`.
 - Si después de fixtures queda cuota por minuto muy baja, el orquestador omite
   resultados para evitar una llamada que probablemente termine en `429`.
 - Las respuestas JSON no incluyen secretos.
+
+### Rollback Manual De Equipos De 16avos Mal Asignados
+
+Si una corrida anterior asignó equipos de eliminación sin IDs oficiales del
+proveedor, limpiar solo esas relaciones con SQL manual auditado. No borrar
+predicciones:
+
+```sql
+update public.matches
+set home_team_id = null, away_team_id = null
+where stage = 'LAST_32'
+  and raw_json->'homeTeam'->>'id' is null
+  and raw_json->'awayTeam'->>'id' is null
+  and (home_team_id is not null or away_team_id is not null);
+```
 
 ## Permisos Productivos
 

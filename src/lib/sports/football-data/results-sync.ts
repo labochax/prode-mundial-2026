@@ -61,6 +61,7 @@ export type FootballDataResultsSyncResult = {
   checkedMatches: number;
   finishedMatchesScored: number;
   knockoutMatchesUnlocked: number;
+  knockoutSkippedMissingOfficialFixtureMap: number;
   knockoutTeamSlotsResolved: number;
   knockoutTeamSlotsSkipped: number;
   liveMatchesUpdated: number;
@@ -277,6 +278,7 @@ async function syncResultsToDatabase(
   }
   const {
     knockoutMatchesUnlocked,
+    knockoutSkippedMissingOfficialFixtureMap,
     knockoutTeamSlotsResolved,
     knockoutTeamSlotsSkipped,
   } = await syncOfficialKnockoutTeamsFromGroupResults(client);
@@ -284,6 +286,7 @@ async function syncResultsToDatabase(
   return {
     finishedMatchesScored,
     knockoutMatchesUnlocked,
+    knockoutSkippedMissingOfficialFixtureMap,
     knockoutTeamSlotsResolved,
     knockoutTeamSlotsSkipped,
     liveMatchesUpdated,
@@ -309,6 +312,7 @@ export async function syncFootballDataResults(
     const {
       finishedMatchesScored,
       knockoutMatchesUnlocked,
+      knockoutSkippedMissingOfficialFixtureMap,
       knockoutTeamSlotsResolved,
       knockoutTeamSlotsSkipped,
       liveMatchesUpdated,
@@ -322,6 +326,7 @@ export async function syncFootballDataResults(
       checkedMatches: candidates.matches.length,
       finishedMatchesScored,
       knockoutMatchesUnlocked,
+      knockoutSkippedMissingOfficialFixtureMap,
       knockoutTeamSlotsResolved,
       knockoutTeamSlotsSkipped,
       liveMatchesUpdated,

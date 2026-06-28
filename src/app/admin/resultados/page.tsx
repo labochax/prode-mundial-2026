@@ -164,6 +164,11 @@ export default async function AdminResultsPage({
                   getSearchValue(resolvedSearchParams, "sync_scored") ?? "0"
                 }. Datos desactualizados protegidos: ${
                   getSearchValue(resolvedSearchParams, "sync_stale") ?? "0"
+                }. 16avos sin mapa oficial: ${
+                  getSearchValue(
+                    resolvedSearchParams,
+                    "sync_knockout_missing_map",
+                  ) ?? "0"
                 }. Cuota por minuto: ${
                   getSearchValue(resolvedSearchParams, "sync_minute") ?? "sin dato"
                 }.`}
