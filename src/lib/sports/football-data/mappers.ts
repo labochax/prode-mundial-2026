@@ -63,7 +63,25 @@ function normalizeText(value: string | null | undefined) {
   return normalized && normalized.length > 0 ? normalized : null;
 }
 
-function getScoreSide(match: FootballDataMatch): FootballDataMatchScoreSide | null {
+function hasNumericScoreSide(
+  score: FootballDataMatchScoreSide | null | undefined,
+) {
+  return typeof score?.home === "number" && typeof score.away === "number";
+}
+
+function isPenaltyShootoutDuration(duration: string | null | undefined) {
+  return duration?.trim().toUpperCase() === "PENALTY_SHOOTOUT";
+}
+
+function getProdeScoreSide(
+  match: FootballDataMatch,
+): FootballDataMatchScoreSide | null {
+  if (isPenaltyShootoutDuration(match.score?.duration)) {
+    return hasNumericScoreSide(match.score?.regularTime)
+      ? match.score?.regularTime ?? null
+      : null;
+  }
+
   return match.score?.fullTime ?? match.score?.regularTime ?? null;
 }
 
@@ -81,7 +99,7 @@ function getWinner(
     return null;
   }
 
-  const score = getScoreSide(match);
+  const score = getProdeScoreSide(match);
 
   if (typeof score?.home !== "number" || typeof score.away !== "number") {
     return null;
@@ -148,7 +166,7 @@ export function mapFootballDataMatchToCandidate(
   match: FootballDataMatch,
   syncedAt = new Date().toISOString(),
 ): FootballDataMatchCandidate {
-  const score = getScoreSide(match);
+  const score = getProdeScoreSide(match);
   const status = mapStatus(match.status);
 
   return {
